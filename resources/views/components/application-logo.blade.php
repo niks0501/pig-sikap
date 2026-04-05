@@ -1,0 +1,1 @@
+<img src="{{ asset('images/slp_logo.png') }}" alt="SLP Logo" {{ $attributes }}>
