@@ -93,6 +93,13 @@
                         <span x-show="sidebarOpen" class="whitespace-nowrap">Docs & Approvals</span>
                     </div>
                 </a>
+
+                <a href="{{ route('audit-trails.index') }}" class="flex items-center px-3 py-2.5 rounded-xl mb-1 transition-colors {{ request()->routeIs('audit-trails.*') ? 'bg-[#0c6d57]/10 text-[#0c6d57] font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium' }}" :class="sidebarOpen ? 'justify-between' : 'justify-center'" title="Audit Trails">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0 {{ request()->routeIs('audit-trails.*') ? 'text-[#0c6d57]' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span x-show="sidebarOpen" class="whitespace-nowrap">Audit Trails</span>
+                    </div>
+                </a>
             </nav>
         </div>
 

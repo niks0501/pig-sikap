@@ -5,11 +5,11 @@
     <form method="POST" action="{{ route('login') }}" class="space-y-5">
         @csrf
 
-        <!-- Username (Email mapped) -->
+        <!-- Email -->
         <div>
             <x-input-label for="email" :value="__('Email')" class="text-slate-700 font-medium" />
-            <x-text-input id="email" class="block mt-1.5 w-full border-slate-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 px-4 py-2.5 shadow-sm text-sm" type="text" name="email" :value="old('email')" required
-                autofocus autocomplete="username" placeholder="juandelacruz" />
+            <x-text-input id="email" class="block mt-1.5 w-full border-slate-300 rounded-lg focus:border-emerald-500 focus:ring-emerald-500 px-4 py-2.5 shadow-sm text-sm" type="email" name="email" :value="old('email')" required
+                autofocus autocomplete="username" placeholder="admin@pigsikap.local" />
             <x-input-error :messages="$errors->get('email')" class="mt-2 text-red-500 text-sm" />
         </div>
 
@@ -53,11 +53,8 @@
             {{ __('Sign In') }}
         </button>
 
-        <p class="text-center text-sm mt-4 text-slate-600">
-            <a class="font-medium text-emerald-600 hover:text-emerald-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 rounded-md"
-                href="{{ route('register') }}">
-                {{ __('Don\'t have an account? Sign Up') }}
-            </a>
+        <p class="text-center text-xs mt-4 text-slate-500">
+            System access is provided by your organization administrator.
         </p>
     </form>
 </x-guest-layout>
