@@ -58,9 +58,7 @@
                     Reduce manual workload, track expenses, and easily compute your profitability. Your digital assistant designed specifically for community livelihood associations.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                    <a href="{{ route('register') }}" class="px-8 py-4 bg-[#0c6d57] text-white text-lg font-medium rounded-lg hover:bg-[#095946] transition shadow-lg text-center">
-                        Get Started
-                    </a>
+                
                     <a href="#about" class="px-8 py-4 bg-gray-50 text-gray-700 border border-gray-200 text-lg font-medium rounded-lg hover:bg-gray-100 transition text-center">
                         Learn More
                     </a>
@@ -323,9 +321,12 @@
                             Go to Dashboard
                         </a>
                     @else
-                        <a href="{{ route('register') }}" class="inline-block px-10 py-5 bg-white text-[#0c6d57] text-xl font-bold rounded-xl shadow-lg hover:bg-gray-50 transition transform hover:-translate-y-1">
-                            Get Started Now
-                        </a>
+                        @error(401)
+                            <div class="bg-red-100 text-red-700 px-4 py-3 rounded mb-4">
+                                You must be logged in to access the dashboard.
+                            </div>
+                            
+                        @enderror
                     @endauth
                 </div>
             </div>

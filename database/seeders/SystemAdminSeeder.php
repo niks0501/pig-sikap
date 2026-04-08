@@ -24,7 +24,7 @@ class SystemAdminSeeder extends Seeder
             ['email' => env('SYSTEM_ADMIN_EMAIL', 'admin@pigsikap.local')],
             [
                 'name' => env('SYSTEM_ADMIN_NAME', 'System Admin'),
-                'password' => Hash::make(env('SYSTEM_ADMIN_PASSWORD', 'Admin123!')),
+                'password' => Hash::make(env('SYSTEM_ADMIN_PASSWORD')),
                 'role_id' => $role->id,
                 'is_active' => true,
                 'must_change_password' => true,
