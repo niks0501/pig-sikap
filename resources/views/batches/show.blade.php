@@ -1,201 +1,341 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('batches.index') }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-start gap-4">
+                <a href="{{ route('batches.index') }}" class="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </a>
                 <div>
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-2xl font-bold text-gray-900 leading-tight">Batch B-001</h2>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Piglets</span>
+                    <h2 class="text-2xl font-bold text-gray-900 leading-tight">{{ $batch->batch_code }}</h2>
+                    <p class="mt-1 text-sm text-gray-500">Registered {{ $batch->created_at?->format('M d, Y h:i A') }}</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">{{ $batch->stage }}</span>
+                        <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ $batch->status }}</span>
+                        @if ($batch->isArchived())
+                            <span class="rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">Archived</span>
+                        @endif
                     </div>
-                    <p class="text-sm text-gray-500 mt-1">From Inahin A • Registered Sep 12, 2024</p>
                 </div>
             </div>
-            <div class="hidden sm:flex sm:items-center gap-3">
-                <a href="{{ route('batches.edit', 'B-001') }}" class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                    Edit
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('batches.pigs.index', $batch) }}" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                    Manage Pig Profiles
                 </a>
-                <button type="button" x-data @click="$dispatch('open-modal', 'status-update')" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#0c6d57] text-white font-bold text-sm rounded-xl hover:bg-[#0a5a48] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0c6d57] gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Update Batch Status
-                </button>
+                @unless ($batch->isArchived())
+                    <a href="{{ route('batches.edit', $batch) }}" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-4 py-2.5 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
+                        Edit Batch
+                    </a>
+                    <form method="POST" action="{{ route('batches.archive', $batch) }}" onsubmit="return confirm('Archive this batch? Operational editing will be restricted.');">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-900">
+                            Archive / Close
+                        </button>
+                    </form>
+                @endunless
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6 relative">
-        
-        <!-- Mobile Actions (Hidden on desktop) -->
-        <div class="sm:hidden grid grid-cols-2 gap-3 mb-6">
-            <button type="button" x-data @click="$dispatch('open-modal', 'status-update')" class="w-full inline-flex justify-center items-center px-4 py-3 bg-[#0c6d57] text-white font-bold text-sm rounded-xl shadow-sm focus:outline-none">
-                Update Status
-            </button>
-            <a href="{{ route('batches.edit', 'B-001') }}" class="w-full inline-flex justify-center items-center px-4 py-3 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl shadow-sm focus:outline-none">
-                Edit Record
-            </a>
-        </div>
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        @if (session('status'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                {{ session('status') }}
+            </div>
+        @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start" x-data="{ showStatusModal: false }">
-            
-            <!-- Left Column: Details -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Data Highlight Cards -->
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                    <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-6">Batch Profile Overview</h3>
-                    
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                        <!-- Stat 1 -->
+        @if ($errors->any())
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Count</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900">{{ number_format($batch->current_count) }}</p>
+            </article>
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Initial Count</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900">{{ number_format($batch->initial_count) }}</p>
+            </article>
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Pig Profiles</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900">{{ number_format($batch->pigs->count()) }}</p>
+                <p class="mt-1 text-xs font-medium text-gray-500">{{ $batch->has_pig_profiles ? 'Enabled' : 'Not enabled' }}</p>
+            </article>
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Last Reviewed</p>
+                <p class="mt-2 text-sm font-bold text-gray-900">{{ $batch->last_reviewed_at?->format('M d, Y h:i A') ?? 'Not yet reviewed' }}</p>
+            </article>
+        </section>
+
+        <div class="grid gap-6 xl:grid-cols-3">
+            <section class="space-y-6 xl:col-span-2">
+                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h3 class="text-base font-bold text-gray-900">Batch Information</h3>
+                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                Total Pigs
-                            </p>
-                            <p class="text-3xl font-bold text-gray-900 mb-0.5">8 <span class="text-sm text-gray-400">/ 8</span></p>
-                            <p class="text-xs text-emerald-600 font-medium">Original count</p>
+                            <dt class="font-semibold text-gray-500">Breeder / Inahin</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->breeder?->breeder_code ?? 'No linked breeder' }} {{ $batch->breeder?->name_or_tag ? '- '.$batch->breeder?->name_or_tag : '' }}</dd>
                         </div>
-                        
-                        <!-- Stat 2 -->
                         <div>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                Age Group
-                            </p>
-                            <p class="text-3xl font-bold text-gray-900 mb-0.5">Weaners</p>
-                            <p class="text-xs text-gray-500 font-medium">8 weeks old</p>
+                            <dt class="font-semibold text-gray-500">Caretaker</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->caretaker?->name ?? 'Unassigned' }}</dd>
                         </div>
-
-                        <!-- Stat 3 (Spans 2 cols on mobile) -->
-                        <div class="col-span-2 sm:col-span-1">
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                Caretaker
-                            </p>
-                            <div class="flex items-center gap-2.5 mt-2">
-                                <div class="bg-emerald-50 text-[#0c6d57] font-bold w-10 h-10 rounded-full flex items-center justify-center shrink-0">JD</div>
-                                <div>
-                                    <p class="text-sm text-gray-900 font-bold leading-tight">Juan Dela Cruz</p>
-                                    <p class="text-xs text-gray-500 font-medium">Since Registration</p>
-                                </div>
-                            </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Birth Date</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->birth_date->format('M d, Y') }}</dd>
                         </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Cycle Number</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->cycle_number ?? '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Average Weight</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->average_weight ? number_format((float) $batch->average_weight, 2).' kg' : '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Profiles Enabled</dt>
+                            <dd class="mt-1 text-gray-800">{{ $batch->has_pig_profiles ? 'Yes' : 'No' }}</dd>
+                        </div>
+                    </dl>
+                    <div class="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                        {{ $batch->notes ?: 'No notes for this batch yet.' }}
                     </div>
-                </div>
+                </article>
 
-                <!-- Notes and Information -->
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                    <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-4">Initial Remarks & Notes</h3>
-                    <div class="prose prose-sm text-gray-600 max-w-none">
-                        <p>Batch sourced internally from Inahin A's third parity. Healthy and active upon inspection. Assigned immediately to Juan's block.</p>
-                        <p class="mb-0"><strong>Feeding Plan:</strong> Booster pellets assigned for Month 1. Iron injection given on Day 3.</p>
-                    </div>
-                </div>
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                        <h3 class="text-base font-bold text-gray-900">Adjust Count</h3>
+                        @if ($batch->isArchived())
+                            <p class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
+                                Batch is archived. Reopen status first before adjusting count.
+                            </p>
+                        @else
+                            <form action="{{ route('batches.adjustments.store', $batch) }}" method="POST" class="mt-4 space-y-3">
+                                @csrf
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Type</span>
+                                    <select name="adjustment_type" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        @foreach ($adjustmentTypes as $type)
+                                            <option value="{{ $type }}">{{ ucfirst($type) }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
 
-                <!-- Modals -->
-                <!-- Status Update Modal -->
-                <!-- Assuming standard Alpine modal or Breeze default components here. Using raw markup for illustration as x-show / dialog. -->
-                <x-modal name="status-update" focusable>
-                    <div class="p-6">
-                        <h2 class="text-xl font-bold text-gray-900 border-b border-gray-100 pb-3 mb-5">Update Batch Status</h2>
-                        
-                        <form class="space-y-6">
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Quantity Change</span>
+                                    <input type="number" name="quantity_change" required value="{{ old('quantity_change') }}" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="Use + or - for correction">
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Resulting Count (optional)</span>
+                                    <input type="number" min="0" name="quantity_after" value="{{ old('quantity_after') }}" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Reason</span>
+                                    <select name="reason" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        @foreach ($adjustmentReasons as $reason)
+                                            <option value="{{ $reason }}" @selected(old('reason') === $reason)>{{ ucfirst($reason) }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</span>
+                                    <textarea name="remarks" rows="2" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('remarks') }}</textarea>
+                                </label>
+
+                                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                                    Save Adjustment
+                                </button>
+                            </form>
+                        @endif
+                    </article>
+
+                    <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                        <h3 class="text-base font-bold text-gray-900">Update Stage / Status</h3>
+                        <form action="{{ route('batches.status.store', $batch) }}" method="POST" class="mt-4 space-y-3">
                             @csrf
-                            
-                            <div>
-                                <label for="new_status" class="block text-sm font-bold text-gray-700 mb-1.5">New Livestock Phase/Status</label>
-                                <select id="new_status" name="status" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="piglets" selected>Piglets (Current)</option>
-                                    <option value="fatteners">Promote to Fatteners</option>
-                                    <option value="breeders">Select as Breeders/Inahin candidate</option>
-                                    <option disabled>──────────</option>
-                                    <option value="sick">Mark batch as Sick / Recovering</option>
-                                    <option value="deceased">Report Mortality (-1 Head)</option>
-                                    <option value="sold">Report Sales / Complete Cycle</option>
+                            <label class="block">
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">New Stage</span>
+                                <select name="new_stage" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                    <option value="">Keep {{ $batch->stage }}</option>
+                                    @foreach ($stages as $stage)
+                                        <option value="{{ $stage }}" @selected(old('new_stage') === $stage)>{{ $stage }}</option>
+                                    @endforeach
                                 </select>
-                            </div>
+                            </label>
 
-                            <div>
-                                <label for="update_date" class="block text-sm font-bold text-gray-700 mb-1.5">Date of Update</label>
-                                <input type="date" id="update_date" value="{{ date('Y-m-d') }}" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                            </div>
+                            <label class="block">
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">New Status</span>
+                                <select name="new_status" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                    <option value="">Keep {{ $batch->status }}</option>
+                                    @foreach ($statuses as $status)
+                                        <option value="{{ $status }}" @selected(old('new_status') === $status)>{{ $status }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
 
-                            <div class="bg-yellow-50 text-yellow-800 p-4 rounded-xl border border-yellow-100 text-sm hidden">
-                                <strong>Note:</strong> Reducing headcount. Please specify the reason below.
-                            </div>
+                            <label class="block">
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</span>
+                                <textarea name="remarks" rows="2" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('remarks') }}</textarea>
+                            </label>
 
-                            <div>
-                                <label for="reason" class="block text-sm font-bold text-gray-700 mb-1.5">Reason or Remarks <span class="text-gray-400 font-medium">(Required for Status changes)</span></label>
-                                <textarea id="reason" rows="3" placeholder="Explain the status change..." class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]"></textarea>
-                            </div>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                                Save Status Update
+                            </button>
+                        </form>
+                    </article>
+                </div>
 
-                            <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
-                                <button type="button" x-on:click="$dispatch('close')" class="px-5 py-3 border border-gray-200 rounded-xl text-gray-700 font-bold bg-white hover:bg-gray-50 transition-colors">Cancel</button>
-                                <button type="button" class="px-5 py-3 rounded-xl text-white font-bold bg-[#0c6d57] hover:bg-[#0a5a48] transition-colors">Save Update</button>
+                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 class="text-base font-bold text-gray-900">Pig Profiles</h3>
+                        <a href="{{ route('batches.pigs.index', $batch) }}" class="text-sm font-semibold text-[#0c6d57] hover:text-[#0a5a48]">Open dedicated profile manager</a>
+                    </div>
+
+                    @unless ($batch->isArchived())
+                        <form action="{{ route('batches.pigs.store', $batch) }}" method="POST" class="mt-4 grid gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-2">
+                            @csrf
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Pig No.</span>
+                                <input type="number" name="pig_no" min="1" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Sex</span>
+                                <select name="sex" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                    <option value="">Not set</option>
+                                    @foreach ($sexOptions as $sex)
+                                        <option value="{{ $sex }}">{{ $sex }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Ear Mark Type</span>
+                                <input type="text" name="ear_mark_type" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="e.g. Left cut">
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Ear Mark Value</span>
+                                <input type="text" name="ear_mark_value" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="e.g. L-2">
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</span>
+                                <select name="status" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                    @foreach ($pigStatuses as $pigStatus)
+                                        <option value="{{ $pigStatus }}" @selected($pigStatus === 'Active')>{{ $pigStatus }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label>
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</span>
+                                <input type="text" name="remarks" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="Optional">
+                            </label>
+                            <div class="md:col-span-2">
+                                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                                    Add Pig Profile
+                                </button>
                             </div>
                         </form>
+                    @endunless
+
+                    <div class="mt-4 overflow-x-auto rounded-2xl border border-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Pig #</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Ear Mark</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Sex</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</th>
+                                    <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                @forelse ($batch->pigs as $pig)
+                                    <tr>
+                                        <td class="px-3 py-2 font-semibold text-gray-900">{{ $pig->pig_no }}</td>
+                                        <td class="px-3 py-2 text-gray-700">{{ trim(($pig->ear_mark_type ?? '').' '.($pig->ear_mark_value ?? '')) ?: '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-700">{{ $pig->sex ?? '-' }}</td>
+                                        <td class="px-3 py-2 text-gray-700">{{ $pig->status }}</td>
+                                        <td class="px-3 py-2 text-gray-700">{{ $pig->remarks ?: '-' }}</td>
+                                        <td class="px-3 py-2 text-right">
+                                            @unless ($batch->isArchived())
+                                                <form action="{{ route('batches.pigs.update', [$batch, $pig]) }}" method="POST" class="inline-flex gap-2">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="hidden" name="pig_no" value="{{ $pig->pig_no }}">
+                                                    <input type="hidden" name="ear_mark_type" value="{{ $pig->ear_mark_type }}">
+                                                    <input type="hidden" name="ear_mark_value" value="{{ $pig->ear_mark_value }}">
+                                                    <input type="hidden" name="sex" value="{{ $pig->sex }}">
+                                                    <input type="hidden" name="status" value="{{ $pig->status }}">
+                                                    <input type="hidden" name="remarks" value="{{ $pig->remarks }}">
+                                                    <button type="submit" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                                                        Keep As-Is
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs font-medium text-gray-500">Locked</span>
+                                            @endunless
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="px-3 py-8 text-center text-sm font-medium text-gray-500">
+                                            No pig profiles yet. Create a profile above or use the profile manager.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-                </x-modal>
+                </article>
+            </section>
 
-            </div>
-
-            <!-- Right Column: Timeline / History -->
-            <div class="lg:col-span-1">
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 lg:sticky lg:top-24">
-                    <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-6">Status History</h3>
-                    
-                    <div class="flow-root">
-                        <ul role="list" class="-mb-8">
-                            <!-- Timeline Item 2 -->
-                            <li>
-                                <div class="relative pb-8">
-                                    <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
-                                    <div class="relative flex space-x-3">
-                                        <div>
-                                            <span class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center ring-8 ring-white z-10 shrink-0">
-                                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                                            </span>
-                                        </div>
-                                        <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                            <div>
-                                                <p class="text-sm text-gray-900 font-medium">Head count updated <strong>(+1 recovered from illness)</strong></p>
-                                                <p class="text-sm text-gray-500 mt-1">Total count adjusted to 8</p>
-                                            </div>
-                                            <div class="whitespace-nowrap text-right text-[11px] font-medium text-gray-400">
-                                                <time datetime="2024-10-15">Oct 15</time>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-
-                            <!-- Timeline Item 3 -->
-                            <li>
-                                <div class="relative pb-8">
-                                    <div class="relative flex space-x-3">
-                                        <div>
-                                            <span class="h-8 w-8 rounded-full bg-[#0c6d57]/10 flex items-center justify-center ring-8 ring-white z-10 shrink-0">
-                                                <svg class="w-4 h-4 text-[#0c6d57]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                            </span>
-                                        </div>
-                                        <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                            <div>
-                                                <p class="text-sm text-[#0c6d57] font-bold">Batch Registered</p>
-                                                <p class="text-sm text-gray-500 mt-1">Created by admin</p>
-                                            </div>
-                                            <div class="whitespace-nowrap text-right text-[11px] font-medium text-gray-400">
-                                                <time datetime="2024-09-12">Sep 12</time>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
+            <aside class="space-y-6">
+                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h3 class="text-base font-bold text-gray-900">Adjustment History</h3>
+                    <div class="mt-4 space-y-3">
+                        @forelse ($batch->adjustments->sortByDesc('created_at') as $adjustment)
+                            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
+                                <p class="font-semibold text-gray-900">
+                                    {{ $adjustment->quantity_before }} -> {{ $adjustment->quantity_after }}
+                                    <span class="text-xs uppercase tracking-[0.14em] text-gray-500">({{ $adjustment->adjustment_type }})</span>
+                                </p>
+                                <p class="mt-1 text-xs text-gray-600">Reason: {{ $adjustment->reason }}</p>
+                                <p class="mt-1 text-xs text-gray-500">{{ $adjustment->createdBy?->name ?? 'System' }} · {{ $adjustment->created_at?->format('M d, Y h:i A') }}</p>
+                            </div>
+                        @empty
+                            <p class="rounded-2xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
+                                No count adjustments yet.
+                            </p>
+                        @endforelse
                     </div>
-                </div>
-            </div>
-            
+                </article>
+
+                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h3 class="text-base font-bold text-gray-900">Status History</h3>
+                    <div class="mt-4 space-y-3">
+                        @forelse ($batch->statusHistories->sortByDesc('created_at') as $history)
+                            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
+                                <p class="font-semibold text-gray-900">{{ $history->new_stage }} / {{ $history->new_status }}</p>
+                                <p class="mt-1 text-xs text-gray-600">From: {{ $history->old_stage ?: '-' }} / {{ $history->old_status ?: '-' }}</p>
+                                @if ($history->remarks)
+                                    <p class="mt-1 text-xs text-gray-600">{{ $history->remarks }}</p>
+                                @endif
+                                <p class="mt-1 text-xs text-gray-500">{{ $history->changedBy?->name ?? 'System' }} · {{ $history->created_at?->format('M d, Y h:i A') }}</p>
+                            </div>
+                        @empty
+                            <p class="rounded-2xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
+                                No status updates yet.
+                            </p>
+                        @endforelse
+                    </div>
+                </article>
+            </aside>
         </div>
     </div>
 </x-app-layout>

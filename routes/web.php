@@ -5,6 +5,11 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\President\PresidentPigBatchAdjustmentController;
+use App\Http\Controllers\President\PresidentPigBatchStatusController;
+use App\Http\Controllers\President\PresidentPigBreederController;
+use App\Http\Controllers\President\PresidentPigInventoryController;
+use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,16 +43,30 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Frontend Design Mockup Routes
-    Route::prefix('batches')->name('batches.')->group(function () {
-        Route::get('/', function () { return view('batches.index'); })->name('index');
-        Route::get('/create', function () { return view('batches.create'); })->name('create');
-        Route::get('/{batch}', function ($id) { return view('batches.show', ['id' => $id]); })->name('show');
-        Route::get('/{batch}/edit', function ($id) { return view('batches.edit', ['id' => $id]); })->name('edit');
-    });
+    Route::middleware(['role:president'])->group(function () {
+        Route::prefix('batches')->name('batches.')->scopeBindings()->group(function () {
+            Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');
+            Route::get('/create', [PresidentPigInventoryController::class, 'create'])->name('create');
+            Route::post('/', [PresidentPigInventoryController::class, 'store'])->name('store');
+            Route::get('/archived', [PresidentPigInventoryController::class, 'archived'])->name('archived');
+            Route::get('/{batch}', [PresidentPigInventoryController::class, 'show'])->name('show');
+            Route::get('/{batch}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
+            Route::put('/{batch}', [PresidentPigInventoryController::class, 'update'])->name('update');
+            Route::patch('/{batch}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
 
-    // Breeder / Inahin Forms
-    Route::get('/breeders/create', function () { return view('breeders.create'); })->name('breeders.create');
+            Route::get('/{batch}/pigs', [PresidentPigProfileController::class, 'index'])->name('pigs.index');
+            Route::post('/{batch}/pigs', [PresidentPigProfileController::class, 'store'])->name('pigs.store');
+            Route::put('/{batch}/pigs/{pig}', [PresidentPigProfileController::class, 'update'])->name('pigs.update');
+
+            Route::post('/{batch}/adjustments', [PresidentPigBatchAdjustmentController::class, 'store'])->name('adjustments.store');
+            Route::post('/{batch}/status', [PresidentPigBatchStatusController::class, 'store'])->name('status.store');
+        });
+
+        Route::prefix('breeders')->name('breeders.')->group(function () {
+            Route::get('/create', [PresidentPigBreederController::class, 'index'])->name('create');
+            Route::post('/', [PresidentPigBreederController::class, 'store'])->name('store');
+        });
+    });
 
     // Health, Vaccination, and Treatment Module
     Route::prefix('health')->name('health.')->group(function () {

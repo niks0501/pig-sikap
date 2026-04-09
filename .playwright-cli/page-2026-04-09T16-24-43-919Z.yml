@@ -1,0 +1,28 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Pig Sikap home" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img "SLP Logo" [ref=e5]
+    - heading "Elite Visionaries SLP Association" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Humayingan, Lian, Batangas
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Email
+      - textbox "Email" [active] [ref=e12]:
+        - /placeholder: admin@pigsikap.local
+    - generic [ref=e13]:
+      - generic [ref=e14]: Password
+      - generic [ref=e15]:
+        - textbox "Password" [ref=e16]:
+          - /placeholder: Enter your password
+        - button [ref=e17]:
+          - img [ref=e18]
+    - generic [ref=e21]:
+      - generic [ref=e22] [cursor=pointer]:
+        - checkbox "Remember me" [ref=e23]
+        - generic [ref=e24]: Remember me
+      - link "Forgot password?" [ref=e25] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/forgot-password
+    - button "Sign In" [ref=e26]
+    - paragraph [ref=e27]: System access is provided by your organization administrator.
+  - paragraph [ref=e29]: Secure management system for association members

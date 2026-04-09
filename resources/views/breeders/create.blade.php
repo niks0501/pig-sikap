@@ -1,99 +1,128 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="javascript:history.back()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <a href="{{ route('batches.index') }}" class="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Register New Inahin / Breeder</h2>
-                <p class="text-sm text-gray-500 mt-1">Record a new breeding cycle or sow registry.</p>
+                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Breeder Registry</h2>
+                <p class="mt-1 text-sm text-gray-500">Maintain inahin records used by pig batches.</p>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
-        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 sm:p-8">
-                <form action="#" method="POST" class="space-y-8">
-                    @csrf
-                    
-                    <!-- Breeder Identification -->
-                    <div>
-                        <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-5">Breeder Information</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            
-                            <!-- Identifier / Ear Tag -->
-                            <div>
-                                <label for="breeder_name" class="block text-sm font-bold text-gray-700 mb-1.5">Breeder ID / Tag Name *</label>
-                                <input type="text" id="breeder_name" name="breeder_name" placeholder="e.g. Inahin A" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                            </div>
-
-                            <!-- Source Batch -->
-                            <div>
-                                <label for="source_batch" class="block text-sm font-bold text-gray-700 mb-1.5">Original Batch (If applicable)</label>
-                                <select id="source_batch" name="source_batch" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="" selected>Not from an internal batch</option>
-                                    <option value="B-001">Batch B-001</option>
-                                    <option value="B-002">Batch B-002</option>
-                                    <option value="B-003">Batch B-003</option>
-                                </select>
-                                <p class="text-[10px] text-gray-500 mt-1 font-medium">Link if this breeder came from one of your own litters.</p>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <!-- Reproductive Data -->
-                    <div>
-                        <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-5">Current Reproductive Status</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            
-                            <!-- Date of Breeding / Insemination ->
-                            <div>
-                                <label for="breeding_date" class="block text-sm font-bold text-gray-700 mb-1.5">Date of Breeding / Insemination</label>
-                                <input type="date" id="breeding_date" name="breeding_date" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                            </div>
-
-                            <!-- Expected Farrowing -->
-                            <div>
-                                <label for="farrowing_date" class="block text-sm font-bold text-gray-700 mb-1.5">Expected Farrowing Date</label>
-                                <input type="date" id="farrowing_date" name="farrowing_date" readonly class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 font-medium sm:text-sm cursor-not-allowed">
-                                <p class="text-[10px] text-gray-500 mt-1 font-medium">Auto-calculated (114 days from breeding).</p>
-                            </div>
-
-                            <!-- Current Status -->
-                            <div class="sm:col-span-2">
-                                <label for="status" class="block text-sm font-bold text-gray-700 mb-1.5">Pregnancy / Cycle Status *</label>
-                                <select id="status" name="status" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="open">Open / Ready to Breed</option>
-                                    <option value="inseminated" selected>Bred / Inseminated (Pending Check)</option>
-                                    <option value="pregnant">Confirmed Pregnant</option>
-                                    <option value="farrowed">Farrowed (Lactating)</option>
-                                    <option value="weaned">Weaned</option>
-                                    <option value="cull">Cull / Retire</option>
-                                </select>
-                            </div>
-
-                            <!-- Notes / Remarks -->
-                            <div class="sm:col-span-2">
-                                <label for="notes" class="block text-sm font-bold text-gray-700 mb-1.5">Breeder Notes & Remarks</label>
-                                <textarea id="notes" name="notes" rows="4" placeholder="Add information regarding boar used, method, parity number, general health prior to breeding..." class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57] transition-all"></textarea>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="pt-6 border-t border-gray-100 flex flex-col sm:flex-row-reverse gap-3">
-                        <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3.5 bg-[#0c6d57] text-white font-bold text-sm rounded-xl hover:bg-[#0a5a48] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0c6d57]">
-                            Save Breeder Record
-                        </button>
-                        <a href="javascript:history.back()" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        @if (session('status'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                {{ session('status') }}
             </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <div class="grid gap-6 xl:grid-cols-3">
+            <section class="xl:col-span-1">
+                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h3 class="text-base font-bold text-gray-900">Register Breeder</h3>
+                    <form action="{{ route('breeders.store') }}" method="POST" class="mt-4 space-y-3">
+                        @csrf
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Breeder Code *</span>
+                            <input type="text" name="breeder_code" value="{{ old('breeder_code') }}" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="e.g. INA-001">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Name / Tag *</span>
+                            <input type="text" name="name_or_tag" value="{{ old('name_or_tag') }}" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="e.g. Inahin A">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Reproductive Status *</span>
+                            <select name="reproductive_status" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                @foreach ($reproductiveStatuses as $item)
+                                    <option value="{{ $item }}" @selected(old('reproductive_status', 'Active') === $item)>{{ $item }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Acquisition Date</span>
+                            <input type="date" name="acquisition_date" value="{{ old('acquisition_date') }}" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Expected Farrowing Date</span>
+                            <input type="date" name="expected_farrowing_date" value="{{ old('expected_farrowing_date') }}" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Notes</span>
+                            <textarea name="notes" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('notes') }}</textarea>
+                        </label>
+
+                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                            Save Breeder
+                        </button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="xl:col-span-2">
+                <article class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+                    <div class="border-b border-gray-200 px-5 py-4 sm:px-6">
+                        <form method="GET" action="{{ route('breeders.create') }}" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                            <label class="flex-1">
+                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search breeders</span>
+                                <input type="text" name="search" value="{{ $search }}" placeholder="Code, tag, or status"
+                                    class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            </label>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                                Search
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Code</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Tag Name</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Acquired</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Expected Farrowing</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white text-sm">
+                                @forelse ($breeders as $breeder)
+                                    <tr>
+                                        <td class="px-4 py-3 font-bold text-gray-900">{{ $breeder->breeder_code }}</td>
+                                        <td class="px-4 py-3 text-gray-800">{{ $breeder->name_or_tag }}</td>
+                                        <td class="px-4 py-3"><span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ $breeder->reproductive_status }}</span></td>
+                                        <td class="px-4 py-3 text-gray-700">{{ $breeder->acquisition_date?->format('M d, Y') ?? '-' }}</td>
+                                        <td class="px-4 py-3 text-gray-700">{{ $breeder->expected_farrowing_date?->format('M d, Y') ?? '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-10 text-center text-sm font-medium text-gray-500">No breeder records found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($breeders->hasPages())
+                        <div class="border-t border-gray-200 px-4 py-3">
+                            {{ $breeders->links() }}
+                        </div>
+                    @endif
+                </article>
+            </section>
         </div>
     </div>
 </x-app-layout>

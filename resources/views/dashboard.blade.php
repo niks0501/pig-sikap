@@ -3,7 +3,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             
             <!-- 1. Welcome Header -->
-            <div class="bg-gradient-to-r from-[#0c6d57] to-emerald-600 rounded-2xl p-6 md:p-8 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="bg-linear-to-r from-[#0c6d57] to-emerald-600 rounded-2xl p-6 md:p-8 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div class="flex flex-wrap items-center gap-3 mb-2">
                         <h2 class="text-2xl md:text-3xl font-bold">Welcome, {{ Auth::user()->name ?? 'User' }}!</h2>
@@ -268,7 +268,7 @@
             <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100 mt-6">
                 <h3 class="text-base font-medium text-gray-800 mb-6">Revenue vs Expenses by Cycle</h3>
 
-                <div class="relative w-full h-[400px] flex pb-10">
+                <div class="relative w-full h-100 flex pb-10">
                     
                     <div class="flex flex-col justify-between text-xs text-gray-400 text-right pr-4 pb-6 h-full border-r border-gray-200 z-10 w-20 shrink-0">
                         <span>₱180,000</span>
@@ -289,11 +289,11 @@
                             <div class="w-full border-t border-gray-300 h-0"></div> </div>
 
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            <div class="flex gap-1 w-full justify-center items-end h-[316px] pb-[1px]">
-                                <div class="w-full max-w-[32px] bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 71%;">
+                            <div class="flex gap-1 w-full justify-center items-end h-79 pb-px">
+                                <div class="w-full max-w-8 bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 71%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱128,000</div>
                                 </div>
-                                <div class="w-full max-w-[32px] bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 97%;">
+                                <div class="w-full max-w-8 bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 97%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱175,000</div>
                                 </div>
                             </div>
@@ -301,14 +301,14 @@
                         </div>
 
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            <div class="flex gap-1 w-full justify-center items-end h-[316px] pb-[1px]">
-                                <div class="w-full max-w-[32px] bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 55%;">
+                            <div class="flex gap-1 w-full justify-center items-end h-79 pb-px">
+                                <div class="w-full max-w-8 bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 55%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱100,000</div>
                                 </div>
-                                <div class="w-full max-w-[32px] bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 45%;">
+                                <div class="w-full max-w-8 bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 45%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱82,000</div>
                                 </div>
-                                <div class="w-full max-w-[32px] bg-[#f59e0b] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 11%;">
+                                <div class="w-full max-w-8 bg-[#f59e0b] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 11%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱20,000</div>
                                 </div>
                             </div>
@@ -316,11 +316,11 @@
                         </div>
 
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            <div class="flex gap-1 w-full justify-center items-end h-[316px] pb-[1px]">
-                                <div class="w-full max-w-[32px] bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 41%;">
+                            <div class="flex gap-1 w-full justify-center items-end h-79 pb-px">
+                                <div class="w-full max-w-8 bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 41%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱75,000</div>
                                 </div>
-                                <div class="w-full max-w-[32px] bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 51%;">
+                                <div class="w-full max-w-8 bg-[#10b981] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 51%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱93,000</div>
                                 </div>
                             </div>
@@ -328,8 +328,8 @@
                         </div>
 
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            <div class="flex gap-1 w-full justify-center items-end h-[316px] pb-[1px]">
-                                <div class="w-full max-w-[32px] bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 70%;">
+                            <div class="flex gap-1 w-full justify-center items-end h-79 pb-px">
+                                <div class="w-full max-w-8 bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 70%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱126,000</div>
                                 </div>
                             </div>
@@ -337,8 +337,8 @@
                         </div>
 
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            <div class="flex gap-1 w-full justify-center items-end h-[316px] pb-[1px]">
-                                <div class="w-full max-w-[32px] bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 28%;">
+                            <div class="flex gap-1 w-full justify-center items-end h-79 pb-px">
+                                <div class="w-full max-w-8 bg-[#94a3b8] rounded-t hover:opacity-80 transition-opacity relative group/bar" style="height: 28%;">
                                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/bar:opacity-100 pointer-events-none transition-opacity z-20 whitespace-nowrap">₱52,000</div>
                                 </div>
                             </div>
