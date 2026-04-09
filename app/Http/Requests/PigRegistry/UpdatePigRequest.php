@@ -29,8 +29,7 @@ class UpdatePigRequest extends FormRequest
                 'min:1',
                 Rule::unique('pigs', 'pig_no')
                     ->ignore($pig?->id)
-                    ->where(fn ($query) => $query->where('batch_id', $batchId))
-                    ->withoutTrashed(),
+                    ->where(fn ($query) => $query->where('batch_id', $batchId)),
             ],
             'ear_mark_type' => ['nullable', 'string', 'max:50'],
             'ear_mark_value' => ['nullable', 'string', 'max:80'],

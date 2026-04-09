@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class Pig extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     public const STATUSES = [
         'Active',
@@ -22,6 +22,13 @@ class Pig extends Model
     public const SEX_OPTIONS = [
         'Male',
         'Female',
+    ];
+
+    public const OUT_OF_COUNT_STATUSES = [
+        'Isolated',
+        'Sold',
+        'Deceased',
+        'Deleted',
     ];
 
     /**
@@ -46,7 +53,6 @@ class Pig extends Model
         return [
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
-            'deleted_at' => 'datetime',
         ];
     }
 
@@ -58,5 +64,33 @@ class Pig extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public static function statusCountsTowardBatch(?string $status): bool
+    {
+        if ($status === null || $status === '') {
+            return true;
+        }
+
+        return ! in_array($status, self::OUT_OF_COUNT_STATUSES, true);
+    }
+
+    public static function autoDecreaseReasonForStatus(string $status): string
+    {
+        return match ($status) {
+            'Deceased' => 'mortality',
+            'Sold' => 'sale deduction',
+            'Isolated' => 'isolated pig',
+            default => 'data correction',
+        };
+    }
+
+    public static function autoIncreaseReasonForStatus(?string $previousStatus): string
+    {
+        return match ($previousStatus) {
+            'Sold', 'Isolated' => 'transfer',
+            'Deceased' => 'data correction',
+            default => 'recount',
+        };
     }
 }

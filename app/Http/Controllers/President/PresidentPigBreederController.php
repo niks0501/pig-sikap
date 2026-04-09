@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PigRegistry\StorePigBreederRequest;
 use App\Models\PigBreeder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +15,7 @@ class PresidentPigBreederController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
 
@@ -29,6 +30,18 @@ class PresidentPigBreederController extends Controller
             ->latest('created_at')
             ->paginate(10)
             ->withQueryString();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $breeders->items(),
+                'meta' => [
+                    'current_page' => $breeders->currentPage(),
+                    'last_page' => $breeders->lastPage(),
+                    'per_page' => $breeders->perPage(),
+                    'total' => $breeders->total(),
+                ],
+            ]);
+        }
 
         return view('breeders.create', [
             'breeders' => $breeders,

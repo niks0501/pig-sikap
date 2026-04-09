@@ -52,11 +52,13 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
             Route::get('/{batch}', [PresidentPigInventoryController::class, 'show'])->name('show');
             Route::get('/{batch}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
             Route::put('/{batch}', [PresidentPigInventoryController::class, 'update'])->name('update');
+            Route::delete('/{batch}', [PresidentPigInventoryController::class, 'destroy'])->name('destroy');
             Route::patch('/{batch}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
 
             Route::get('/{batch}/pigs', [PresidentPigProfileController::class, 'index'])->name('pigs.index');
             Route::post('/{batch}/pigs', [PresidentPigProfileController::class, 'store'])->name('pigs.store');
             Route::put('/{batch}/pigs/{pig}', [PresidentPigProfileController::class, 'update'])->name('pigs.update');
+            Route::delete('/{batch}/pigs/{pig}', [PresidentPigProfileController::class, 'destroy'])->name('pigs.destroy');
 
             Route::post('/{batch}/adjustments', [PresidentPigBatchAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{batch}/status', [PresidentPigBatchStatusController::class, 'store'])->name('status.store');

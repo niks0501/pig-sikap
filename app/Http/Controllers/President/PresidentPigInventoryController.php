@@ -13,16 +13,19 @@ use App\Models\PigBatchStatusHistory;
 use App\Models\PigBreeder;
 use App\Models\User;
 use App\Services\PigRegistry\CreatePigBatchService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PresidentPigInventoryController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
         $stage = trim((string) $request->query('stage', ''));
@@ -78,6 +81,18 @@ class PresidentPigInventoryController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        $summary = $this->summary();
+        $recentUpdates = $this->recentUpdates();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $batches->items(),
+                'meta' => $this->paginationMeta($batches),
+                'summary' => $summary,
+                'recent_updates' => $recentUpdates->values(),
+            ]);
+        }
+
         return view('batches.index', [
             'batches' => $batches,
             'filters' => [
@@ -88,8 +103,8 @@ class PresidentPigInventoryController extends Controller
                 'caretaker' => $caretakerId,
                 'scope' => $scope,
             ],
-            'summary' => $this->summary(),
-            'recentUpdates' => $this->recentUpdates(),
+            'summary' => $summary,
+            'recentUpdates' => $recentUpdates,
             'stages' => PigBatch::STAGES,
             'statuses' => PigBatch::STATUSES,
             'breeders' => PigBreeder::query()->orderBy('name_or_tag')->get(['id', 'breeder_code', 'name_or_tag']),
@@ -242,7 +257,32 @@ class PresidentPigInventoryController extends Controller
             ->with('status', 'Batch moved to archived records.');
     }
 
-    public function archived(Request $request): View
+    public function destroy(Request $request, PigBatch $batch): RedirectResponse
+    {
+        if (! $batch->isArchived()) {
+            return back()->withErrors([
+                'batch' => 'Only archived batches can be deleted.',
+            ]);
+        }
+
+        $batchCode = $batch->batch_code;
+
+        DB::transaction(function () use ($batch): void {
+            $batch->forceDelete();
+        });
+
+        $this->recordAudit(
+            $request,
+            'batch_deleted',
+            "Deleted archived batch {$batchCode}."
+        );
+
+        return redirect()
+            ->route('batches.archived')
+            ->with('status', "Archived batch {$batchCode} deleted successfully.");
+    }
+
+    public function archived(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
 
@@ -260,10 +300,32 @@ class PresidentPigInventoryController extends Controller
             });
         }
 
+        $batches = $query->latest('updated_at')->paginate(12)->withQueryString();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $batches->items(),
+                'meta' => $this->paginationMeta($batches),
+            ]);
+        }
+
         return view('batches.archived', [
-            'batches' => $query->latest('updated_at')->paginate(12)->withQueryString(),
+            'batches' => $batches,
             'search' => $search,
         ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function paginationMeta(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+        ];
     }
 
     /**

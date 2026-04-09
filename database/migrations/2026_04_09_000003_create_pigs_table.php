@@ -21,7 +21,6 @@ return new class extends Migration
             $table->string('status')->default('Active');
             $table->text('remarks')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->softDeletes();
             $table->timestamps();
 
             $table->unique(['batch_id', 'pig_no']);

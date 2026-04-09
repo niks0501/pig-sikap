@@ -13,7 +13,7 @@ class GeneratePigProfilesService
             return;
         }
 
-        $lastPigNo = (int) $batch->pigs()->withTrashed()->max('pig_no');
+        $lastPigNo = (int) $batch->pigs()->max('pig_no');
 
         for ($offset = 1; $offset <= $count; $offset++) {
             Pig::create([
