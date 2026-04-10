@@ -1,13 +1,13 @@
 <x-app-layout>
     @php
         $vueProps = [
-            'batch' => $batch,
+            'cycle' => $cycle,
             'pigStatuses' => $pigStatuses,
             'sexOptions' => $sexOptions,
             'routes' => [
-                'show' => route('batches.show', $batch),
-                'store' => route('batches.pigs.store', $batch),
-                'pigsBase' => route('batches.pigs.index', $batch),
+                'show' => route('cycles.show', $cycle),
+                'store' => route('cycles.profiles.store', $cycle),
+                'profilesBase' => route('cycles.profiles.index', $cycle),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

@@ -1,12 +1,12 @@
 <x-app-layout>
     @php
         $initialData = [
-            'data' => $batches->items(),
+            'data' => $cycles->items(),
             'meta' => [
-                'current_page' => $batches->currentPage(),
-                'last_page' => $batches->lastPage(),
-                'per_page' => $batches->perPage(),
-                'total' => $batches->total(),
+                'current_page' => $cycles->currentPage(),
+                'last_page' => $cycles->lastPage(),
+                'per_page' => $cycles->perPage(),
+                'total' => $cycles->total(),
             ],
         ];
 
@@ -14,10 +14,10 @@
             'initialData' => $initialData,
             'search' => $search,
             'routes' => [
-                'index' => route('batches.index'),
-                'archived' => route('batches.archived'),
-                'showBase' => url('/batches'),
-                'destroyBase' => url('/batches'),
+                'index' => route('cycles.index'),
+                'archived' => route('cycles.archived'),
+                'showBase' => url('/cycles'),
+                'destroyBase' => url('/cycles'),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

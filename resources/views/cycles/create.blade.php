@@ -1,14 +1,13 @@
 <x-app-layout>
     @php
         $vueProps = [
-            'batchCode' => $batchCode,
+            'cycleCode' => $cycleCode,
             'stages' => $stages,
             'statuses' => $statuses,
-            'breeders' => $breeders,
             'caretakers' => $caretakers,
             'routes' => [
-                'index' => route('batches.index'),
-                'store' => route('batches.store'),
+                'index' => route('cycles.index'),
+                'store' => route('cycles.store'),
             ],
             'csrfToken' => csrf_token(),
             'oldInput' => old(),

@@ -1,7 +1,7 @@
 <x-app-layout>
     @php
         $vueProps = [
-            'batch' => $batch,
+            'cycle' => $cycle,
             'adjustmentTypes' => $adjustmentTypes,
             'adjustmentReasons' => $adjustmentReasons,
             'stages' => $stages,
@@ -9,14 +9,12 @@
             'pigStatuses' => $pigStatuses,
             'sexOptions' => $sexOptions,
             'routes' => [
-                'index' => route('batches.index'),
-                'edit' => route('batches.edit', $batch),
-                'archive' => route('batches.archive', $batch),
-                'pigsIndex' => route('batches.pigs.index', $batch),
-                'pigsStore' => route('batches.pigs.store', $batch),
-                'pigsBase' => route('batches.pigs.index', $batch),
-                'adjustmentsStore' => route('batches.adjustments.store', $batch),
-                'statusStore' => route('batches.status.store', $batch),
+                'index' => route('cycles.index'),
+                'edit' => route('cycles.edit', $cycle),
+                'archive' => route('cycles.archive', $cycle),
+                'profilesIndex' => route('cycles.profiles.index', $cycle),
+                'adjustmentsStore' => route('cycles.adjustments.store', $cycle),
+                'statusStore' => route('cycles.status.store', $cycle),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

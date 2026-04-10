@@ -2,61 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-class PigBatchAdjustment extends Model
+class PigBatchAdjustment extends PigCycleAdjustment
 {
-    use HasFactory;
-
-    public const ADJUSTMENT_TYPES = [
-        'increase',
-        'decrease',
-        'correction',
-    ];
-
-    public const REASONS = [
-        'mortality',
-        'sale deduction',
-        'recount',
-        'isolated pig',
-        'transfer',
-        'data correction',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'batch_id',
-        'adjustment_type',
-        'quantity_before',
-        'quantity_change',
-        'quantity_after',
-        'reason',
-        'remarks',
-        'created_by',
-    ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-        ];
-    }
-
-    public function batch(): BelongsTo
-    {
-        return $this->belongsTo(PigBatch::class, 'batch_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
 }

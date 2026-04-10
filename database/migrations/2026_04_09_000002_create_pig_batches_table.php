@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pig_batches', function (Blueprint $table): void {
+        Schema::create('pig_cycles', function (Blueprint $table): void {
             $table->id();
             $table->string('batch_code')->unique();
-            $table->foreignId('breeder_id')->nullable()->constrained('pig_breeders')->nullOnDelete();
             $table->foreignId('caretaker_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedSmallInteger('cycle_number')->nullable();
-            $table->date('birth_date');
+            $table->date('date_of_purchase');
             $table->unsignedInteger('initial_count');
             $table->unsignedInteger('current_count');
             $table->decimal('average_weight', 8, 2)->nullable();
@@ -30,7 +29,7 @@ return new class extends Migration
             $table->softDeletes();
             $table->timestamps();
 
-            $table->index('birth_date');
+            $table->index('date_of_purchase');
             $table->index('stage');
             $table->index('status');
             $table->index(['stage', 'status']);
@@ -42,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pig_batches');
+        Schema::dropIfExists('pig_cycles');
     }
 };

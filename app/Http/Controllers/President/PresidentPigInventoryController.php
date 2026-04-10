@@ -4,15 +4,14 @@ namespace App\Http\Controllers\President;
 
 use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PigRegistry\StorePigBatchRequest;
-use App\Http\Requests\PigRegistry\UpdatePigBatchRequest;
+use App\Http\Requests\PigRegistry\StorePigCycleRequest;
+use App\Http\Requests\PigRegistry\UpdatePigCycleRequest;
 use App\Models\Pig;
-use App\Models\PigBatch;
-use App\Models\PigBatchAdjustment;
-use App\Models\PigBatchStatusHistory;
-use App\Models\PigBreeder;
+use App\Models\PigCycle;
+use App\Models\PigCycleAdjustment;
+use App\Models\PigCycleStatusHistory;
 use App\Models\User;
-use App\Services\PigRegistry\CreatePigBatchService;
+use App\Services\PigRegistry\CreatePigCycleService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,22 +29,16 @@ class PresidentPigInventoryController extends Controller
         $search = trim((string) $request->query('search', ''));
         $stage = trim((string) $request->query('stage', ''));
         $status = trim((string) $request->query('status', ''));
-        $breederId = trim((string) $request->query('breeder', ''));
         $caretakerId = trim((string) $request->query('caretaker', ''));
         $scope = trim((string) $request->query('scope', 'all'));
 
-        $query = PigBatch::query()->with([
-            'breeder:id,breeder_code,name_or_tag',
+        $query = PigCycle::query()->with([
             'caretaker:id,name',
         ]);
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
                 $builder->where('batch_code', 'like', "%{$search}%")
-                    ->orWhereHas('breeder', function ($breederQuery) use ($search): void {
-                        $breederQuery->where('breeder_code', 'like', "%{$search}%")
-                            ->orWhere('name_or_tag', 'like', "%{$search}%");
-                    })
                     ->orWhereHas('caretaker', function ($caretakerQuery) use ($search): void {
                         $caretakerQuery->where('name', 'like', "%{$search}%");
                     });
@@ -60,10 +53,6 @@ class PresidentPigInventoryController extends Controller
             $query->where('status', $status);
         }
 
-        if ($breederId !== '') {
-            $query->where('breeder_id', $breederId);
-        }
-
         if ($caretakerId !== '') {
             $query->where('caretaker_user_id', $caretakerId);
         }
@@ -76,7 +65,7 @@ class PresidentPigInventoryController extends Controller
             $query->archivedRecords();
         }
 
-        $batches = $query
+        $cycles = $query
             ->orderByDesc('updated_at')
             ->paginate(12)
             ->withQueryString();
@@ -86,231 +75,225 @@ class PresidentPigInventoryController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'data' => $batches->items(),
-                'meta' => $this->paginationMeta($batches),
+                'data' => $cycles->items(),
+                'meta' => $this->paginationMeta($cycles),
                 'summary' => $summary,
                 'recent_updates' => $recentUpdates->values(),
             ]);
         }
 
-        return view('batches.index', [
-            'batches' => $batches,
+        return view('cycles.index', [
+            'cycles' => $cycles,
             'filters' => [
                 'search' => $search,
                 'stage' => $stage,
                 'status' => $status,
-                'breeder' => $breederId,
                 'caretaker' => $caretakerId,
                 'scope' => $scope,
             ],
             'summary' => $summary,
             'recentUpdates' => $recentUpdates,
-            'stages' => PigBatch::STAGES,
-            'statuses' => PigBatch::STATUSES,
-            'breeders' => PigBreeder::query()->orderBy('name_or_tag')->get(['id', 'breeder_code', 'name_or_tag']),
+            'stages' => PigCycle::STAGES,
+            'statuses' => PigCycle::STATUSES,
             'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function create(): View
     {
-        return view('batches.create', [
-            'batchCode' => $this->nextBatchCode(),
-            'stages' => PigBatch::STAGES,
-            'statuses' => PigBatch::STATUSES,
-            'breeders' => PigBreeder::query()->orderBy('name_or_tag')->get(['id', 'breeder_code', 'name_or_tag']),
+        return view('cycles.create', [
+            'cycleCode' => $this->nextCycleCode(),
+            'stages' => PigCycle::STAGES,
+            'statuses' => PigCycle::STATUSES,
             'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function store(StorePigBatchRequest $request, CreatePigBatchService $createPigBatchService): RedirectResponse
+    public function store(StorePigCycleRequest $request, CreatePigCycleService $createPigCycleService): RedirectResponse
     {
-        $batch = $createPigBatchService->handle($request->validated(), $request->user());
+        $cycle = $createPigCycleService->handle($request->validated(), $request->user());
 
         $this->recordAudit(
             $request,
-            'batch_created',
-            "Created batch {$batch->batch_code} with {$batch->current_count} pigs."
+            'cycle_created',
+            "Created cycle {$cycle->batch_code} with {$cycle->current_count} pigs."
         );
 
         return redirect()
-            ->route('batches.show', $batch)
-            ->with('status', 'Batch was created successfully.');
+            ->route('cycles.show', $cycle)
+            ->with('status', 'Cycle was created successfully.');
     }
 
-    public function show(PigBatch $batch): View
+    public function show(PigCycle $cycle): View
     {
-        $batch->load([
-            'breeder:id,breeder_code,name_or_tag',
+        $cycle->load([
             'caretaker:id,name',
             'pigs' => fn ($query) => $query->orderBy('pig_no'),
             'adjustments.createdBy:id,name',
             'statusHistories.changedBy:id,name',
         ]);
 
-        return view('batches.show', [
-            'batch' => $batch,
-            'adjustmentTypes' => PigBatchAdjustment::ADJUSTMENT_TYPES,
-            'adjustmentReasons' => PigBatchAdjustment::REASONS,
-            'stages' => PigBatch::STAGES,
-            'statuses' => PigBatch::STATUSES,
+        return view('cycles.show', [
+            'cycle' => $cycle,
+            'adjustmentTypes' => PigCycleAdjustment::ADJUSTMENT_TYPES,
+            'adjustmentReasons' => PigCycleAdjustment::REASONS,
+            'stages' => PigCycle::STAGES,
+            'statuses' => PigCycle::STATUSES,
             'pigStatuses' => Pig::STATUSES,
             'sexOptions' => Pig::SEX_OPTIONS,
         ]);
     }
 
-    public function edit(PigBatch $batch): View|RedirectResponse
+    public function edit(PigCycle $cycle): View|RedirectResponse
     {
-        if ($batch->isArchived()) {
+        if ($cycle->isArchived()) {
             return redirect()
-                ->route('batches.show', $batch)
+                ->route('cycles.show', $cycle)
                 ->withErrors([
-                    'batch' => 'Archived batches can no longer be edited in the regular form.',
+                    'cycle' => 'Archived cycles can no longer be edited in the regular form.',
                 ]);
         }
 
-        return view('batches.edit', [
-            'batch' => $batch,
-            'stages' => PigBatch::STAGES,
-            'statuses' => PigBatch::STATUSES,
-            'breeders' => PigBreeder::query()->orderBy('name_or_tag')->get(['id', 'breeder_code', 'name_or_tag']),
+        return view('cycles.edit', [
+            'cycle' => $cycle,
+            'stages' => PigCycle::STAGES,
+            'statuses' => PigCycle::STATUSES,
             'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function update(UpdatePigBatchRequest $request, PigBatch $batch): RedirectResponse
+    public function update(UpdatePigCycleRequest $request, PigCycle $cycle): RedirectResponse
     {
-        if ($batch->isArchived()) {
+        if ($cycle->isArchived()) {
             return back()->withErrors([
-                'batch' => 'Archived batches cannot be edited without reopening.',
+                'cycle' => 'Archived cycles cannot be edited without reopening.',
             ]);
         }
 
-        $oldStage = $batch->stage;
-        $oldStatus = $batch->status;
+        $oldStage = $cycle->stage;
+        $oldStatus = $cycle->status;
 
-        $batch->update([
+        $cycle->update([
             ...$request->validated(),
             'last_reviewed_at' => now(),
         ]);
 
-        if ($oldStage !== $batch->stage || $oldStatus !== $batch->status) {
-            PigBatchStatusHistory::create([
-                'batch_id' => $batch->id,
+        if ($oldStage !== $cycle->stage || $oldStatus !== $cycle->status) {
+            PigCycleStatusHistory::create([
+                'batch_id' => $cycle->id,
                 'old_stage' => $oldStage,
-                'new_stage' => $batch->stage,
+                'new_stage' => $cycle->stage,
                 'old_status' => $oldStatus,
-                'new_status' => $batch->status,
-                'remarks' => 'Updated from edit batch form.',
+                'new_status' => $cycle->status,
+                'remarks' => 'Updated from edit cycle form.',
                 'changed_by' => $request->user()->id,
             ]);
 
             $this->recordAudit(
                 $request,
-                'batch_status_updated',
-                "Updated stage/status for batch {$batch->batch_code} to {$batch->stage} / {$batch->status}."
+                'cycle_status_updated',
+                "Updated stage/status for cycle {$cycle->batch_code} to {$cycle->stage} / {$cycle->status}."
             );
         } else {
             $this->recordAudit(
                 $request,
-                'batch_updated',
-                "Updated batch {$batch->batch_code} profile details."
+                'cycle_updated',
+                "Updated cycle {$cycle->batch_code} profile details."
             );
         }
 
         return redirect()
-            ->route('batches.show', $batch)
-            ->with('status', 'Batch details were updated.');
+            ->route('cycles.show', $cycle)
+            ->with('status', 'Cycle details were updated.');
     }
 
-    public function archive(Request $request, PigBatch $batch): RedirectResponse
+    public function archive(Request $request, PigCycle $cycle): RedirectResponse
     {
-        if (! $batch->isArchived()) {
-            $oldStage = $batch->stage;
-            $oldStatus = $batch->status;
+        if (! $cycle->isArchived()) {
+            $oldStage = $cycle->stage;
+            $oldStatus = $cycle->status;
 
-            $batch->update([
+            $cycle->update([
                 'stage' => 'Completed',
                 'status' => 'Closed',
                 'last_reviewed_at' => now(),
             ]);
 
-            PigBatchStatusHistory::create([
-                'batch_id' => $batch->id,
+            PigCycleStatusHistory::create([
+                'batch_id' => $cycle->id,
                 'old_stage' => $oldStage,
                 'new_stage' => 'Completed',
                 'old_status' => $oldStatus,
                 'new_status' => 'Closed',
-                'remarks' => (string) $request->input('remarks', 'Batch archived from Pig Registry.'),
+                'remarks' => (string) $request->input('remarks', 'Cycle archived from Cycles module.'),
                 'changed_by' => $request->user()->id,
             ]);
 
             $this->recordAudit(
                 $request,
-                'batch_archived',
-                "Archived batch {$batch->batch_code}."
+                'cycle_archived',
+                "Archived cycle {$cycle->batch_code}."
             );
         }
 
         return redirect()
-            ->route('batches.archived')
-            ->with('status', 'Batch moved to archived records.');
+            ->route('cycles.archived')
+            ->with('status', 'Cycle moved to archived records.');
     }
 
-    public function destroy(Request $request, PigBatch $batch): RedirectResponse
+    public function destroy(Request $request, PigCycle $cycle): RedirectResponse
     {
-        if (! $batch->isArchived()) {
+        if (! $cycle->isArchived()) {
             return back()->withErrors([
-                'batch' => 'Only archived batches can be deleted.',
+                'cycle' => 'Only archived cycles can be deleted.',
             ]);
         }
 
-        $batchCode = $batch->batch_code;
+        $cycleCode = $cycle->batch_code;
 
-        DB::transaction(function () use ($batch): void {
-            $batch->forceDelete();
+        DB::transaction(function () use ($cycle): void {
+            $cycle->forceDelete();
         });
 
         $this->recordAudit(
             $request,
-            'batch_deleted',
-            "Deleted archived batch {$batchCode}."
+            'cycle_deleted',
+            "Deleted archived cycle {$cycleCode}."
         );
 
         return redirect()
-            ->route('batches.archived')
-            ->with('status', "Archived batch {$batchCode} deleted successfully.");
+            ->route('cycles.archived')
+            ->with('status', "Archived cycle {$cycleCode} deleted successfully.");
     }
 
     public function archived(Request $request): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
 
-        $query = PigBatch::query()
-            ->with(['breeder:id,breeder_code,name_or_tag', 'caretaker:id,name'])
+        $query = PigCycle::query()
+            ->with(['caretaker:id,name'])
             ->archivedRecords();
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
                 $builder->where('batch_code', 'like', "%{$search}%")
-                    ->orWhereHas('breeder', function ($breederQuery) use ($search): void {
-                        $breederQuery->where('breeder_code', 'like', "%{$search}%")
-                            ->orWhere('name_or_tag', 'like', "%{$search}%");
+                    ->orWhereHas('caretaker', function ($caretakerQuery) use ($search): void {
+                        $caretakerQuery->where('name', 'like', "%{$search}%");
                     });
             });
         }
 
-        $batches = $query->latest('updated_at')->paginate(12)->withQueryString();
+        $cycles = $query->latest('updated_at')->paginate(12)->withQueryString();
 
         if ($request->expectsJson()) {
             return response()->json([
-                'data' => $batches->items(),
-                'meta' => $this->paginationMeta($batches),
+                'data' => $cycles->items(),
+                'meta' => $this->paginationMeta($cycles),
             ]);
         }
 
-        return view('batches.archived', [
-            'batches' => $batches,
+        return view('cycles.archived', [
+            'cycles' => $cycles,
             'search' => $search,
         ]);
     }
@@ -334,27 +317,26 @@ class PresidentPigInventoryController extends Controller
     private function summary(): array
     {
         return [
-            'active_batches' => PigBatch::query()->activeRecords()->count(),
-            'total_piglets' => (int) PigBatch::query()->where('stage', 'Piglet')->sum('current_count'),
-            'total_breeders' => PigBreeder::query()->count(),
-            'total_fatteners' => (int) PigBatch::query()->where('stage', 'Fattening')->sum('current_count'),
+            'active_cycles' => PigCycle::query()->activeRecords()->count(),
+            'total_piglets' => (int) PigCycle::query()->where('stage', 'Piglet')->sum('current_count'),
+            'total_fatteners' => (int) PigCycle::query()->where('stage', 'Fattening')->sum('current_count'),
             'total_sick' => Pig::query()->where('status', 'Sick')->count(),
             'total_deceased' => Pig::query()->where('status', 'Deceased')->count(),
-            'ready_for_sale_batches' => PigBatch::query()->where('status', 'Ready for Sale')->count(),
+            'ready_for_sale_cycles' => PigCycle::query()->where('status', 'Ready for Sale')->count(),
         ];
     }
 
-    private function nextBatchCode(): string
+    private function nextCycleCode(): string
     {
-        $latestCode = (string) PigBatch::query()->withTrashed()->latest('id')->value('batch_code');
+        $latestCode = (string) PigCycle::query()->withTrashed()->latest('id')->value('batch_code');
 
         if (preg_match('/(\d+)$/', $latestCode, $matches) === 1) {
             $nextNumber = (int) $matches[1] + 1;
 
-            return 'B-'.str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+            return 'C-'.str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
         }
 
-        return 'B-001';
+        return 'C-001';
     }
 
     /**
@@ -362,27 +344,27 @@ class PresidentPigInventoryController extends Controller
      */
     private function recentUpdates(): Collection
     {
-        $statusRows = PigBatchStatusHistory::query()
-            ->with(['batch:id,batch_code', 'changedBy:id,name'])
+        $statusRows = PigCycleStatusHistory::query()
+            ->with(['cycle:id,batch_code', 'changedBy:id,name'])
             ->latest('created_at')
             ->take(5)
             ->get()
-            ->map(fn (PigBatchStatusHistory $history) => [
+            ->map(fn (PigCycleStatusHistory $history) => [
                 'type' => 'status',
-                'batch_code' => $history->batch?->batch_code,
+                'cycle_code' => $history->cycle?->batch_code,
                 'description' => "Stage/status updated to {$history->new_stage} / {$history->new_status}",
                 'actor' => $history->changedBy?->name,
                 'created_at' => $history->created_at,
             ]);
 
-        $adjustmentRows = PigBatchAdjustment::query()
-            ->with(['batch:id,batch_code', 'createdBy:id,name'])
+        $adjustmentRows = PigCycleAdjustment::query()
+            ->with(['cycle:id,batch_code', 'createdBy:id,name'])
             ->latest('created_at')
             ->take(5)
             ->get()
-            ->map(fn (PigBatchAdjustment $adjustment) => [
+            ->map(fn (PigCycleAdjustment $adjustment) => [
                 'type' => 'adjustment',
-                'batch_code' => $adjustment->batch?->batch_code,
+                'cycle_code' => $adjustment->cycle?->batch_code,
                 'description' => "Count adjusted from {$adjustment->quantity_before} to {$adjustment->quantity_after}",
                 'actor' => $adjustment->createdBy?->name,
                 'created_at' => $adjustment->created_at,

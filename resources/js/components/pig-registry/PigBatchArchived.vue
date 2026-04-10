@@ -40,7 +40,7 @@ const rows = ref(props.initialData?.data ?? []);
 const flashStatus = ref(props.statusMessage || '');
 const flashError = ref(props.errorMessage || '');
 const isDeleteModalOpen = ref(false);
-const batchToDelete = ref(null);
+const cycleToDelete = ref(null);
 const deleteCountdown = ref(0);
 const form = reactive({ search: props.search || '' });
 const meta = reactive({
@@ -71,7 +71,7 @@ const fetchRows = async (page = 1) => {
         meta.last_page = response.data?.meta?.last_page ?? 1;
         meta.total = response.data?.meta?.total ?? 0;
     } catch (error) {
-        flashError.value = 'Unable to load archived batches right now.';
+        flashError.value = 'Unable to load archived cycles right now.';
     } finally {
         loading.value = false;
     }
@@ -90,8 +90,8 @@ watch(
     }
 );
 
-const showBatchUrl = (batchCode) => `${props.routes.showBase}/${encodeURIComponent(batchCode)}`;
-const deleteBatchUrl = (batchCode) => `${props.routes.destroyBase}/${encodeURIComponent(batchCode)}`;
+const showCycleUrl = (cycleCode) => `${props.routes.showBase}/${encodeURIComponent(cycleCode)}`;
+const deleteCycleUrl = (cycleCode) => `${props.routes.destroyBase}/${encodeURIComponent(cycleCode)}`;
 
 const startDeleteCountdown = () => {
     deleteCountdown.value = 5;
@@ -113,15 +113,15 @@ const startDeleteCountdown = () => {
     }, 1000);
 };
 
-const openDeleteModal = (batch) => {
-    batchToDelete.value = batch;
+const openDeleteModal = (cycle) => {
+    cycleToDelete.value = cycle;
     isDeleteModalOpen.value = true;
     startDeleteCountdown();
 };
 
 const closeDeleteModal = () => {
     isDeleteModalOpen.value = false;
-    batchToDelete.value = null;
+    cycleToDelete.value = null;
     deleteCountdown.value = 0;
 
     if (deleteCountdownTimer) {
@@ -160,14 +160,14 @@ const formatDate = (value) => {
 </script>
 
 <template>
-    <div class="space-y-4 max-w-[1200px] mx-auto">
-        <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="mx-auto max-w-300 space-y-4">
+        <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Archived Pig Batches</h2>
-                <p class="mt-1 text-sm text-gray-500">Completed and closed inventory records.</p>
+                <h2 class="text-2xl font-bold text-gray-900">Archived Pig Cycles</h2>
+                <p class="mt-1 text-sm text-gray-500">Completed and closed cycle records.</p>
             </div>
             <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                Back to Active Registry
+                Back to Active Cycles
             </a>
         </section>
 
@@ -181,8 +181,8 @@ const formatDate = (value) => {
 
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <label class="block">
-                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search archived batch</span>
-                <input v-model="form.search" type="text" placeholder="Batch code or breeder" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search archived cycle</span>
+                <input v-model="form.search" type="text" placeholder="Cycle code or caretaker" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
             </label>
         </section>
 
@@ -191,8 +191,8 @@ const formatDate = (value) => {
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Batch</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Breeder</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Cycle</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Caretaker</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Final Count</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Stage / Status</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Updated</th>
@@ -203,29 +203,26 @@ const formatDate = (value) => {
                         <tr v-if="loading && rows.length === 0">
                             <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">Loading archived records...</td>
                         </tr>
-                        <tr v-for="batch in rows" :key="batch.batch_code">
-                            <td class="px-3 py-2 font-bold text-gray-900">{{ batch.batch_code }}</td>
+                        <tr v-for="cycle in rows" :key="cycle.batch_code">
+                            <td class="px-3 py-2 font-bold text-gray-900">{{ cycle.batch_code }}</td>
+                            <td class="px-3 py-2 text-gray-700">{{ cycle.caretaker?.name || 'Unassigned' }}</td>
+                            <td class="px-3 py-2 text-gray-700">{{ Number(cycle.current_count || 0).toLocaleString() }} / {{ Number(cycle.initial_count || 0).toLocaleString() }}</td>
                             <td class="px-3 py-2 text-gray-700">
-                                {{ batch.breeder?.breeder_code ?? '-' }}
-                                <span v-if="batch.breeder?.name_or_tag">- {{ batch.breeder.name_or_tag }}</span>
+                                <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">{{ cycle.stage }}</span>
+                                <span class="ml-1 rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-800">{{ cycle.status }}</span>
                             </td>
-                            <td class="px-3 py-2 text-gray-700">{{ Number(batch.current_count || 0).toLocaleString() }} / {{ Number(batch.initial_count || 0).toLocaleString() }}</td>
-                            <td class="px-3 py-2 text-gray-700">
-                                <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">{{ batch.stage }}</span>
-                                <span class="ml-1 rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-800">{{ batch.status }}</span>
-                            </td>
-                            <td class="px-3 py-2 text-gray-700">{{ formatDate(batch.updated_at) }}</td>
+                            <td class="px-3 py-2 text-gray-700">{{ formatDate(cycle.updated_at) }}</td>
                             <td class="px-3 py-2 text-right">
-                                <a :href="showBatchUrl(batch.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50">
+                                <a :href="showCycleUrl(cycle.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50">
                                     View
                                 </a>
-                                <button type="button" class="ml-2 inline-flex items-center justify-center rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" @click="openDeleteModal(batch)">
+                                <button type="button" class="ml-2 inline-flex items-center justify-center rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100" @click="openDeleteModal(cycle)">
                                     Delete
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="!loading && rows.length === 0">
-                            <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">No archived batches found.</td>
+                            <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">No archived cycles found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -273,12 +270,12 @@ const formatDate = (value) => {
                         >
                             <DialogPanel class="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
                                 <DialogTitle class="text-lg font-bold text-gray-900">
-                                    Delete Archived Batch
+                                    Delete Archived Cycle
                                 </DialogTitle>
 
                                 <p class="mt-2 text-sm text-gray-600">
-                                    You are about to permanently delete archived batch
-                                    <span class="font-semibold text-gray-900">{{ batchToDelete?.batch_code }}</span>.
+                                    You are about to permanently delete archived cycle
+                                    <span class="font-semibold text-gray-900">{{ cycleToDelete?.batch_code }}</span>.
                                     This cannot be undone.
                                 </p>
 
@@ -287,8 +284,8 @@ const formatDate = (value) => {
                                 </p>
 
                                 <form
-                                    v-if="batchToDelete"
-                                    :action="deleteBatchUrl(batchToDelete.batch_code)"
+                                    v-if="cycleToDelete"
+                                    :action="deleteCycleUrl(cycleToDelete.batch_code)"
                                     method="POST"
                                     class="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end"
                                 >

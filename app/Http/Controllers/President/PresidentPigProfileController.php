@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PigRegistry\StorePigRequest;
 use App\Http\Requests\PigRegistry\UpdatePigRequest;
 use App\Models\Pig;
-use App\Models\PigBatch;
-use App\Models\PigBatchAdjustment;
+use App\Models\PigCycle;
+use App\Models\PigCycleAdjustment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,41 +19,41 @@ class PresidentPigProfileController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(PigBatch $batch): View
+    public function index(PigCycle $cycle): View
     {
-        $batch->load(['breeder:id,breeder_code,name_or_tag', 'pigs' => fn ($query) => $query->orderBy('pig_no')]);
+        $cycle->load(['caretaker:id,name', 'pigs' => fn ($query) => $query->orderBy('pig_no')]);
 
-        return view('batches.pigs', [
-            'batch' => $batch,
+        return view('cycles.pigs', [
+            'cycle' => $cycle,
             'pigStatuses' => Pig::STATUSES,
             'sexOptions' => Pig::SEX_OPTIONS,
         ]);
     }
 
-    public function store(StorePigRequest $request, PigBatch $batch): RedirectResponse
+    public function store(StorePigRequest $request, PigCycle $cycle): RedirectResponse
     {
-        if ($batch->isArchived()) {
+        if ($cycle->isArchived()) {
             return back()->withErrors([
-                'batch' => 'Archived batches cannot accept new pig profiles.',
+                'cycle' => 'Archived cycles cannot accept new pig profiles.',
             ]);
         }
 
-        /** @var array{pig: Pig, adjustment: PigBatchAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $batch): array {
-            $pig = $batch->pigs()->create([
+        /** @var array{pig: Pig, adjustment: PigCycleAdjustment|null} $result */
+        $result = DB::transaction(function () use ($request, $cycle): array {
+            $pig = $cycle->pigs()->create([
                 ...$request->validated(),
                 'created_by' => $request->user()->id,
             ]);
 
-            if (! $batch->has_pig_profiles) {
-                $batch->update([
+            if (! $cycle->has_pig_profiles) {
+                $cycle->update([
                     'has_pig_profiles' => true,
                     'last_reviewed_at' => now(),
                 ]);
             }
 
-            $adjustment = $this->syncBatchCountForPigStatusTransition(
-                $batch,
+            $adjustment = $this->syncCycleCountForPigStatusTransition(
+                $cycle,
                 null,
                 (string) $pig->status,
                 (int) $request->user()->id,
@@ -72,42 +72,42 @@ class PresidentPigProfileController extends Controller
         if ($adjustment !== null) {
             $this->recordAudit(
                 $request,
-                'batch_count_adjusted',
-                "Auto-adjusted {$batch->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pig->pig_no} status Counted -> {$pig->status}."
+                'cycle_count_adjusted',
+                "Auto-adjusted {$cycle->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pig->pig_no} status Counted -> {$pig->status}."
             );
         }
 
         $this->recordAudit(
             $request,
             'pig_profile_created',
-            "Created pig profile #{$pig->pig_no} in batch {$batch->batch_code}."
+            "Created pig profile #{$pig->pig_no} in cycle {$cycle->batch_code}."
         );
 
         return redirect()
-            ->route('batches.show', $batch)
+            ->route('cycles.show', $cycle)
             ->with('status', 'Pig profile added successfully.');
     }
 
-    public function update(UpdatePigRequest $request, PigBatch $batch, Pig $pig): RedirectResponse
+    public function update(UpdatePigRequest $request, PigCycle $cycle, Pig $pig): RedirectResponse
     {
-        if ($pig->batch_id !== $batch->id) {
+        if ($pig->batch_id !== $cycle->id) {
             abort(404);
         }
 
-        if ($batch->isArchived()) {
+        if ($cycle->isArchived()) {
             return back()->withErrors([
-                'batch' => 'Archived batches cannot modify pig profiles.',
+                'cycle' => 'Archived cycles cannot modify pig profiles.',
             ]);
         }
 
         $previousStatus = (string) $pig->status;
 
-        /** @var array{pig: Pig, adjustment: PigBatchAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $batch, $pig, $previousStatus): array {
+        /** @var array{pig: Pig, adjustment: PigCycleAdjustment|null} $result */
+        $result = DB::transaction(function () use ($request, $cycle, $pig, $previousStatus): array {
             $pig->update($request->validated());
 
-            $adjustment = $this->syncBatchCountForPigStatusTransition(
-                $batch,
+            $adjustment = $this->syncCycleCountForPigStatusTransition(
+                $cycle,
                 $previousStatus,
                 (string) $pig->status,
                 (int) $request->user()->id,
@@ -126,44 +126,44 @@ class PresidentPigProfileController extends Controller
         if ($adjustment !== null) {
             $this->recordAudit(
                 $request,
-                'batch_count_adjusted',
-                "Auto-adjusted {$batch->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pig->pig_no} status {$previousStatus} -> {$pig->status}."
+                'cycle_count_adjusted',
+                "Auto-adjusted {$cycle->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pig->pig_no} status {$previousStatus} -> {$pig->status}."
             );
         }
 
         $this->recordAudit(
             $request,
             'pig_profile_updated',
-            "Updated pig profile #{$pig->pig_no} in batch {$batch->batch_code}."
+            "Updated pig profile #{$pig->pig_no} in cycle {$cycle->batch_code}."
         );
 
         return redirect()
-            ->route('batches.show', $batch)
+            ->route('cycles.show', $cycle)
             ->with('status', 'Pig profile updated successfully.');
     }
 
-    public function destroy(Request $request, PigBatch $batch, Pig $pig): RedirectResponse
+    public function destroy(Request $request, PigCycle $cycle, Pig $pig): RedirectResponse
     {
-        if ($pig->batch_id !== $batch->id) {
+        if ($pig->batch_id !== $cycle->id) {
             abort(404);
         }
 
-        if ($batch->isArchived()) {
+        if ($cycle->isArchived()) {
             return back()->withErrors([
-                'batch' => 'Archived batches cannot modify pig profiles.',
+                'cycle' => 'Archived cycles cannot modify pig profiles.',
             ]);
         }
 
         $pigNo = (int) $pig->pig_no;
         $statusBeforeDelete = (string) $pig->status;
 
-        /** @var array{adjustment: PigBatchAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $batch, $pig): array {
+        /** @var array{adjustment: PigCycleAdjustment|null} $result */
+        $result = DB::transaction(function () use ($request, $cycle, $pig): array {
             $adjustment = null;
 
             if (Pig::statusCountsTowardBatch((string) $pig->status)) {
-                $adjustment = $this->syncBatchCountForPigStatusTransition(
-                    $batch,
+                $adjustment = $this->syncCycleCountForPigStatusTransition(
+                    $cycle,
                     (string) $pig->status,
                     'Deleted',
                     (int) $request->user()->id,
@@ -183,29 +183,29 @@ class PresidentPigProfileController extends Controller
 
             $this->recordAudit(
                 $request,
-                'batch_count_adjusted',
-                "Auto-adjusted {$batch->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pigNo} deletion."
+                'cycle_count_adjusted',
+                "Auto-adjusted {$cycle->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} via pig #{$pigNo} deletion."
             );
         }
 
         $this->recordAudit(
             $request,
             'pig_profile_deleted',
-            "Deleted pig profile #{$pigNo} ({$statusBeforeDelete}) in batch {$batch->batch_code}."
+            "Deleted pig profile #{$pigNo} ({$statusBeforeDelete}) in cycle {$cycle->batch_code}."
         );
 
         return redirect()
-            ->route('batches.pigs.index', $batch)
+            ->route('cycles.profiles.index', $cycle)
             ->with('status', 'Pig profile deleted successfully.');
     }
 
-    private function syncBatchCountForPigStatusTransition(
-        PigBatch $batch,
+    private function syncCycleCountForPigStatusTransition(
+        PigCycle $cycle,
         ?string $previousStatus,
         string $newStatus,
         int $actorId,
         int $pigNo
-    ): ?PigBatchAdjustment {
+    ): ?PigCycleAdjustment {
         $wasCounted = Pig::statusCountsTowardBatch($previousStatus);
         $isCounted = Pig::statusCountsTowardBatch($newStatus);
 
@@ -215,27 +215,27 @@ class PresidentPigProfileController extends Controller
 
         $delta = $isCounted ? 1 : -1;
 
-        $lockedBatch = PigBatch::query()
-            ->whereKey($batch->id)
+        $lockedCycle = PigCycle::query()
+            ->whereKey($cycle->id)
             ->lockForUpdate()
             ->firstOrFail();
 
-        $before = (int) $lockedBatch->current_count;
+        $before = (int) $lockedCycle->current_count;
         $after = $before + $delta;
 
         if ($after < 0) {
             throw ValidationException::withMessages([
-                'status' => 'Status change cannot reduce batch count below zero.',
+                'status' => 'Status change cannot reduce cycle count below zero.',
             ]);
         }
 
-        $lockedBatch->update([
+        $lockedCycle->update([
             'current_count' => $after,
             'last_reviewed_at' => now(),
         ]);
 
-        return PigBatchAdjustment::create([
-            'batch_id' => $lockedBatch->id,
+        return PigCycleAdjustment::create([
+            'batch_id' => $lockedCycle->id,
             'adjustment_type' => $delta > 0 ? 'increase' : 'decrease',
             'quantity_before' => $before,
             'quantity_change' => $delta,

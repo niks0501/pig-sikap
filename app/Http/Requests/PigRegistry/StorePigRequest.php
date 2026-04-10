@@ -18,8 +18,8 @@ class StorePigRequest extends FormRequest
      */
     public function rules(): array
     {
-        $batch = $this->route('batch');
-        $batchId = $batch?->id;
+        $cycle = $this->route('cycle') ?? $this->route('batch');
+        $cycleId = $cycle?->id;
 
         return [
             'pig_no' => [
@@ -27,7 +27,7 @@ class StorePigRequest extends FormRequest
                 'integer',
                 'min:1',
                 Rule::unique('pigs', 'pig_no')
-                    ->where(fn ($query) => $query->where('batch_id', $batchId)),
+                    ->where(fn ($query) => $query->where('batch_id', $cycleId)),
             ],
             'ear_mark_type' => ['nullable', 'string', 'max:50'],
             'ear_mark_value' => ['nullable', 'string', 'max:80'],

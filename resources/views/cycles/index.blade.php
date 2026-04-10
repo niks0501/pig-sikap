@@ -1,12 +1,12 @@
 <x-app-layout>
     @php
         $initialData = [
-            'data' => $batches->items(),
+            'data' => $cycles->items(),
             'meta' => [
-                'current_page' => $batches->currentPage(),
-                'last_page' => $batches->lastPage(),
-                'per_page' => $batches->perPage(),
-                'total' => $batches->total(),
+                'current_page' => $cycles->currentPage(),
+                'last_page' => $cycles->lastPage(),
+                'per_page' => $cycles->perPage(),
+                'total' => $cycles->total(),
             ],
         ];
 
@@ -17,14 +17,13 @@
             'recentUpdates' => $recentUpdates,
             'stages' => $stages,
             'statuses' => $statuses,
-            'breeders' => $breeders,
             'caretakers' => $caretakers,
             'routes' => [
-                'index' => route('batches.index'),
-                'create' => route('batches.create'),
-                'archived' => route('batches.archived'),
+                'index' => route('cycles.index'),
+                'create' => route('cycles.create'),
+                'archived' => route('cycles.archived'),
                 'breeders' => route('breeders.create'),
-                'showBase' => url('/batches'),
+                'showBase' => url('/cycles'),
             ],
             'statusMessage' => session('status'),
             'errorMessage' => $errors->first(),

@@ -1,12 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('batches.index') }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+            <a href="{{ route('cycles.index') }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
             <div>
                 <div class="flex items-center gap-2">
-                    <h2 class="text-2xl font-bold text-gray-900 leading-tight">Batch {{ $id }} Health History</h2>
+                    <h2 class="text-2xl font-bold text-gray-900 leading-tight">Cycle {{ $id }} Health History</h2>
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">
                         Healthy
                     </span>
@@ -18,14 +18,14 @@
 
     <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto" x-data="{ showCompleteModal: false }">
         
-        <!-- Batch Summary Banner -->
+        <!-- Cycle Summary Banner -->
         <div class="bg-[#0c6d57] rounded-3xl p-6 mb-8 text-white shadow-md relative overflow-hidden">
             <div class="absolute right-0 top-0 opacity-10 pointer-events-none">
                 <svg class="w-48 h-48 -mt-8 -mr-8" fill="currentColor" viewBox="0 0 24 24"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
             </div>
             <div class="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
-                    <p class="text-[#86d4c1] text-xs font-bold uppercase tracking-wider mb-1">Birth Date</p>
+                    <p class="text-[#86d4c1] text-xs font-bold uppercase tracking-wider mb-1">Date of Purchase</p>
                     <p class="text-lg font-bold">Mar 15, 2026</p>
                 </div>
                 <div>
@@ -51,7 +51,7 @@
             
             <!-- Future / Pending Record -->
             <div class="relative">
-                <div class="absolute -left-[23px] sm:-left-[35px] top-1 w-5 h-5 rounded-full bg-white border-4 border-amber-400 mt-0.5"></div>
+                <div class="absolute -left-5.75 sm:-left-8.75 top-1 w-5 h-5 rounded-full bg-white border-4 border-amber-400 mt-0.5"></div>
                 <div class="bg-white rounded-3xl p-5 shadow-sm border border-amber-100">
                     <div class="flex justify-between items-start mb-3">
                         <div>
@@ -68,7 +68,7 @@
 
             <!-- Completed Record -->
             <div class="relative">
-                <div class="absolute -left-[23px] sm:-left-[35px] top-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white mt-0.5 flex items-center justify-center">
+                <div class="absolute -left-5.75 sm:-left-8.75 top-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white mt-0.5 flex items-center justify-center">
                     <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                 </div>
                 <div class="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 opacity-80">
@@ -88,7 +88,7 @@
 
             <!-- Completed Record 2 -->
             <div class="relative">
-                <div class="absolute -left-[23px] sm:-left-[35px] top-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white mt-0.5 flex items-center justify-center">
+                <div class="absolute -left-5.75 sm:-left-8.75 top-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white mt-0.5 flex items-center justify-center">
                     <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                 </div>
                 <div class="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 opacity-80">

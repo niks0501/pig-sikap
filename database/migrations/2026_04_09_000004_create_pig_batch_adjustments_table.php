@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pig_batch_adjustments', function (Blueprint $table): void {
+        Schema::create('pig_cycle_adjustments', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('batch_id')->constrained('pig_batches')->cascadeOnDelete();
+            $table->foreignId('batch_id')->constrained('pig_cycles')->cascadeOnDelete();
             $table->string('adjustment_type');
             $table->unsignedInteger('quantity_before');
             $table->integer('quantity_change');
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pig_batch_adjustments');
+        Schema::dropIfExists('pig_cycle_adjustments');
     }
 };

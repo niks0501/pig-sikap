@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pig_batch_status_histories', function (Blueprint $table): void {
+        Schema::create('pig_cycle_status_histories', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('batch_id')->constrained('pig_batches')->cascadeOnDelete();
+            $table->foreignId('batch_id')->constrained('pig_cycles')->cascadeOnDelete();
             $table->string('old_stage')->nullable();
             $table->string('new_stage')->nullable();
             $table->string('old_status')->nullable();
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pig_batch_status_histories');
+        Schema::dropIfExists('pig_cycle_status_histories');
     }
 };

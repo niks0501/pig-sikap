@@ -5,6 +5,7 @@ use App\Models\Pig;
 use App\Models\PigBatch;
 use App\Models\PigBatchAdjustment;
 use App\Models\PigBatchStatusHistory;
+use App\Models\PigCycle;
 use App\Models\PigBreeder;
 use App\Models\Role;
 use App\Models\User;
@@ -80,7 +81,7 @@ function makeBatch(User $actor, array $overrides = []): PigBatch
         'breeder_id' => null,
         'caretaker_user_id' => $actor->id,
         'cycle_number' => 1,
-        'birth_date' => now()->toDateString(),
+        'date_of_purchase' => now()->toDateString(),
         'initial_count' => 10,
         'current_count' => 10,
         'average_weight' => 3.50,
@@ -105,7 +106,7 @@ function batchPayload(array $overrides = []): array
         'breeder_id' => null,
         'caretaker_user_id' => null,
         'cycle_number' => 3,
-        'birth_date' => now()->toDateString(),
+        'date_of_purchase' => now()->toDateString(),
         'initial_count' => 6,
         'average_weight' => 3.25,
         'stage' => 'Piglet',
@@ -125,9 +126,9 @@ test('guest is redirected to login for pig registry pages', function () {
     $president = presidentUser();
     $batch = makeBatch($president);
 
-    get(route('batches.index'))->assertRedirect(route('login'));
-    get(route('batches.create'))->assertRedirect(route('login'));
-    get(route('batches.show', $batch))->assertRedirect(route('login'));
+    get(route('cycles.index'))->assertRedirect(route('login'));
+    get(route('cycles.create'))->assertRedirect(route('login'));
+    get(route('cycles.show', $batch))->assertRedirect(route('login'));
     get(route('breeders.create'))->assertRedirect(route('login'));
 });
 
@@ -142,40 +143,40 @@ test('non president is forbidden from all pig registry actions', function () {
         'created_by' => $president->id,
     ]);
 
-    actingAs($secretary)->get(route('batches.index'))->assertForbidden();
-    actingAs($secretary)->get(route('batches.create'))->assertForbidden();
-    actingAs($secretary)->get(route('batches.archived'))->assertForbidden();
-    actingAs($secretary)->get(route('batches.show', $batch))->assertForbidden();
-    actingAs($secretary)->get(route('batches.edit', $batch))->assertForbidden();
-    actingAs($secretary)->get(route('batches.pigs.index', $batch))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.index'))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.create'))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.archived'))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.show', $batch))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.edit', $batch))->assertForbidden();
+    actingAs($secretary)->get(route('cycles.profiles.index', $batch))->assertForbidden();
     actingAs($secretary)->get(route('breeders.create'))->assertForbidden();
 
-    actingAs($secretary)->post(route('batches.store'), batchPayload())->assertForbidden();
-    actingAs($secretary)->put(route('batches.update', $batch), [
+    actingAs($secretary)->post(route('cycles.store'), batchPayload())->assertForbidden();
+    actingAs($secretary)->put(route('cycles.update', $batch), [
         'stage' => 'Piglet',
         'status' => 'Active',
     ])->assertForbidden();
-    actingAs($secretary)->delete(route('batches.destroy', $batch))->assertForbidden();
-    actingAs($secretary)->patch(route('batches.archive', $batch))->assertForbidden();
+    actingAs($secretary)->delete(route('cycles.destroy', $batch))->assertForbidden();
+    actingAs($secretary)->patch(route('cycles.archive', $batch))->assertForbidden();
 
-    actingAs($secretary)->post(route('batches.pigs.store', $batch), [
+    actingAs($secretary)->post(route('cycles.profiles.store', $batch), [
         'pig_no' => 2,
         'status' => 'Active',
     ])->assertForbidden();
 
-    actingAs($secretary)->put(route('batches.pigs.update', [$batch, $pig]), [
+    actingAs($secretary)->put(route('cycles.profiles.update', [$batch, $pig]), [
         'pig_no' => 1,
         'status' => 'Active',
     ])->assertForbidden();
-    actingAs($secretary)->delete(route('batches.pigs.destroy', [$batch, $pig]))->assertForbidden();
+    actingAs($secretary)->delete(route('cycles.profiles.destroy', [$batch, $pig]))->assertForbidden();
 
-    actingAs($secretary)->post(route('batches.adjustments.store', $batch), [
+    actingAs($secretary)->post(route('cycles.adjustments.store', $batch), [
         'adjustment_type' => 'increase',
         'quantity_change' => 1,
         'reason' => 'recount',
     ])->assertForbidden();
 
-    actingAs($secretary)->post(route('batches.status.store', $batch), [
+    actingAs($secretary)->post(route('cycles.status.store', $batch), [
         'new_stage' => 'Weaning',
     ])->assertForbidden();
 
@@ -191,12 +192,12 @@ test('president can view pig registry html and json payload', function () {
     $batch = makeBatch($president);
 
     actingAs($president)
-        ->get(route('batches.index'))
+        ->get(route('cycles.index'))
         ->assertOk()
-        ->assertViewIs('batches.index')
-        ->assertViewHasAll(['batches', 'filters', 'summary', 'recentUpdates']);
+        ->assertViewIs('cycles.index')
+        ->assertViewHasAll(['cycles', 'filters', 'summary', 'recentUpdates']);
 
-    $jsonResponse = actingAs($president)->getJson(route('batches.index'));
+    $jsonResponse = actingAs($president)->getJson(route('cycles.index'));
 
     $jsonResponse
         ->assertOk()
@@ -204,13 +205,12 @@ test('president can view pig registry html and json payload', function () {
             'data',
             'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             'summary' => [
-                'active_batches',
+                'active_cycles',
                 'total_piglets',
-                'total_breeders',
                 'total_fatteners',
                 'total_sick',
                 'total_deceased',
-                'ready_for_sale_batches',
+                'ready_for_sale_cycles',
             ],
             'recent_updates',
         ]);
@@ -243,7 +243,7 @@ test('pig registry json endpoint filters by search stage status breeder caretake
         'status' => 'Under Monitoring',
     ]);
 
-    $response = actingAs($president)->getJson(route('batches.index', [
+    $response = actingAs($president)->getJson(route('cycles.index', [
         'search' => 'TARGET',
         'stage' => 'Piglet',
         'status' => 'Active',
@@ -263,13 +263,13 @@ test('pig registry scope filter separates active and archived records in json', 
     $activeBatch = makeBatch($president, ['status' => 'Active', 'stage' => 'Piglet']);
     $archivedBatch = makeBatch($president, ['status' => 'Closed', 'stage' => 'Completed']);
 
-    $activeResponse = actingAs($president)->getJson(route('batches.index', ['scope' => 'active']));
+    $activeResponse = actingAs($president)->getJson(route('cycles.index', ['scope' => 'active']));
     $activeCodes = batchCodesFromResponse($activeResponse->json('data') ?? [])->all();
 
     expect($activeCodes)->toContain($activeBatch->batch_code);
     expect($activeCodes)->not->toContain($archivedBatch->batch_code);
 
-    $archivedResponse = actingAs($president)->getJson(route('batches.index', ['scope' => 'archived']));
+    $archivedResponse = actingAs($president)->getJson(route('cycles.index', ['scope' => 'archived']));
     $archivedCodes = batchCodesFromResponse($archivedResponse->json('data') ?? [])->all();
 
     expect($archivedCodes)->toContain($archivedBatch->batch_code);
@@ -282,11 +282,11 @@ test('archived batches endpoint returns archived records in html and json', func
     $archivedBatch = makeBatch($president, ['batch_code' => 'B-ARCH', 'status' => 'Sold', 'stage' => 'For Sale']);
 
     actingAs($president)
-        ->get(route('batches.archived'))
+        ->get(route('cycles.archived'))
         ->assertOk()
-        ->assertViewIs('batches.archived');
+        ->assertViewIs('cycles.archived');
 
-    $jsonResponse = actingAs($president)->getJson(route('batches.archived'));
+    $jsonResponse = actingAs($president)->getJson(route('cycles.archived'));
 
     $jsonResponse->assertOk()->assertJsonStructure([
         'data',
@@ -307,16 +307,16 @@ test('create batch page suggests next batch code from latest soft deleted record
     $latest->delete();
 
     actingAs($president)
-        ->get(route('batches.create'))
+        ->get(route('cycles.create'))
         ->assertOk()
-        ->assertViewIs('batches.create')
-        ->assertViewHas('batchCode', 'B-011');
+        ->assertViewIs('cycles.create')
+        ->assertViewHas('cycleCode', 'C-011');
 });
 
 test('president can create batch without auto generated pig profiles', function () {
     $president = presidentUser();
 
-    $response = actingAs($president)->post(route('batches.store'), batchPayload([
+    $response = actingAs($president)->post(route('cycles.store'), batchPayload([
         'batch_code' => 'B-NO-PROFILES',
         'initial_count' => 8,
         'has_pig_profiles' => false,
@@ -324,9 +324,9 @@ test('president can create batch without auto generated pig profiles', function 
 
     $batch = PigBatch::query()->where('batch_code', 'B-NO-PROFILES')->firstOrFail();
 
-    $response->assertRedirect(route('batches.show', $batch));
+    $response->assertRedirect(route('cycles.show', $batch));
 
-    assertDatabaseHas('pig_batches', [
+    assertDatabaseHas('pig_cycles', [
         'id' => $batch->id,
         'initial_count' => 8,
         'current_count' => 8,
@@ -335,7 +335,7 @@ test('president can create batch without auto generated pig profiles', function 
 
     assertDatabaseCount('pigs', 0);
 
-    assertDatabaseHas('pig_batch_status_histories', [
+    assertDatabaseHas('pig_cycle_status_histories', [
         'batch_id' => $batch->id,
         'old_stage' => null,
         'new_stage' => 'Piglet',
@@ -345,7 +345,7 @@ test('president can create batch without auto generated pig profiles', function 
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_created',
+        'action' => 'cycle_created',
         'module' => 'pig_registry',
     ]);
 });
@@ -357,7 +357,7 @@ test('president can create batch and auto generate pig profiles', function () {
         'name_or_tag' => 'Inahin A',
     ]);
 
-    $response = actingAs($president)->post(route('batches.store'), batchPayload([
+    $response = actingAs($president)->post(route('cycles.store'), batchPayload([
         'batch_code' => 'B-101',
         'breeder_id' => $breeder->id,
         'caretaker_user_id' => $president->id,
@@ -368,9 +368,9 @@ test('president can create batch and auto generate pig profiles', function () {
 
     $batch = PigBatch::query()->where('batch_code', 'B-101')->firstOrFail();
 
-    $response->assertRedirect(route('batches.show', $batch));
+    $response->assertRedirect(route('cycles.show', $batch));
 
-    assertDatabaseHas('pig_batches', [
+    assertDatabaseHas('pig_cycles', [
         'batch_code' => 'B-101',
         'initial_count' => 6,
         'current_count' => 6,
@@ -391,7 +391,7 @@ test('president can create batch and auto generate pig profiles', function () {
 test('batch store validates required fields and enum values', function () {
     $president = presidentUser();
 
-    $response = actingAs($president)->post(route('batches.store'), batchPayload([
+    $response = actingAs($president)->post(route('cycles.store'), batchPayload([
         'batch_code' => '',
         'initial_count' => 0,
         'stage' => 'UnknownStage',
@@ -399,14 +399,14 @@ test('batch store validates required fields and enum values', function () {
     ]));
 
     $response->assertSessionHasErrors(['batch_code', 'initial_count', 'stage', 'status']);
-    assertDatabaseCount('pig_batches', 0);
+    assertDatabaseCount('pig_cycles', 0);
 });
 
 test('batch code must be unique when creating records', function () {
     $president = presidentUser();
     makeBatch($president, ['batch_code' => 'B-UNIQUE-001']);
 
-    $response = actingAs($president)->post(route('batches.store'), batchPayload([
+    $response = actingAs($president)->post(route('cycles.store'), batchPayload([
         'batch_code' => 'B-UNIQUE-001',
     ]));
 
@@ -418,10 +418,10 @@ test('president can view batch details using batch code route model binding', fu
     $batch = makeBatch($president, ['batch_code' => 'B-SHOW-001']);
 
     actingAs($president)
-        ->get(route('batches.show', $batch->batch_code))
+        ->get(route('cycles.show', $batch->batch_code))
         ->assertOk()
-        ->assertViewIs('batches.show')
-        ->assertViewHas('batch', fn (PigBatch $viewBatch) => $viewBatch->batch_code === 'B-SHOW-001');
+        ->assertViewIs('cycles.show')
+        ->assertViewHas('cycle', fn (PigCycle $viewCycle) => $viewCycle->batch_code === 'B-SHOW-001');
 });
 
 test('updating batch details without status change records batch_updated audit', function () {
@@ -432,7 +432,7 @@ test('updating batch details without status change records batch_updated audit',
         'notes' => 'Before update',
     ]);
 
-    $response = actingAs($president)->put(route('batches.update', $batch), [
+    $response = actingAs($president)->put(route('cycles.update', $batch), [
         'breeder_id' => null,
         'caretaker_user_id' => $president->id,
         'cycle_number' => 8,
@@ -442,7 +442,7 @@ test('updating batch details without status change records batch_updated audit',
         'notes' => 'Updated profile details',
     ]);
 
-    $response->assertRedirect(route('batches.show', $batch));
+    $response->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
 
@@ -451,17 +451,17 @@ test('updating batch details without status change records batch_updated audit',
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_updated',
+        'action' => 'cycle_updated',
         'module' => 'pig_registry',
     ]);
 
     assertDatabaseMissing('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_status_updated',
+        'action' => 'cycle_status_updated',
         'description' => "Updated stage/status for batch {$batch->batch_code} to {$batch->stage} / {$batch->status}.",
     ]);
 
-    assertDatabaseCount('pig_batch_status_histories', 0);
+    assertDatabaseCount('pig_cycle_status_histories', 0);
 });
 
 test('updating batch stage or status creates history and status audit', function () {
@@ -471,7 +471,7 @@ test('updating batch stage or status creates history and status audit', function
         'status' => 'Active',
     ]);
 
-    $response = actingAs($president)->put(route('batches.update', $batch), [
+    $response = actingAs($president)->put(route('cycles.update', $batch), [
         'breeder_id' => null,
         'caretaker_user_id' => $president->id,
         'cycle_number' => 2,
@@ -481,13 +481,13 @@ test('updating batch stage or status creates history and status audit', function
         'notes' => 'Moved after weaning phase',
     ]);
 
-    $response->assertRedirect(route('batches.show', $batch));
+    $response->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->stage)->toBe('Fattening');
     expect($batch->status)->toBe('Under Monitoring');
 
-    assertDatabaseHas('pig_batch_status_histories', [
+    assertDatabaseHas('pig_cycle_status_histories', [
         'batch_id' => $batch->id,
         'old_stage' => 'Piglet',
         'new_stage' => 'Fattening',
@@ -497,7 +497,7 @@ test('updating batch stage or status creates history and status audit', function
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_status_updated',
+        'action' => 'cycle_status_updated',
         'module' => 'pig_registry',
     ]);
 });
@@ -510,19 +510,19 @@ test('archived batch cannot be opened in edit form or updated through regular fl
     ]);
 
     actingAs($president)
-        ->get(route('batches.edit', $batch))
-        ->assertRedirect(route('batches.show', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->get(route('cycles.edit', $batch))
+        ->assertRedirect(route('cycles.show', $batch))
+        ->assertSessionHasErrors(['cycle']);
 
     actingAs($president)
-        ->from(route('batches.edit', $batch))
-        ->put(route('batches.update', $batch), [
+        ->from(route('cycles.edit', $batch))
+        ->put(route('cycles.update', $batch), [
             'stage' => 'Piglet',
             'status' => 'Active',
             'notes' => 'Attempt to update archived batch',
         ])
-        ->assertRedirect(route('batches.edit', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->assertRedirect(route('cycles.edit', $batch))
+        ->assertSessionHasErrors(['cycle']);
 });
 
 test('regular batch update cannot override counts directly', function () {
@@ -532,7 +532,7 @@ test('regular batch update cannot override counts directly', function () {
         'current_count' => 9,
     ]);
 
-    $response = actingAs($president)->put(route('batches.update', $batch), [
+    $response = actingAs($president)->put(route('cycles.update', $batch), [
         'stage' => 'Piglet',
         'status' => 'Active',
         'notes' => 'Attempting to bypass adjustment flow.',
@@ -555,18 +555,18 @@ test('archiving active batch closes it and records status history and audit', fu
         'status' => 'Ready for Sale',
     ]);
 
-    $response = actingAs($president)->patch(route('batches.archive', $batch), [
+    $response = actingAs($president)->patch(route('cycles.archive', $batch), [
         'remarks' => 'Sold and closed this batch.',
     ]);
 
-    $response->assertRedirect(route('batches.archived'));
+    $response->assertRedirect(route('cycles.archived'));
 
     $batch->refresh();
 
     expect($batch->stage)->toBe('Completed');
     expect($batch->status)->toBe('Closed');
 
-    assertDatabaseHas('pig_batch_status_histories', [
+    assertDatabaseHas('pig_cycle_status_histories', [
         'batch_id' => $batch->id,
         'old_stage' => 'For Sale',
         'new_stage' => 'Completed',
@@ -576,7 +576,7 @@ test('archiving active batch closes it and records status history and audit', fu
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_archived',
+        'action' => 'cycle_archived',
         'module' => 'pig_registry',
     ]);
 });
@@ -589,12 +589,12 @@ test('archiving an already archived batch is idempotent', function () {
     ]);
 
     actingAs($president)
-        ->patch(route('batches.archive', $batch))
-        ->assertRedirect(route('batches.archived'));
+        ->patch(route('cycles.archive', $batch))
+        ->assertRedirect(route('cycles.archived'));
 
-    assertDatabaseCount('pig_batch_status_histories', 0);
+    assertDatabaseCount('pig_cycle_status_histories', 0);
     assertDatabaseMissing('audit_trails', [
-        'action' => 'batch_archived',
+        'action' => 'cycle_archived',
         'module' => 'pig_registry',
     ]);
 });
@@ -633,17 +633,17 @@ test('president can delete archived batch and cascading records are removed', fu
     ]);
 
     actingAs($president)
-        ->delete(route('batches.destroy', $batch))
-        ->assertRedirect(route('batches.archived'));
+        ->delete(route('cycles.destroy', $batch))
+        ->assertRedirect(route('cycles.archived'));
 
-    assertDatabaseMissing('pig_batches', ['id' => $batch->id]);
+    assertDatabaseMissing('pig_cycles', ['id' => $batch->id]);
     assertDatabaseMissing('pigs', ['id' => $pig->id]);
-    assertDatabaseMissing('pig_batch_adjustments', ['id' => $adjustment->id]);
-    assertDatabaseMissing('pig_batch_status_histories', ['id' => $history->id]);
+    assertDatabaseMissing('pig_cycle_adjustments', ['id' => $adjustment->id]);
+    assertDatabaseMissing('pig_cycle_status_histories', ['id' => $history->id]);
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_deleted',
+        'action' => 'cycle_deleted',
         'module' => 'pig_registry',
     ]);
 });
@@ -656,12 +656,12 @@ test('active batch cannot be deleted', function () {
     ]);
 
     actingAs($president)
-        ->from(route('batches.show', $batch))
-        ->delete(route('batches.destroy', $batch))
-        ->assertRedirect(route('batches.show', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->from(route('cycles.show', $batch))
+        ->delete(route('cycles.destroy', $batch))
+        ->assertRedirect(route('cycles.show', $batch))
+        ->assertSessionHasErrors(['cycle']);
 
-    assertDatabaseHas('pig_batches', ['id' => $batch->id]);
+    assertDatabaseHas('pig_cycles', ['id' => $batch->id]);
 });
 
 test('president can view and search breeder registry using html and json', function () {
@@ -749,17 +749,17 @@ test('president can view pig profile manager page', function () {
     $batch = makeBatch($president);
 
     actingAs($president)
-        ->get(route('batches.pigs.index', $batch))
+        ->get(route('cycles.profiles.index', $batch))
         ->assertOk()
-        ->assertViewIs('batches.pigs')
-        ->assertViewHas('batch', fn (PigBatch $viewBatch) => $viewBatch->id === $batch->id);
+        ->assertViewIs('cycles.pigs')
+        ->assertViewHas('cycle', fn (PigCycle $viewCycle) => $viewCycle->id === $batch->id);
 });
 
 test('president can add pig profile and profile flag is enabled automatically', function () {
     $president = presidentUser();
     $batch = makeBatch($president, ['has_pig_profiles' => false]);
 
-    $response = actingAs($president)->post(route('batches.pigs.store', $batch), [
+    $response = actingAs($president)->post(route('cycles.profiles.store', $batch), [
         'pig_no' => 1,
         'ear_mark_type' => 'Left cut',
         'ear_mark_value' => 'L-1',
@@ -768,7 +768,7 @@ test('president can add pig profile and profile flag is enabled automatically', 
         'remarks' => 'Initial pig profile',
     ]);
 
-    $response->assertRedirect(route('batches.show', $batch));
+    $response->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->has_pig_profiles)->toBeTrue();
@@ -795,19 +795,19 @@ test('adding pig profile with out-of-count status automatically decreases batch 
     ]);
 
     actingAs($president)
-        ->post(route('batches.pigs.store', $batch), [
+        ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 1,
             'status' => 'Deceased',
             'remarks' => 'Died during observation.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
 
     expect($batch->current_count)->toBe(9);
     expect($batch->has_pig_profiles)->toBeTrue();
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'decrease',
         'quantity_before' => 10,
@@ -818,7 +818,7 @@ test('adding pig profile with out-of-count status automatically decreases batch 
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_count_adjusted',
+        'action' => 'cycle_count_adjusted',
         'module' => 'pig_registry',
     ]);
 });
@@ -830,18 +830,18 @@ test('adding isolated pig profile also auto decreases active batch count', funct
     ]);
 
     actingAs($president)
-        ->post(route('batches.pigs.store', $batch), [
+        ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 2,
             'status' => 'Isolated',
             'remarks' => 'Separated for isolation pen.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
 
     expect($batch->current_count)->toBe(3);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'decrease',
         'quantity_before' => 4,
@@ -859,13 +859,13 @@ test('cannot add pig profile to archived batch', function () {
     ]);
 
     actingAs($president)
-        ->from(route('batches.pigs.index', $batch))
-        ->post(route('batches.pigs.store', $batch), [
+        ->from(route('cycles.profiles.index', $batch))
+        ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
-        ->assertRedirect(route('batches.pigs.index', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->assertRedirect(route('cycles.profiles.index', $batch))
+        ->assertSessionHasErrors(['cycle']);
 
     assertDatabaseCount('pigs', 0);
 });
@@ -882,15 +882,15 @@ test('deleting counted pig profile automatically decreases batch count', functio
     ]);
 
     actingAs($president)
-        ->delete(route('batches.pigs.destroy', [$batch, $pig]))
-        ->assertRedirect(route('batches.pigs.index', $batch));
+        ->delete(route('cycles.profiles.destroy', [$batch, $pig]))
+        ->assertRedirect(route('cycles.profiles.index', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(4);
 
     expect(Pig::query()->find($pig->id))->toBeNull();
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'decrease',
         'quantity_before' => 5,
@@ -901,7 +901,7 @@ test('deleting counted pig profile automatically decreases batch count', functio
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_count_adjusted',
+        'action' => 'cycle_count_adjusted',
         'module' => 'pig_registry',
     ]);
 
@@ -924,15 +924,15 @@ test('deleting out-of-count pig profile does not alter current batch count', fun
     ]);
 
     actingAs($president)
-        ->delete(route('batches.pigs.destroy', [$batch, $pig]))
-        ->assertRedirect(route('batches.pigs.index', $batch));
+        ->delete(route('cycles.profiles.destroy', [$batch, $pig]))
+        ->assertRedirect(route('cycles.profiles.index', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(5);
 
     expect(Pig::query()->find($pig->id))->toBeNull();
 
-    assertDatabaseCount('pig_batch_adjustments', 0);
+    assertDatabaseCount('pig_cycle_adjustments', 0);
 });
 
 test('cannot delete pig profile when batch is archived', function () {
@@ -950,10 +950,10 @@ test('cannot delete pig profile when batch is archived', function () {
     ]);
 
     actingAs($president)
-        ->from(route('batches.pigs.index', $batch))
-        ->delete(route('batches.pigs.destroy', [$batch, $pig]))
-        ->assertRedirect(route('batches.pigs.index', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->from(route('cycles.profiles.index', $batch))
+        ->delete(route('cycles.profiles.destroy', [$batch, $pig]))
+        ->assertRedirect(route('cycles.profiles.index', $batch))
+        ->assertSessionHasErrors(['cycle']);
 
     expect(Pig::query()->find($pig->id))->not->toBeNull();
 });
@@ -971,18 +971,18 @@ test('pig number must be unique within a batch but reusable across other batches
     ]);
 
     actingAs($president)
-        ->post(route('batches.pigs.store', $batchOne), [
+        ->post(route('cycles.profiles.store', $batchOne), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
         ->assertSessionHasErrors(['pig_no']);
 
     actingAs($president)
-        ->post(route('batches.pigs.store', $batchTwo), [
+        ->post(route('cycles.profiles.store', $batchTwo), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
-        ->assertRedirect(route('batches.show', $batchTwo));
+        ->assertRedirect(route('cycles.show', $batchTwo));
 
     assertDatabaseCount('pigs', 2);
 });
@@ -998,7 +998,7 @@ test('president can update pig profile details', function () {
     ]);
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batch, $pig]), [
+        ->put(route('cycles.profiles.update', [$batch, $pig]), [
             'pig_no' => 1,
             'ear_mark_type' => 'Right notch',
             'ear_mark_value' => 'R-9',
@@ -1006,7 +1006,7 @@ test('president can update pig profile details', function () {
             'status' => 'Sick',
             'remarks' => 'Needs treatment',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     assertDatabaseHas('pigs', [
         'id' => $pig->id,
@@ -1037,17 +1037,17 @@ test('updating pig profile status adjusts batch count in both directions', funct
     ]);
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batch, $pig]), [
+        ->put(route('cycles.profiles.update', [$batch, $pig]), [
             'pig_no' => 1,
             'status' => 'Sold',
             'remarks' => 'Sold in market day.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(5);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'decrease',
         'quantity_before' => 6,
@@ -1057,17 +1057,17 @@ test('updating pig profile status adjusts batch count in both directions', funct
     ]);
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batch, $pig]), [
+        ->put(route('cycles.profiles.update', [$batch, $pig]), [
             'pig_no' => 1,
             'status' => 'Active',
             'remarks' => 'Status correction after encoding issue.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(6);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'increase',
         'quantity_before' => 5,
@@ -1082,7 +1082,7 @@ test('auto status adjustment rejects transitions that would produce negative bat
     $batch = makeBatch($president, ['current_count' => 0]);
 
     actingAs($president)
-        ->post(route('batches.pigs.store', $batch), [
+        ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 1,
             'status' => 'Deceased',
         ])
@@ -1091,7 +1091,7 @@ test('auto status adjustment rejects transitions that would produce negative bat
     $batch->refresh();
     expect($batch->current_count)->toBe(0);
 
-    assertDatabaseCount('pig_batch_adjustments', 0);
+    assertDatabaseCount('pig_cycle_adjustments', 0);
 });
 
 test('pig update returns 404 when pig is not part of batch route parameter', function () {
@@ -1106,7 +1106,7 @@ test('pig update returns 404 when pig is not part of batch route parameter', fun
     ]);
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batchA, $pigInBatchB]), [
+        ->put(route('cycles.profiles.update', [$batchA, $pigInBatchB]), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
@@ -1128,13 +1128,13 @@ test('cannot update pig profiles in archived batch', function () {
     ]);
 
     actingAs($president)
-        ->from(route('batches.pigs.index', $batch))
-        ->put(route('batches.pigs.update', [$batch, $pig]), [
+        ->from(route('cycles.profiles.index', $batch))
+        ->put(route('cycles.profiles.update', [$batch, $pig]), [
             'pig_no' => 1,
             'status' => 'Sick',
         ])
-        ->assertRedirect(route('batches.pigs.index', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->assertRedirect(route('cycles.profiles.index', $batch))
+        ->assertSessionHasErrors(['cycle']);
 });
 
 test('pig profile update enforces per batch uniqueness but allows unchanged own number', function () {
@@ -1156,14 +1156,14 @@ test('pig profile update enforces per batch uniqueness but allows unchanged own 
     ]);
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batch, $pigOne]), [
+        ->put(route('cycles.profiles.update', [$batch, $pigOne]), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     actingAs($president)
-        ->put(route('batches.pigs.update', [$batch, $pigTwo]), [
+        ->put(route('cycles.profiles.update', [$batch, $pigTwo]), [
             'pig_no' => 1,
             'status' => 'Active',
         ])
@@ -1175,18 +1175,18 @@ test('increase adjustment normalizes quantity change to positive value', functio
     $batch = makeBatch($president, ['current_count' => 10]);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'increase',
             'quantity_change' => -3,
             'reason' => 'recount',
             'remarks' => 'Inventory recount increased count.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(13);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'increase',
         'quantity_before' => 10,
@@ -1200,20 +1200,20 @@ test('decrease adjustment updates batch count and records audit trail', function
     $president = presidentUser();
     $batch = makeBatch($president, ['current_count' => 10]);
 
-    $adjustmentResponse = actingAs($president)->post(route('batches.adjustments.store', $batch), [
+    $adjustmentResponse = actingAs($president)->post(route('cycles.adjustments.store', $batch), [
         'adjustment_type' => 'decrease',
         'quantity_change' => 2,
         'reason' => 'mortality',
         'remarks' => 'Two piglets died during monitoring.',
     ]);
 
-    $adjustmentResponse->assertRedirect(route('batches.show', $batch));
+    $adjustmentResponse->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
 
     expect($batch->current_count)->toBe(8);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'decrease',
         'quantity_before' => 10,
@@ -1224,7 +1224,7 @@ test('decrease adjustment updates batch count and records audit trail', function
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_count_adjusted',
+        'action' => 'cycle_count_adjusted',
         'module' => 'pig_registry',
     ]);
 });
@@ -1234,19 +1234,19 @@ test('correction adjustment can derive delta using resulting count', function ()
     $batch = makeBatch($president, ['current_count' => 10]);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'correction',
             'quantity_change' => 0,
             'quantity_after' => 7,
             'reason' => 'data correction',
             'remarks' => 'Correcting to verified physical count.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->current_count)->toBe(7);
 
-    assertDatabaseHas('pig_batch_adjustments', [
+    assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $batch->id,
         'adjustment_type' => 'correction',
         'quantity_before' => 10,
@@ -1261,7 +1261,7 @@ test('increase and decrease adjustments reject zero quantity change', function (
     $batch = makeBatch($president);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'increase',
             'quantity_change' => 0,
             'reason' => 'recount',
@@ -1269,7 +1269,7 @@ test('increase and decrease adjustments reject zero quantity change', function (
         ->assertSessionHasErrors(['quantity_change']);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 0,
             'reason' => 'mortality',
@@ -1282,7 +1282,7 @@ test('correction adjustment requires a delta or resulting count', function () {
     $batch = makeBatch($president);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'correction',
             'quantity_change' => 0,
             'reason' => 'data correction',
@@ -1295,7 +1295,7 @@ test('adjustment cannot result in negative current count', function () {
     $batch = makeBatch($president, ['current_count' => 2]);
 
     actingAs($president)
-        ->post(route('batches.adjustments.store', $batch), [
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 5,
             'reason' => 'mortality',
@@ -1314,14 +1314,14 @@ test('archived batches cannot be adjusted', function () {
     ]);
 
     actingAs($president)
-        ->from(route('batches.show', $batch))
-        ->post(route('batches.adjustments.store', $batch), [
+        ->from(route('cycles.show', $batch))
+        ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 1,
             'reason' => 'mortality',
         ])
-        ->assertRedirect(route('batches.show', $batch))
-        ->assertSessionHasErrors(['batch']);
+        ->assertRedirect(route('cycles.show', $batch))
+        ->assertSessionHasErrors(['cycle']);
 });
 
 test('status update can change stage while keeping current status', function () {
@@ -1332,17 +1332,17 @@ test('status update can change stage while keeping current status', function () 
     ]);
 
     actingAs($president)
-        ->post(route('batches.status.store', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'new_stage' => 'Weaning',
             'remarks' => 'Reached weaning phase.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->stage)->toBe('Weaning');
     expect($batch->status)->toBe('Active');
 
-    assertDatabaseHas('pig_batch_status_histories', [
+    assertDatabaseHas('pig_cycle_status_histories', [
         'batch_id' => $batch->id,
         'old_stage' => 'Piglet',
         'new_stage' => 'Weaning',
@@ -1352,7 +1352,7 @@ test('status update can change stage while keeping current status', function () 
 
     assertDatabaseHas('audit_trails', [
         'user_id' => $president->id,
-        'action' => 'batch_status_updated',
+        'action' => 'cycle_status_updated',
         'module' => 'pig_registry',
     ]);
 });
@@ -1365,11 +1365,11 @@ test('status update can change status while keeping current stage', function () 
     ]);
 
     actingAs($president)
-        ->post(route('batches.status.store', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'new_status' => 'Ready for Sale',
             'remarks' => 'Weight target reached.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->stage)->toBe('Fattening');
@@ -1384,12 +1384,12 @@ test('status update can reopen archived batch', function () {
     ]);
 
     actingAs($president)
-        ->post(route('batches.status.store', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'new_stage' => 'Piglet',
             'new_status' => 'Active',
             'remarks' => 'Reopened after reassessment.',
         ])
-        ->assertRedirect(route('batches.show', $batch));
+        ->assertRedirect(route('cycles.show', $batch));
 
     $batch->refresh();
     expect($batch->stage)->toBe('Piglet');
@@ -1401,7 +1401,7 @@ test('status update requires at least one new value', function () {
     $batch = makeBatch($president);
 
     actingAs($president)
-        ->post(route('batches.status.store', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'remarks' => 'No fields changed.',
         ])
         ->assertSessionHasErrors(['new_status']);
@@ -1415,7 +1415,7 @@ test('status update rejects unchanged stage and status values', function () {
     ]);
 
     actingAs($president)
-        ->post(route('batches.status.store', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'new_stage' => 'Piglet',
             'new_status' => 'Active',
             'remarks' => 'No effective update',
@@ -1427,21 +1427,22 @@ test('batch lifecycle operations produce expected audit rows only', function () 
     $president = presidentUser();
     $batch = makeBatch($president);
 
-    actingAs($president)->post(route('batches.adjustments.store', $batch), [
+    actingAs($president)->post(route('cycles.adjustments.store', $batch), [
         'adjustment_type' => 'increase',
         'quantity_change' => 2,
         'reason' => 'recount',
-    ])->assertRedirect(route('batches.show', $batch));
+    ])->assertRedirect(route('cycles.show', $batch));
 
-    actingAs($president)->post(route('batches.status.store', $batch), [
+    actingAs($president)->post(route('cycles.status.store', $batch), [
         'new_stage' => 'Weaning',
-    ])->assertRedirect(route('batches.show', $batch));
+    ])->assertRedirect(route('cycles.show', $batch));
 
     $actions = AuditTrail::query()
         ->where('module', 'pig_registry')
         ->pluck('action')
         ->all();
 
-    expect($actions)->toContain('batch_count_adjusted');
-    expect($actions)->toContain('batch_status_updated');
+    expect($actions)->toContain('cycle_count_adjusted');
+    expect($actions)->toContain('cycle_status_updated');
 });
+

@@ -9,7 +9,7 @@ import {
 import { ref } from 'vue';
 
 const props = defineProps({
-    batch: {
+    cycle: {
         type: Object,
         required: true,
     },
@@ -39,14 +39,14 @@ const props = defineProps({
     },
 });
 
-const updateRoute = (pigId) => `${props.routes.pigsBase}/${pigId}`;
-const deleteRoute = (pigId) => `${props.routes.pigsBase}/${pigId}`;
-const isArchived = () => props.batch.stage === 'Completed' || ['Sold', 'Closed'].includes(props.batch.status);
+const updateRoute = (pigId) => `${props.routes.profilesBase}/${pigId}`;
+const deleteRoute = (pigId) => `${props.routes.profilesBase}/${pigId}`;
+const isArchived = () => props.cycle.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle.status);
 const rowFormId = (pigId) => `pig-profile-row-form-${pigId}`;
 const isDeleteModalOpen = ref(false);
 const pigToDelete = ref(null);
 
-const countsTowardBatch = (status) => !['Isolated', 'Sold', 'Deceased'].includes(status);
+const countsTowardCycle = (status) => !['Isolated', 'Sold', 'Deceased'].includes(status);
 
 const statusBadgeClass = (status) => {
     if (status === 'Deceased') {
@@ -80,14 +80,14 @@ const closeDeleteModal = () => {
 </script>
 
 <template>
-    <div class="space-y-4 max-w-[1200px] mx-auto">
-        <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="mx-auto max-w-300 space-y-4">
+        <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Pig Profiles: {{ props.batch.batch_code }}</h2>
-                <p class="mt-1 text-sm text-gray-500">Lightweight identity records for this batch.</p>
+                <h2 class="text-2xl font-bold text-gray-900">Dedicated Profile Manager: {{ props.cycle.batch_code }}</h2>
+                <p class="mt-1 text-sm text-gray-500">Manage pig profiles separately from cycle details to keep workflows clean.</p>
             </div>
             <a :href="props.routes.show" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                Back to Batch Detail
+                Back to Cycle Detail
             </a>
         </section>
 
@@ -146,7 +146,7 @@ const closeDeleteModal = () => {
                 </div>
 
                 <p class="md:col-span-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                    Automation: setting status to Isolated, Sold, or Deceased will auto-adjust the batch current count.
+                    Automation: setting status to Isolated, Sold, or Deceased will auto-adjust the cycle current count.
                 </p>
             </form>
         </section>
@@ -166,7 +166,7 @@ const closeDeleteModal = () => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
-                        <tr v-for="pig in props.batch.pigs" :key="pig.id" :class="[!countsTowardBatch(pig.status) ? 'bg-amber-50/40' : '', 'transition-colors hover:bg-gray-50/50']">
+                        <tr v-for="pig in props.cycle.pigs" :key="pig.id" :class="[!countsTowardCycle(pig.status) ? 'bg-amber-50/40' : '', 'transition-colors hover:bg-gray-50/50']">
                             <td class="px-3 py-2 align-top">
                                 <input :form="rowFormId(pig.id)" type="number" min="1" name="pig_no" :value="pig.pig_no" class="w-16 rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:border-[#0c6d57] focus:ring-1 focus:ring-[#0c6d57]/20 transition-all">
                             </td>
@@ -191,8 +191,8 @@ const closeDeleteModal = () => {
                                         <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]" :class="statusBadgeClass(pig.status)">
                                             {{ pig.status }}
                                         </span>
-                                        <span v-if="!countsTowardBatch(pig.status)" class="text-[10px] font-semibold text-amber-600 flex items-center gap-1" title="Excluded from active count">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.94 6.94a.75.75 0 1 1-1.061-1.061 3 3 0 1 1 2.871 5.026v.345a.75.75 0 0 1-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 1 0 8.94 6.94ZM10 15a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" /></svg>
+                                        <span v-if="!countsTowardCycle(pig.status)" class="flex items-center gap-1 text-[10px] font-semibold text-amber-600" title="Excluded from active count">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.94 6.94a.75.75 0 1 1-1.061-1.061 3 3 0 1 1 2.871 5.026v.345a.75.75 0 0 1-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 1 0 8.94 6.94ZM10 15a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" /></svg>
                                             Excluded
                                         </span>
                                     </div>
@@ -206,7 +206,7 @@ const closeDeleteModal = () => {
                                     <input type="hidden" name="_token" :value="props.csrfToken">
                                     <input type="hidden" name="_method" value="PUT">
                                 </form>
-                                <div v-if="!isArchived()" class="flex flex-col items-end gap-2 w-full">
+                                <div v-if="!isArchived()" class="flex w-full flex-col items-end gap-2">
                                     <button type="submit" :form="rowFormId(pig.id)" class="w-20 justify-center rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 focus:ring-2 focus:ring-emerald-600/20">
                                         Update
                                     </button>
@@ -219,16 +219,16 @@ const closeDeleteModal = () => {
                                 </span>
                             </td>
                         </tr>
-                        <tr v-if="props.batch.pigs.length === 0">
-                            <td colspan="7" class="px-4 py-16 text-center bg-gray-50/50">
+                        <tr v-if="props.cycle.pigs.length === 0">
+                            <td colspan="7" class="bg-gray-50/50 px-4 py-16 text-center">
                                 <div class="flex flex-col items-center justify-center">
-                                    <div class="rounded-full bg-gray-100 p-3 text-gray-400 mb-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                    <div class="mb-3 rounded-full bg-gray-100 p-3 text-gray-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-8 w-8">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                                         </svg>
                                     </div>
                                     <p class="text-sm font-bold text-gray-900">No pig profiles recorded</p>
-                                    <p class="mt-1 text-sm text-gray-500 max-w-sm mx-auto">This batch currently has no individual pig records. Use the "Add Pig Profile" form above to create identity records.</p>
+                                    <p class="mx-auto mt-1 max-w-sm text-sm text-gray-500">This cycle currently has no individual pig records. Use the Add Pig Profile form above to create identity records.</p>
                                 </div>
                             </td>
                         </tr>
@@ -270,12 +270,12 @@ const closeDeleteModal = () => {
                                 <p class="mt-2 text-sm text-gray-600">
                                     Delete pig profile
                                     <span class="font-semibold text-gray-900">#{{ pigToDelete?.pig_no }}</span>
-                                    from batch
-                                    <span class="font-semibold text-gray-900">{{ props.batch.batch_code }}</span>?
+                                    from cycle
+                                    <span class="font-semibold text-gray-900">{{ props.cycle.batch_code }}</span>?
                                 </p>
 
                                 <p class="mt-2 text-xs text-gray-500">
-                                    If this pig is currently counted as active, batch count will auto-adjust.
+                                    If this pig is currently counted as active, cycle count will auto-adjust.
                                 </p>
 
                                 <form

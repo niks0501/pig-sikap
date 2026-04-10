@@ -17,7 +17,7 @@
             'routes' => [
                 'index' => route('breeders.create'),
                 'store' => route('breeders.store'),
-                'batches' => route('batches.index'),
+                'batches' => route('cycles.index'),
             ],
             'csrfToken' => csrf_token(),
             'oldInput' => old(),

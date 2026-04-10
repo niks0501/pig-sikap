@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pigs', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('batch_id')->constrained('pig_batches')->cascadeOnDelete();
+            $table->foreignId('batch_id')->constrained('pig_cycles')->cascadeOnDelete();
             $table->unsignedInteger('pig_no');
             $table->string('ear_mark_type')->nullable();
             $table->string('ear_mark_value')->nullable();

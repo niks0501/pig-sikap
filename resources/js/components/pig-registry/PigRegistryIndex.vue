@@ -32,10 +32,6 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    breeders: {
-        type: Array,
-        default: () => [],
-    },
     caretakers: {
         type: Array,
         default: () => [],
@@ -55,17 +51,16 @@ const props = defineProps({
 });
 
 const loading = ref(false);
-const batches = ref(props.initialData?.data ?? []);
+const cycles = ref(props.initialData?.data ?? []);
 const flashStatus = ref(props.statusMessage || '');
 const flashError = ref(props.errorMessage || '');
 const summary = ref({
-    active_batches: 0,
+    active_cycles: 0,
     total_piglets: 0,
-    total_breeders: 0,
     total_fatteners: 0,
     total_sick: 0,
     total_deceased: 0,
-    ready_for_sale_batches: 0,
+    ready_for_sale_cycles: 0,
     ...props.summary,
 });
 const recentUpdates = ref(Array.isArray(props.recentUpdates) ? props.recentUpdates : []);
@@ -82,7 +77,6 @@ const filters = reactive({
     scope: props.initialFilters?.scope ?? 'all',
     stage: props.initialFilters?.stage ?? '',
     status: props.initialFilters?.status ?? '',
-    breeder: props.initialFilters?.breeder ?? '',
     caretaker: props.initialFilters?.caretaker ?? '',
 });
 
@@ -102,15 +96,9 @@ const statusOptions = computed(() => [
     ...props.statuses.map((status) => ({ label: status, value: status })),
 ]);
 
-const selectedScope = ref(
-    scopeOptions.find((item) => item.value === filters.scope) ?? scopeOptions[0]
-);
-const selectedStage = ref(
-    stageOptions.value.find((item) => item.value === filters.stage) ?? stageOptions.value[0]
-);
-const selectedStatus = ref(
-    statusOptions.value.find((item) => item.value === filters.status) ?? statusOptions.value[0]
-);
+const selectedScope = ref(scopeOptions.find((item) => item.value === filters.scope) ?? scopeOptions[0]);
+const selectedStage = ref(stageOptions.value.find((item) => item.value === filters.stage) ?? stageOptions.value[0]);
+const selectedStatus = ref(statusOptions.value.find((item) => item.value === filters.status) ?? statusOptions.value[0]);
 
 watch(selectedScope, (value) => {
     filters.scope = value?.value ?? 'all';
@@ -126,7 +114,7 @@ watch(selectedStatus, (value) => {
 
 let debounceTimer = null;
 
-const fetchBatches = async (page = 1) => {
+const fetchCycles = async (page = 1) => {
     loading.value = true;
 
     try {
@@ -136,7 +124,6 @@ const fetchBatches = async (page = 1) => {
                 scope: filters.scope,
                 stage: filters.stage,
                 status: filters.status,
-                breeder: filters.breeder,
                 caretaker: filters.caretaker,
                 page,
             },
@@ -147,7 +134,7 @@ const fetchBatches = async (page = 1) => {
 
         const payload = response.data || {};
 
-        batches.value = payload.data || [];
+        cycles.value = payload.data || [];
         summary.value = payload.summary || summary.value;
         recentUpdates.value = payload.recent_updates || recentUpdates.value;
 
@@ -156,7 +143,7 @@ const fetchBatches = async (page = 1) => {
         meta.total = payload.meta?.total ?? 0;
         meta.per_page = payload.meta?.per_page ?? 12;
     } catch (error) {
-        flashError.value = 'Unable to refresh pig registry records right now.';
+        flashError.value = 'Unable to refresh cycle records right now.';
     } finally {
         loading.value = false;
     }
@@ -168,7 +155,6 @@ watch(
         filters.scope,
         filters.stage,
         filters.status,
-        filters.breeder,
         filters.caretaker,
     ],
     () => {
@@ -177,14 +163,13 @@ watch(
         }
 
         debounceTimer = window.setTimeout(() => {
-            fetchBatches(1);
+            fetchCycles(1);
         }, 300);
     }
 );
 
 const resetFilters = () => {
     filters.search = '';
-    filters.breeder = '';
     filters.caretaker = '';
 
     selectedScope.value = scopeOptions[0];
@@ -197,12 +182,12 @@ const goToPage = (page) => {
         return;
     }
 
-    fetchBatches(page);
+    fetchCycles(page);
 };
 
 const hasPagination = computed(() => meta.last_page > 1);
 
-const showBatchUrl = (batchCode) => `${props.routes.showBase}/${encodeURIComponent(batchCode)}`;
+const showCycleUrl = (cycleCode) => `${props.routes.showBase}/${encodeURIComponent(cycleCode)}`;
 
 const formatDate = (value) => {
     if (!value) {
@@ -234,11 +219,11 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 </script>
 
 <template>
-    <div class="space-y-4 max-w-[1200px] mx-auto">
+    <div class="mx-auto max-w-300 space-y-4">
         <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Pig Registry</h2>
-                <p class="mt-1 text-sm text-gray-500">Batch-first inventory with reactive filtering and quick operations.</p>
+                <h2 class="text-2xl font-bold text-gray-900">Cycles</h2>
+                <p class="mt-1 text-sm text-gray-500">Cycle-first inventory with focused filters and dedicated profile management.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <a :href="props.routes.archived" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
@@ -248,7 +233,7 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                     Breeder Registry
                 </a>
                 <a :href="props.routes.create" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
-                    Create Batch
+                    Create Cycle
                 </a>
             </div>
         </section>
@@ -261,18 +246,14 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
             {{ flashError }}
         </div>
 
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Batches</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_batches || 0).toLocaleString() }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Cycles</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_cycles || 0).toLocaleString() }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Piglets</p>
                 <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Breeders</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_breeders || 0).toLocaleString() }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Fatteners</p>
@@ -286,20 +267,20 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
                 <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:col-span-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Batches</p>
-                <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_batches || 0).toLocaleString() }}</p>
+            <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Cycles</p>
+                <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_cycles || 0).toLocaleString() }}</p>
             </article>
         </section>
 
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <label class="xl:col-span-2">
                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
                     <input
                         v-model="filters.search"
                         type="text"
-                        placeholder="Batch code, breeder, caretaker"
+                        placeholder="Cycle code, caretaker"
                         class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                     >
                 </label>
@@ -359,16 +340,6 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </div>
 
                 <label>
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Breeder</span>
-                    <select v-model="filters.breeder" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                        <option value="">All breeders</option>
-                        <option v-for="breeder in props.breeders" :key="breeder.id" :value="String(breeder.id)">
-                            {{ breeder.breeder_code }} - {{ breeder.name_or_tag }}
-                        </option>
-                    </select>
-                </label>
-
-                <label>
                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Caretaker</span>
                     <select v-model="filters.caretaker" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
                         <option value="">All caretakers</option>
@@ -384,7 +355,7 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                     Reset Filters
                 </button>
                 <span class="inline-flex items-center rounded-xl bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
-                    {{ loading ? 'Refreshing records...' : `Showing ${Number(meta.total || 0).toLocaleString()} batch records` }}
+                    {{ loading ? 'Refreshing records...' : `Showing ${Number(meta.total || 0).toLocaleString()} cycle records` }}
                 </span>
             </div>
         </section>
@@ -396,44 +367,43 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Batch</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Breeder</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Birth Date</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Cycle</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Date of Purchase</th>
                                     <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Count</th>
                                     <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Stage / Status</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Caretaker</th>
                                     <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                <tr v-if="loading && batches.length === 0">
+                                <tr v-if="loading && cycles.length === 0">
                                     <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">
-                                        Loading registry entries...
+                                        Loading cycle entries...
                                     </td>
                                 </tr>
-                                <tr v-for="batch in batches" :key="batch.batch_code" class="hover:bg-gray-50">
+                                <tr v-for="cycle in cycles" :key="cycle.batch_code" class="hover:bg-gray-50">
                                     <td class="px-3 py-2 align-top">
-                                        <p class="text-sm font-bold text-gray-900">{{ batch.batch_code }}</p>
-                                        <p class="text-xs text-gray-500">Caretaker: {{ batch.caretaker?.name ?? 'Unassigned' }}</p>
+                                        <p class="text-sm font-bold text-gray-900">{{ cycle.batch_code }}</p>
+                                        <p class="text-xs text-gray-500">Cycle #{{ cycle.cycle_number || '-' }}</p>
+                                    </td>
+                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ formatDate(cycle.date_of_purchase) }}</td>
+                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ countLabel(cycle.current_count, cycle.initial_count) }}</td>
+                                    <td class="px-3 py-2 align-top text-xs">
+                                        <p><span class="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">{{ cycle.stage }}</span></p>
+                                        <p class="mt-2"><span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">{{ cycle.status }}</span></p>
                                     </td>
                                     <td class="px-3 py-2 align-top text-sm text-gray-700">
-                                        {{ batch.breeder?.breeder_code ?? 'No breeder linked' }}
-                                        <p class="text-xs text-gray-500">{{ batch.breeder?.name_or_tag ?? '-' }}</p>
-                                    </td>
-                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ formatDate(batch.birth_date) }}</td>
-                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ countLabel(batch.current_count, batch.initial_count) }}</td>
-                                    <td class="px-3 py-2 align-top text-xs">
-                                        <p><span class="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">{{ batch.stage }}</span></p>
-                                        <p class="mt-2"><span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">{{ batch.status }}</span></p>
+                                        {{ cycle.caretaker?.name || 'Unassigned' }}
                                     </td>
                                     <td class="px-3 py-2 text-right align-top">
-                                        <a :href="showBatchUrl(batch.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-1.5 text-xs font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
+                                        <a :href="showCycleUrl(cycle.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-1.5 text-xs font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
                                             Open
                                         </a>
                                     </td>
                                 </tr>
-                                <tr v-if="!loading && batches.length === 0">
+                                <tr v-if="!loading && cycles.length === 0">
                                     <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">
-                                        No batch records found for your selected filters.
+                                        No cycle records found for your selected filters.
                                     </td>
                                 </tr>
                             </tbody>
@@ -441,36 +411,36 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                     </div>
 
                     <div class="space-y-3 p-4 md:hidden">
-                        <article v-for="batch in batches" :key="`mobile-${batch.batch_code}`" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <article v-for="cycle in cycles" :key="`mobile-${cycle.batch_code}`" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <h3 class="text-base font-bold text-gray-900">{{ batch.batch_code }}</h3>
-                                    <p class="text-xs text-gray-500">{{ batch.breeder?.name_or_tag ?? 'No breeder linked' }}</p>
+                                    <h3 class="text-base font-bold text-gray-900">{{ cycle.batch_code }}</h3>
+                                    <p class="text-xs text-gray-500">Caretaker: {{ cycle.caretaker?.name || 'Unassigned' }}</p>
                                 </div>
-                                <a :href="showBatchUrl(batch.batch_code)" class="rounded-lg bg-[#0c6d57]/10 px-3 py-1.5 text-xs font-semibold text-[#0c6d57]">Open</a>
+                                <a :href="showCycleUrl(cycle.batch_code)" class="rounded-lg bg-[#0c6d57]/10 px-3 py-1.5 text-xs font-semibold text-[#0c6d57]">Open</a>
                             </div>
                             <dl class="mt-3 grid grid-cols-2 gap-3 text-xs">
                                 <div>
                                     <dt class="font-semibold uppercase tracking-[0.14em] text-gray-500">Count</dt>
-                                    <dd class="mt-1 text-sm font-bold text-gray-900">{{ countLabel(batch.current_count, batch.initial_count) }}</dd>
+                                    <dd class="mt-1 text-sm font-bold text-gray-900">{{ countLabel(cycle.current_count, cycle.initial_count) }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="font-semibold uppercase tracking-[0.14em] text-gray-500">Birth Date</dt>
-                                    <dd class="mt-1 text-sm font-semibold text-gray-800">{{ formatDate(batch.birth_date) }}</dd>
+                                    <dt class="font-semibold uppercase tracking-[0.14em] text-gray-500">Date of Purchase</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-gray-800">{{ formatDate(cycle.date_of_purchase) }}</dd>
                                 </div>
                                 <div>
                                     <dt class="font-semibold uppercase tracking-[0.14em] text-gray-500">Stage</dt>
-                                    <dd class="mt-1"><span class="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">{{ batch.stage }}</span></dd>
+                                    <dd class="mt-1"><span class="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">{{ cycle.stage }}</span></dd>
                                 </div>
                                 <div>
                                     <dt class="font-semibold uppercase tracking-[0.14em] text-gray-500">Status</dt>
-                                    <dd class="mt-1"><span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">{{ batch.status }}</span></dd>
+                                    <dd class="mt-1"><span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">{{ cycle.status }}</span></dd>
                                 </div>
                             </dl>
                         </article>
 
-                        <p v-if="!loading && batches.length === 0" class="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
-                            No batch records found for your selected filters.
+                        <p v-if="!loading && cycles.length === 0" class="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
+                            No cycle records found for your selected filters.
                         </p>
                     </div>
 
@@ -492,11 +462,11 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 
             <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h3 class="text-base font-bold text-gray-900">Recent Inventory Updates</h3>
-                <p class="mt-1 text-xs text-gray-500">Latest status and count changes from Pig Registry actions.</p>
+                <p class="mt-1 text-xs text-gray-500">Latest status and count changes from cycle operations.</p>
 
                 <div class="mt-4 max-h-120 space-y-3 overflow-y-auto pr-1">
                     <article v-for="(update, idx) in recentUpdates" :key="`update-${idx}`" class="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                        <p class="text-sm font-semibold text-gray-900">{{ update.batch_code || 'Batch' }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ update.cycle_code || update.batch_code || 'Cycle' }}</p>
                         <p class="mt-1 text-xs text-gray-600">{{ update.description }}</p>
                         <p class="mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-gray-500">
                             {{ update.actor || 'System' }}

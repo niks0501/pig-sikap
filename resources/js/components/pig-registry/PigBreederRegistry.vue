@@ -125,14 +125,14 @@ const formatDate = (value) => {
 </script>
 
 <template>
-    <div class="space-y-4 max-w-[1200px] mx-auto">
+    <div class="space-y-4 max-w-300 mx-auto">
         <section class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <a :href="props.routes.batches" class="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Breeder Registry</h2>
-                <p class="mt-1 text-sm text-gray-500">Maintain inahin records linked to pig batches.</p>
+                <p class="mt-1 text-sm text-gray-500">Maintain inahin records linked to pig cycles.</p>
             </div>
         </section>
 

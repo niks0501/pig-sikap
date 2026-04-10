@@ -1,5 +1,5 @@
 <!-- Sidebar layout navigation -->
-<aside class="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen shrink-0 relative overflow-hidden transition-all duration-300" :class="sidebarOpen ? 'w-64' : 'w-[72px]'">
+<aside class="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen shrink-0 relative overflow-hidden transition-all duration-300" :class="sidebarOpen ? 'w-64' : 'w-18'">
     <!-- Logo Section -->
     <div class="flex items-center h-16 border-b border-gray-50 transition-all duration-300" :class="sidebarOpen ? 'px-6 gap-3' : 'justify-center px-2'">
         <div class="bg-emerald-50 p-1.5 rounded-xl text-[#0c6d57] shrink-0">
@@ -29,10 +29,10 @@
                     </div>
                 </a>
 
-                <a href="{{ route('batches.index') }}" class="flex items-center px-3 py-2.5 rounded-xl mb-1 transition-colors {{ request()->routeIs('batches.*') ? 'bg-[#0c6d57]/10 text-[#0c6d57] font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium' }}" :class="sidebarOpen ? 'justify-between' : 'justify-center'" title="Pig Registry">
+                <a href="{{ route('cycles.index') }}" class="flex items-center px-3 py-2.5 rounded-xl mb-1 transition-colors {{ request()->routeIs('cycles.*') ? 'bg-[#0c6d57]/10 text-[#0c6d57] font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium' }}" :class="sidebarOpen ? 'justify-between' : 'justify-center'" title="Cycles">
                     <div class="flex items-center gap-3">
-                        <svg class="w-5 h-5 shrink-0 {{ request()->routeIs('batches.*') ? 'text-[#0c6d57]' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                        <span x-show="sidebarOpen" class="whitespace-nowrap">Pig Registry</span>
+                        <svg class="w-5 h-5 shrink-0 {{ request()->routeIs('cycles.*') ? 'text-[#0c6d57]' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                        <span x-show="sidebarOpen" class="whitespace-nowrap">Cycles</span>
                     </div>
                     <span x-show="sidebarOpen" class="bg-[#0c6d57]/10 text-[#0c6d57] py-0.5 px-2 rounded-full text-xs font-bold shrink-0">248</span>
                 </a>

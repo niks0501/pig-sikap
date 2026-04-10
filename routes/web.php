@@ -5,8 +5,8 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\President\PresidentPigBatchAdjustmentController;
-use App\Http\Controllers\President\PresidentPigBatchStatusController;
+use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
+use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigBreederController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigProfileController;
@@ -44,24 +44,44 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware(['role:president'])->group(function () {
+        Route::prefix('cycles')->name('cycles.')->scopeBindings()->group(function () {
+            Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');
+            Route::get('/create', [PresidentPigInventoryController::class, 'create'])->name('create');
+            Route::post('/', [PresidentPigInventoryController::class, 'store'])->name('store');
+            Route::get('/archived', [PresidentPigInventoryController::class, 'archived'])->name('archived');
+            Route::get('/{cycle}', [PresidentPigInventoryController::class, 'show'])->name('show');
+            Route::get('/{cycle}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
+            Route::put('/{cycle}', [PresidentPigInventoryController::class, 'update'])->name('update');
+            Route::delete('/{cycle}', [PresidentPigInventoryController::class, 'destroy'])->name('destroy');
+            Route::patch('/{cycle}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
+
+            Route::get('/{cycle}/profiles', [PresidentPigProfileController::class, 'index'])->name('profiles.index');
+            Route::post('/{cycle}/profiles', [PresidentPigProfileController::class, 'store'])->name('profiles.store');
+            Route::put('/{cycle}/profiles/{pig}', [PresidentPigProfileController::class, 'update'])->name('profiles.update');
+            Route::delete('/{cycle}/profiles/{pig}', [PresidentPigProfileController::class, 'destroy'])->name('profiles.destroy');
+
+            Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
+            Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
+        });
+
         Route::prefix('batches')->name('batches.')->scopeBindings()->group(function () {
             Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');
             Route::get('/create', [PresidentPigInventoryController::class, 'create'])->name('create');
             Route::post('/', [PresidentPigInventoryController::class, 'store'])->name('store');
             Route::get('/archived', [PresidentPigInventoryController::class, 'archived'])->name('archived');
-            Route::get('/{batch}', [PresidentPigInventoryController::class, 'show'])->name('show');
-            Route::get('/{batch}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
-            Route::put('/{batch}', [PresidentPigInventoryController::class, 'update'])->name('update');
-            Route::delete('/{batch}', [PresidentPigInventoryController::class, 'destroy'])->name('destroy');
-            Route::patch('/{batch}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
+            Route::get('/{cycle}', [PresidentPigInventoryController::class, 'show'])->name('show');
+            Route::get('/{cycle}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
+            Route::put('/{cycle}', [PresidentPigInventoryController::class, 'update'])->name('update');
+            Route::delete('/{cycle}', [PresidentPigInventoryController::class, 'destroy'])->name('destroy');
+            Route::patch('/{cycle}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
 
-            Route::get('/{batch}/pigs', [PresidentPigProfileController::class, 'index'])->name('pigs.index');
-            Route::post('/{batch}/pigs', [PresidentPigProfileController::class, 'store'])->name('pigs.store');
-            Route::put('/{batch}/pigs/{pig}', [PresidentPigProfileController::class, 'update'])->name('pigs.update');
-            Route::delete('/{batch}/pigs/{pig}', [PresidentPigProfileController::class, 'destroy'])->name('pigs.destroy');
+            Route::get('/{cycle}/pigs', [PresidentPigProfileController::class, 'index'])->name('pigs.index');
+            Route::post('/{cycle}/pigs', [PresidentPigProfileController::class, 'store'])->name('pigs.store');
+            Route::put('/{cycle}/pigs/{pig}', [PresidentPigProfileController::class, 'update'])->name('pigs.update');
+            Route::delete('/{cycle}/pigs/{pig}', [PresidentPigProfileController::class, 'destroy'])->name('pigs.destroy');
 
-            Route::post('/{batch}/adjustments', [PresidentPigBatchAdjustmentController::class, 'store'])->name('adjustments.store');
-            Route::post('/{batch}/status', [PresidentPigBatchStatusController::class, 'store'])->name('status.store');
+            Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
+            Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
         });
 
         Route::prefix('breeders')->name('breeders.')->group(function () {
@@ -77,7 +97,8 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         Route::get('/create', function () { return view('health.create'); })->name('create');
         Route::get('/sick', function () { return view('health.sick'); })->name('sick');
     });
-    Route::get('/batches/{batch}/health', function ($id) { return view('batches.health', ['id' => $id]); })->name('batches.health');
+    Route::get('/cycles/{cycle}/health', function ($id) { return view('cycles.health', ['id' => $id]); })->name('cycles.health');
+    Route::get('/batches/{batch}/health', function ($id) { return view('cycles.health', ['id' => $id]); })->name('batches.health');
 
     // Mortality / Deceased Pig Documentation Module
     Route::prefix('mortality')->name('mortality.')->group(function () {

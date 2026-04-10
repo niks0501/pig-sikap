@@ -56,9 +56,14 @@ class Pig extends Model
         ];
     }
 
+    public function cycle(): BelongsTo
+    {
+        return $this->belongsTo(PigCycle::class, 'batch_id');
+    }
+
     public function batch(): BelongsTo
     {
-        return $this->belongsTo(PigBatch::class, 'batch_id');
+        return $this->cycle();
     }
 
     public function createdBy(): BelongsTo
