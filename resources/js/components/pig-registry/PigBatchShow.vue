@@ -136,7 +136,7 @@ const formatDateTime = (value) => {
 </script>
 
 <template>
-    <div class="space-y-4 max-w-[1200px] mx-auto">
+    <div class="space-y-4 max-w-300 mx-auto">
         <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">{{ props.batch.batch_code }}</h2>
@@ -196,7 +196,7 @@ const formatDateTime = (value) => {
         </section>
 
         <div class="grid gap-6 xl:grid-cols-3">
-            <section class="space-y-4 max-w-[1200px] mx-auto xl:col-span-2">
+            <section class="space-y-4 max-w-300 mx-auto xl:col-span-2">
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Batch Information</h3>
                     <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -430,7 +430,7 @@ const formatDateTime = (value) => {
                 </article>
             </section>
 
-            <aside class="space-y-4 max-w-[1200px] mx-auto">
+            <aside class="space-y-4 max-w-300 mx-auto">
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Adjustment History</h3>
                     <div class="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1">
