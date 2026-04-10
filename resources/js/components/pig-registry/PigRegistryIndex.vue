@@ -234,65 +234,65 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 </script>
 
 <template>
-    <div class="space-y-6">
-        <section class="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div class="space-y-4 max-w-[1200px] mx-auto">
+        <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Pig Registry</h2>
                 <p class="mt-1 text-sm text-gray-500">Batch-first inventory with reactive filtering and quick operations.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                <a :href="props.routes.archived" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                <a :href="props.routes.archived" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     Archived
                 </a>
-                <a :href="props.routes.breeders" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-4 py-2.5 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
+                <a :href="props.routes.breeders" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
                     Breeder Registry
                 </a>
-                <a :href="props.routes.create" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                <a :href="props.routes.create" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                     Create Batch
                 </a>
             </div>
         </section>
 
-        <div v-if="flashStatus" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div v-if="flashStatus" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
             {{ flashStatus }}
         </div>
 
-        <div v-if="flashError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+        <div v-if="flashError" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
             {{ flashError }}
         </div>
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Batches</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(summary.active_batches || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_batches || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Piglets</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Breeders</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(summary.total_breeders || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_breeders || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Fatteners</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Sick Pigs</p>
-                <p class="mt-2 text-3xl font-bold text-amber-900">{{ Number(summary.total_sick || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_sick || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+            <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
-                <p class="mt-2 text-3xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm sm:col-span-2">
+            <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:col-span-2">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Batches</p>
-                <p class="mt-2 text-3xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_batches || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_batches || 0).toLocaleString() }}</p>
             </article>
         </section>
 
-        <section class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                 <label class="xl:col-span-2">
                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
@@ -380,7 +380,7 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
             </div>
 
             <div class="mt-4 flex flex-wrap gap-2">
-                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
                     Reset Filters
                 </button>
                 <span class="inline-flex items-center rounded-xl bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
@@ -391,17 +391,17 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 
         <div class="grid gap-6 xl:grid-cols-3">
             <section class="xl:col-span-2">
-                <div class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+                <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                     <div class="hidden overflow-x-auto md:block">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Batch</th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Breeder</th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Birth Date</th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Count</th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Stage / Status</th>
-                                    <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Action</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Batch</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Breeder</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Birth Date</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Count</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Stage / Status</th>
+                                    <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
@@ -411,21 +411,21 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                                     </td>
                                 </tr>
                                 <tr v-for="batch in batches" :key="batch.batch_code" class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 align-top">
+                                    <td class="px-3 py-2 align-top">
                                         <p class="text-sm font-bold text-gray-900">{{ batch.batch_code }}</p>
                                         <p class="text-xs text-gray-500">Caretaker: {{ batch.caretaker?.name ?? 'Unassigned' }}</p>
                                     </td>
-                                    <td class="px-4 py-3 align-top text-sm text-gray-700">
+                                    <td class="px-3 py-2 align-top text-sm text-gray-700">
                                         {{ batch.breeder?.breeder_code ?? 'No breeder linked' }}
                                         <p class="text-xs text-gray-500">{{ batch.breeder?.name_or_tag ?? '-' }}</p>
                                     </td>
-                                    <td class="px-4 py-3 align-top text-sm text-gray-700">{{ formatDate(batch.birth_date) }}</td>
-                                    <td class="px-4 py-3 align-top text-sm text-gray-700">{{ countLabel(batch.current_count, batch.initial_count) }}</td>
-                                    <td class="px-4 py-3 align-top text-xs">
+                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ formatDate(batch.birth_date) }}</td>
+                                    <td class="px-3 py-2 align-top text-sm text-gray-700">{{ countLabel(batch.current_count, batch.initial_count) }}</td>
+                                    <td class="px-3 py-2 align-top text-xs">
                                         <p><span class="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">{{ batch.stage }}</span></p>
                                         <p class="mt-2"><span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">{{ batch.status }}</span></p>
                                     </td>
-                                    <td class="px-4 py-3 text-right align-top">
+                                    <td class="px-3 py-2 text-right align-top">
                                         <a :href="showBatchUrl(batch.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-1.5 text-xs font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
                                             Open
                                         </a>
@@ -441,7 +441,7 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                     </div>
 
                     <div class="space-y-3 p-4 md:hidden">
-                        <article v-for="batch in batches" :key="`mobile-${batch.batch_code}`" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <article v-for="batch in batches" :key="`mobile-${batch.batch_code}`" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <h3 class="text-base font-bold text-gray-900">{{ batch.batch_code }}</h3>
@@ -469,12 +469,12 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                             </dl>
                         </article>
 
-                        <p v-if="!loading && batches.length === 0" class="rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
+                        <p v-if="!loading && batches.length === 0" class="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
                             No batch records found for your selected filters.
                         </p>
                     </div>
 
-                    <div v-if="hasPagination" class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+                    <div v-if="hasPagination" class="flex items-center justify-between border-t border-gray-200 px-3 py-2">
                         <p class="text-xs font-medium uppercase tracking-[0.12em] text-gray-500">
                             Page {{ meta.current_page }} of {{ meta.last_page }}
                         </p>
@@ -490,12 +490,12 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </div>
             </section>
 
-            <section class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h3 class="text-base font-bold text-gray-900">Recent Inventory Updates</h3>
                 <p class="mt-1 text-xs text-gray-500">Latest status and count changes from Pig Registry actions.</p>
 
                 <div class="mt-4 max-h-120 space-y-3 overflow-y-auto pr-1">
-                    <article v-for="(update, idx) in recentUpdates" :key="`update-${idx}`" class="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                    <article v-for="(update, idx) in recentUpdates" :key="`update-${idx}`" class="rounded-xl border border-gray-200 bg-gray-50 p-3">
                         <p class="text-sm font-semibold text-gray-900">{{ update.batch_code || 'Batch' }}</p>
                         <p class="mt-1 text-xs text-gray-600">{{ update.description }}</p>
                         <p class="mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-gray-500">
@@ -504,7 +504,7 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                         </p>
                     </article>
 
-                    <p v-if="recentUpdates.length === 0" class="rounded-2xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
+                    <p v-if="recentUpdates.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
                         No updates recorded yet.
                     </p>
                 </div>

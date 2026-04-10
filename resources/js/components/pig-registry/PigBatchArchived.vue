@@ -160,43 +160,43 @@ const formatDate = (value) => {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div class="space-y-4 max-w-[1200px] mx-auto">
+        <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Archived Pig Batches</h2>
                 <p class="mt-1 text-sm text-gray-500">Completed and closed inventory records.</p>
             </div>
-            <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+            <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                 Back to Active Registry
             </a>
         </section>
 
-        <div v-if="flashStatus" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div v-if="flashStatus" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
             {{ flashStatus }}
         </div>
 
-        <div v-if="flashError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+        <div v-if="flashError" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
             {{ flashError }}
         </div>
 
-        <section class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
             <label class="block">
                 <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search archived batch</span>
                 <input v-model="form.search" type="text" placeholder="Batch code or breeder" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
             </label>
         </section>
 
-        <section class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Batch</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Breeder</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Final Count</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Stage / Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Updated</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Action</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Batch</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Breeder</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Final Count</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Stage / Status</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Updated</th>
+                            <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
@@ -204,18 +204,18 @@ const formatDate = (value) => {
                             <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">Loading archived records...</td>
                         </tr>
                         <tr v-for="batch in rows" :key="batch.batch_code">
-                            <td class="px-4 py-3 font-bold text-gray-900">{{ batch.batch_code }}</td>
-                            <td class="px-4 py-3 text-gray-700">
+                            <td class="px-3 py-2 font-bold text-gray-900">{{ batch.batch_code }}</td>
+                            <td class="px-3 py-2 text-gray-700">
                                 {{ batch.breeder?.breeder_code ?? '-' }}
                                 <span v-if="batch.breeder?.name_or_tag">- {{ batch.breeder.name_or_tag }}</span>
                             </td>
-                            <td class="px-4 py-3 text-gray-700">{{ Number(batch.current_count || 0).toLocaleString() }} / {{ Number(batch.initial_count || 0).toLocaleString() }}</td>
-                            <td class="px-4 py-3 text-gray-700">
+                            <td class="px-3 py-2 text-gray-700">{{ Number(batch.current_count || 0).toLocaleString() }} / {{ Number(batch.initial_count || 0).toLocaleString() }}</td>
+                            <td class="px-3 py-2 text-gray-700">
                                 <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">{{ batch.stage }}</span>
                                 <span class="ml-1 rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-800">{{ batch.status }}</span>
                             </td>
-                            <td class="px-4 py-3 text-gray-700">{{ formatDate(batch.updated_at) }}</td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-3 py-2 text-gray-700">{{ formatDate(batch.updated_at) }}</td>
+                            <td class="px-3 py-2 text-right">
                                 <a :href="showBatchUrl(batch.batch_code)" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50">
                                     View
                                 </a>
@@ -231,7 +231,7 @@ const formatDate = (value) => {
                 </table>
             </div>
 
-            <div v-if="meta.last_page > 1" class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+            <div v-if="meta.last_page > 1" class="flex items-center justify-between border-t border-gray-200 px-3 py-2">
                 <p class="text-xs font-medium uppercase tracking-[0.12em] text-gray-500">
                     Page {{ meta.current_page }} of {{ meta.last_page }}
                 </p>
@@ -271,7 +271,7 @@ const formatDate = (value) => {
                             leave-from="opacity-100 scale-100"
                             leave-to="opacity-0 scale-95"
                         >
-                            <DialogPanel class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+                            <DialogPanel class="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
                                 <DialogTitle class="text-lg font-bold text-gray-900">
                                     Delete Archived Batch
                                 </DialogTitle>
@@ -297,7 +297,7 @@ const formatDate = (value) => {
 
                                     <button
                                         type="button"
-                                        class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                                        class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                                         @click="closeDeleteModal"
                                     >
                                         Cancel
@@ -305,7 +305,7 @@ const formatDate = (value) => {
 
                                     <button
                                         type="submit"
-                                        class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
+                                        class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
                                         :disabled="deleteCountdown > 0"
                                     >
                                         {{ deleteCountdown > 0 ? `Delete in ${deleteCountdown}s` : 'Confirm Delete' }}

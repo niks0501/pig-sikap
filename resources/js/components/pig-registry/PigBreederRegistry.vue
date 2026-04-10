@@ -125,8 +125,8 @@ const formatDate = (value) => {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <section class="flex items-center gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div class="space-y-4 max-w-[1200px] mx-auto">
+        <section class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <a :href="props.routes.batches" class="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
@@ -136,17 +136,17 @@ const formatDate = (value) => {
             </div>
         </section>
 
-        <div v-if="flashStatus" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div v-if="flashStatus" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
             {{ flashStatus }}
         </div>
 
-        <div v-if="flashError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+        <div v-if="flashError" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
             {{ flashError }}
         </div>
 
         <div class="grid gap-6 xl:grid-cols-3">
             <section class="xl:col-span-1">
-                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Register Breeder</h3>
                     <form :action="props.routes.store" method="POST" class="mt-4 space-y-3">
                         <input type="hidden" name="_token" :value="props.csrfToken">
@@ -185,7 +185,7 @@ const formatDate = (value) => {
                             <textarea v-model="createForm.notes" name="notes" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
                         </label>
 
-                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                             Save Breeder
                         </button>
                     </form>
@@ -193,7 +193,7 @@ const formatDate = (value) => {
             </section>
 
             <section class="xl:col-span-2">
-                <article class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+                <article class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                     <div class="border-b border-gray-200 px-5 py-4 sm:px-6">
                         <label class="block">
                             <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search breeders</span>
@@ -205,11 +205,11 @@ const formatDate = (value) => {
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Code</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Tag Name</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Acquired</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Expected Farrowing</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Code</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Tag Name</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Acquired</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Expected Farrowing</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white text-sm">
@@ -217,11 +217,11 @@ const formatDate = (value) => {
                                     <td colspan="5" class="px-4 py-10 text-center text-sm font-medium text-gray-500">Loading breeder records...</td>
                                 </tr>
                                 <tr v-for="breeder in rows" :key="breeder.id">
-                                    <td class="px-4 py-3 font-bold text-gray-900">{{ breeder.breeder_code }}</td>
-                                    <td class="px-4 py-3 text-gray-800">{{ breeder.name_or_tag }}</td>
-                                    <td class="px-4 py-3"><span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ breeder.reproductive_status }}</span></td>
-                                    <td class="px-4 py-3 text-gray-700">{{ formatDate(breeder.acquisition_date) }}</td>
-                                    <td class="px-4 py-3 text-gray-700">{{ formatDate(breeder.expected_farrowing_date) }}</td>
+                                    <td class="px-3 py-2 font-bold text-gray-900">{{ breeder.breeder_code }}</td>
+                                    <td class="px-3 py-2 text-gray-800">{{ breeder.name_or_tag }}</td>
+                                    <td class="px-3 py-2"><span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ breeder.reproductive_status }}</span></td>
+                                    <td class="px-3 py-2 text-gray-700">{{ formatDate(breeder.acquisition_date) }}</td>
+                                    <td class="px-3 py-2 text-gray-700">{{ formatDate(breeder.expected_farrowing_date) }}</td>
                                 </tr>
                                 <tr v-if="!loading && rows.length === 0">
                                     <td colspan="5" class="px-4 py-10 text-center text-sm font-medium text-gray-500">No breeder records found.</td>
@@ -230,7 +230,7 @@ const formatDate = (value) => {
                         </table>
                     </div>
 
-                    <div v-if="meta.last_page > 1" class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+                    <div v-if="meta.last_page > 1" class="flex items-center justify-between border-t border-gray-200 px-3 py-2">
                         <p class="text-xs font-medium uppercase tracking-[0.12em] text-gray-500">
                             Page {{ meta.current_page }} of {{ meta.last_page }}
                         </p>

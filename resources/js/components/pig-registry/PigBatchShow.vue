@@ -136,8 +136,8 @@ const formatDateTime = (value) => {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <section class="flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div class="space-y-4 max-w-[1200px] mx-auto">
+        <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">{{ props.batch.batch_code }}</h2>
                 <p class="mt-1 text-sm text-gray-500">Registered {{ formatDateTime(props.batch.created_at) }}</p>
@@ -149,55 +149,55 @@ const formatDateTime = (value) => {
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     Back to Registry
                 </a>
-                <a :href="props.routes.pigsIndex" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                <a :href="props.routes.pigsIndex" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
                     Manage Pig Profiles
                 </a>
-                <a v-if="!isArchived" :href="props.routes.edit" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-4 py-2.5 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
+                <a v-if="!isArchived" :href="props.routes.edit" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
                     Edit Batch
                 </a>
                 <form v-if="!isArchived" :action="props.routes.archive" method="POST" onsubmit="return confirm('Archive this batch? Operational editing will be restricted.');">
                     <input type="hidden" name="_token" :value="props.csrfToken">
                     <input type="hidden" name="_method" value="PATCH">
-                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-900">
+                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900">
                         Archive / Close
                     </button>
                 </form>
             </div>
         </section>
 
-        <div v-if="props.statusMessage" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div v-if="props.statusMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
             {{ props.statusMessage }}
         </div>
 
-        <div v-if="props.errorMessage" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+        <div v-if="props.errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
             {{ props.errorMessage }}
         </div>
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Count</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(props.batch.current_count || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(props.batch.current_count || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Initial Count</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Number(props.batch.initial_count || 0).toLocaleString() }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(props.batch.initial_count || 0).toLocaleString() }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Pig Profiles</p>
-                <p class="mt-2 text-3xl font-bold text-gray-900">{{ Array.isArray(props.batch.pigs) ? props.batch.pigs.length : 0 }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Array.isArray(props.batch.pigs) ? props.batch.pigs.length : 0 }}</p>
             </article>
-            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Last Reviewed</p>
                 <p class="mt-2 text-sm font-bold text-gray-900">{{ formatDateTime(props.batch.last_reviewed_at) }}</p>
             </article>
         </section>
 
         <div class="grid gap-6 xl:grid-cols-3">
-            <section class="space-y-6 xl:col-span-2">
-                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <section class="space-y-4 max-w-[1200px] mx-auto xl:col-span-2">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Batch Information</h3>
                     <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                         <div>
@@ -228,13 +228,13 @@ const formatDateTime = (value) => {
                             <dd class="mt-1 text-gray-800">{{ props.batch.has_pig_profiles ? 'Yes' : 'No' }}</dd>
                         </div>
                     </dl>
-                    <div class="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                    <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
                         {{ props.batch.notes || 'No notes for this batch yet.' }}
                     </div>
                 </article>
 
                 <div class="grid gap-6 lg:grid-cols-2">
-                    <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                         <h3 class="text-base font-bold text-gray-900">Adjust Count</h3>
                         <p v-if="isArchived" class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
                             Batch is archived. Reopen status first before adjusting count.
@@ -271,13 +271,13 @@ const formatDateTime = (value) => {
                                 <textarea name="remarks" rows="2" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
                             </label>
 
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                                 Save Adjustment
                             </button>
                         </form>
                     </article>
 
-                    <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                         <h3 class="text-base font-bold text-gray-900">Update Stage / Status</h3>
                         <form :action="props.routes.statusStore" method="POST" class="mt-4 space-y-3">
                             <input type="hidden" name="_token" :value="props.csrfToken">
@@ -303,20 +303,20 @@ const formatDateTime = (value) => {
                                 <textarea name="remarks" rows="2" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
                             </label>
 
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                                 Save Status Update
                             </button>
                         </form>
                     </article>
                 </div>
 
-                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <h3 class="text-base font-bold text-gray-900">Pig Profiles</h3>
                         <a :href="props.routes.pigsIndex" class="text-sm font-semibold text-[#0c6d57] hover:text-[#0a5a48]">Open dedicated profile manager</a>
                     </div>
 
-                    <form v-if="!isArchived" :action="props.routes.pigsStore" method="POST" class="mt-4 grid gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-2">
+                    <form v-if="!isArchived" :action="props.routes.pigsStore" method="POST" class="mt-4 grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-2">
                         <input type="hidden" name="_token" :value="props.csrfToken">
 
                         <label>
@@ -349,7 +349,7 @@ const formatDateTime = (value) => {
                             <input type="text" name="remarks" placeholder="Optional" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
                         </label>
                         <div class="md:col-span-2">
-                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                                 Add Pig Profile
                             </button>
                         </div>
@@ -359,7 +359,7 @@ const formatDateTime = (value) => {
                         </p>
                     </form>
 
-                    <div class="mt-4 overflow-x-auto rounded-2xl border border-gray-200">
+                    <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -430,11 +430,11 @@ const formatDateTime = (value) => {
                 </article>
             </section>
 
-            <aside class="space-y-6">
-                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            <aside class="space-y-4 max-w-[1200px] mx-auto">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Adjustment History</h3>
                     <div class="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1">
-                        <div v-for="adjustment in adjustmentHistory" :key="adjustment.id" class="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
+                        <div v-for="adjustment in adjustmentHistory" :key="adjustment.id" class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
                             <p class="font-semibold text-gray-900">
                                 {{ adjustment.quantity_before }} -> {{ adjustment.quantity_after }}
                                 <span class="text-xs uppercase tracking-[0.14em] text-gray-500">({{ adjustment.adjustment_type }})</span>
@@ -442,22 +442,22 @@ const formatDateTime = (value) => {
                             <p class="mt-1 text-xs text-gray-600">Reason: {{ adjustment.reason }}</p>
                             <p class="mt-1 text-xs text-gray-500">{{ adjustment.created_by?.name || adjustment.created_by?.name || adjustment.created_by_name || adjustment.created_by || 'System' }} - {{ formatDateTime(adjustment.created_at) }}</p>
                         </div>
-                        <p v-if="adjustmentHistory.length === 0" class="rounded-2xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
+                        <p v-if="adjustmentHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
                             No count adjustments yet.
                         </p>
                     </div>
                 </article>
 
-                <article class="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                     <h3 class="text-base font-bold text-gray-900">Status History</h3>
                     <div class="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1">
-                        <div v-for="history in statusHistory" :key="history.id" class="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
+                        <div v-for="history in statusHistory" :key="history.id" class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm">
                             <p class="font-semibold text-gray-900">{{ history.new_stage }} / {{ history.new_status }}</p>
                             <p class="mt-1 text-xs text-gray-600">From: {{ history.old_stage || '-' }} / {{ history.old_status || '-' }}</p>
                             <p v-if="history.remarks" class="mt-1 text-xs text-gray-600">{{ history.remarks }}</p>
                             <p class="mt-1 text-xs text-gray-500">{{ history.changed_by?.name || history.changed_by || 'System' }} - {{ formatDateTime(history.created_at) }}</p>
                         </div>
-                        <p v-if="statusHistory.length === 0" class="rounded-2xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
+                        <p v-if="statusHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
                             No status updates yet.
                         </p>
                     </div>
@@ -490,7 +490,7 @@ const formatDateTime = (value) => {
                             leave-from="opacity-100 scale-100"
                             leave-to="opacity-0 scale-95"
                         >
-                            <DialogPanel class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+                            <DialogPanel class="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
                                 <DialogTitle class="text-lg font-bold text-gray-900">
                                     Delete Pig Profile
                                 </DialogTitle>
@@ -517,7 +517,7 @@ const formatDateTime = (value) => {
 
                                     <button
                                         type="button"
-                                        class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                                        class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                                         @click="closeDeleteModal"
                                     >
                                         Cancel
@@ -525,7 +525,7 @@ const formatDateTime = (value) => {
 
                                     <button
                                         type="submit"
-                                        class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+                                        class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
                                     >
                                         Confirm Delete
                                     </button>

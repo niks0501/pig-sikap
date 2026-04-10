@@ -21,6 +21,7 @@
 /vendor
 /.vscode
 /.github
+/md_files
 .playwright-cli
 .serena
 .playwright
