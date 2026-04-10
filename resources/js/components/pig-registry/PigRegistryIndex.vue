@@ -187,6 +187,32 @@ const goToPage = (page) => {
 
 const hasPagination = computed(() => meta.last_page > 1);
 
+const activeFilterCount = computed(() => {
+    let count = 0;
+
+    if (filters.search.trim()) {
+        count += 1;
+    }
+
+    if (filters.scope !== 'all') {
+        count += 1;
+    }
+
+    if (filters.stage) {
+        count += 1;
+    }
+
+    if (filters.status) {
+        count += 1;
+    }
+
+    if (filters.caretaker) {
+        count += 1;
+    }
+
+    return count;
+});
+
 const showCycleUrl = (cycleCode) => `${props.routes.showBase}/${encodeURIComponent(cycleCode)}`;
 
 const formatDate = (value) => {
@@ -274,7 +300,17 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
         </section>
 
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">Filter Cycles</h3>
+                    <p class="mt-1 text-xs text-gray-500">Narrow records by search, scope, stage, status, and caretaker.</p>
+                </div>
+                <span class="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                    {{ activeFilterCount }} active filter{{ activeFilterCount === 1 ? '' : 's' }}
+                </span>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <label class="xl:col-span-2">
                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
                     <input
@@ -350,8 +386,8 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </label>
             </div>
 
-            <div class="mt-4 flex flex-wrap gap-2">
-                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60" :disabled="activeFilterCount === 0" @click="resetFilters">
                     Reset Filters
                 </button>
                 <span class="inline-flex items-center rounded-xl bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
@@ -403,7 +439,10 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                                 </tr>
                                 <tr v-if="!loading && cycles.length === 0">
                                     <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">
-                                        No cycle records found for your selected filters.
+                                        <p>No cycle records found for your selected filters.</p>
+                                        <button type="button" class="mt-3 inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+                                            Clear Filters
+                                        </button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -441,6 +480,9 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 
                         <p v-if="!loading && cycles.length === 0" class="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
                             No cycle records found for your selected filters.
+                            <button type="button" class="mt-3 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+                                Clear Filters
+                            </button>
                         </p>
                     </div>
 

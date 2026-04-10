@@ -16,6 +16,6 @@
     @endphp
 
     <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div data-vue-component="pig-batch-pigs" data-props='@json($vueProps)'></div>
+        <div data-vue-component="pig-cycle-pigs" data-props='@json($vueProps)'></div>
     </div>
 </x-app-layout>

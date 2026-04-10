@@ -26,16 +26,18 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
 </script>
 
 <template>
-    <div>
-        <h3 class="mb-4 border-b border-gray-100 pb-2 text-base font-bold text-gray-900">3. Life Stage & Description</h3>
-        <div class="grid gap-5 sm:grid-cols-2">
+    <div class="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5">
+        <h3 class="text-base font-bold text-gray-900">3. Life Stage & Description</h3>
+        <p class="mt-1 text-xs text-gray-500">Set the current operational stage and status, then include field notes.</p>
+
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label>
                 <span class="mb-1 block text-sm font-semibold text-gray-700">Current Stage <span class="text-rose-500" title="Required">*</span></span>
                 <select
                     v-model="props.form.stage"
                     name="stage"
                     required
-                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                 >
                     <option v-for="stage in props.stages" :key="stage" :value="stage">{{ stage }}</option>
                 </select>
@@ -48,7 +50,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                     v-model="props.form.status"
                     name="status"
                     required
-                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                 >
                     <option v-for="status in props.statuses" :key="status" :value="status">{{ status }}</option>
                 </select>
@@ -67,7 +69,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                     min="0"
                     step="0.01"
                     placeholder="0.00"
-                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                 >
                 <span v-if="fieldError('average_weight')" class="mt-1 block text-xs font-medium text-rose-700">{{ fieldError('average_weight') }}</span>
             </label>
@@ -82,8 +84,8 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                     name="notes"
                     rows="3"
                     :placeholder="props.notesPlaceholder"
-                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
-                />
+                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                ></textarea>
                 <span v-if="fieldError('notes')" class="mt-1 block text-xs font-medium text-rose-700">{{ fieldError('notes') }}</span>
             </label>
         </div>

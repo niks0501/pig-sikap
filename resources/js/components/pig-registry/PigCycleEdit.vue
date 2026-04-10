@@ -81,10 +81,11 @@ const formatDate = (value) => {
 </script>
 
 <template>
-    <div class="mx-auto max-w-300 space-y-4">
-        <section class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <div class="mx-auto max-w-300 space-y-5">
+        <section class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Edit Cycle {{ props.cycle.batch_code }}</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#0c6d57]">Cycle Maintenance</p>
+                <h2 class="mt-2 text-2xl font-bold text-gray-900">Edit Cycle {{ props.cycle.batch_code }}</h2>
                 <p class="mt-1 text-sm text-gray-500">Update cycle metadata. Count changes are handled in adjustment flow.</p>
             </div>
             <a :href="props.routes.show" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
@@ -105,27 +106,29 @@ const formatDate = (value) => {
         </div>
 
         <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div class="p-5">
+            <div class="p-4 sm:p-6">
                 <form :action="props.routes.update" method="POST" class="space-y-8">
                     <input type="hidden" name="_token" :value="props.csrfToken">
                     <input type="hidden" name="_method" value="PUT">
 
                     <div>
-                        <h3 class="mb-4 border-b border-gray-100 pb-2 text-base font-bold text-gray-900">1. Locked Information</h3>
-                        <div class="grid gap-5 sm:grid-cols-3">
+                        <h3 class="text-base font-bold text-gray-900">1. Locked Information</h3>
+                        <p class="mt-1 text-xs text-gray-500">These values are fixed for identity and historical integrity.</p>
+
+                        <div class="mt-4 grid gap-4 sm:grid-cols-3">
                             <label>
                                 <span class="mb-1 block text-sm font-semibold text-gray-700">Cycle Code</span>
-                                <input type="text" :value="props.cycle.batch_code" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500">
+                                <input type="text" :value="props.cycle.batch_code" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-500">
                             </label>
 
                             <label>
                                 <span class="mb-1 block text-sm font-semibold text-gray-700">Current Count</span>
-                                <input type="text" :value="countLabel" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500">
+                                <input type="text" :value="countLabel" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-500">
                             </label>
 
                             <label>
                                 <span class="mb-1 block text-sm font-semibold text-gray-700">Date of Purchase</span>
-                                <input type="text" :value="formatDate(props.cycle.date_of_purchase)" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500">
+                                <input type="text" :value="formatDate(props.cycle.date_of_purchase)" disabled class="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-500">
                             </label>
                         </div>
                     </div>

@@ -73,10 +73,11 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
 </script>
 
 <template>
-    <div class="mx-auto max-w-300 space-y-4">
-        <section class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <div class="mx-auto max-w-300 space-y-5">
+        <section class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Create Pig Cycle</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#0c6d57]">Cycle Registration</p>
+                <h2 class="mt-2 text-2xl font-bold text-gray-900">Create Cycle Record</h2>
                 <p class="mt-1 text-sm text-gray-500">Register one livestock cycle as the main inventory record.</p>
             </div>
             <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
@@ -93,13 +94,15 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
         </div>
 
         <section class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div class="p-5">
+            <div class="p-4 sm:p-6">
                 <form :action="props.routes.store" method="POST" class="space-y-8">
                     <input type="hidden" name="_token" :value="props.csrfToken">
 
                     <div>
-                        <h3 class="mb-4 border-b border-gray-100 pb-2 text-base font-bold text-gray-900">1. Essential Cycle Information</h3>
-                        <div class="grid gap-5 sm:grid-cols-2">
+                        <h3 class="text-base font-bold text-gray-900">1. Essential Cycle Information</h3>
+                        <p class="mt-1 text-xs text-gray-500">Define the identity and baseline quantity of this cycle.</p>
+
+                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <label>
                                 <span class="mb-1 block text-sm font-semibold text-gray-700">Cycle Code <span class="text-rose-500" title="Required">*</span></span>
                                 <input
@@ -108,7 +111,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                                     name="batch_code"
                                     required
                                     placeholder="e.g. C-001"
-                                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                                 >
                                 <span v-if="fieldError('batch_code')" class="mt-1 block text-xs font-medium text-rose-700">{{ fieldError('batch_code') }}</span>
                             </label>
@@ -120,7 +123,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                                     type="date"
                                     name="date_of_purchase"
                                     required
-                                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                                 >
                                 <span v-if="fieldError('date_of_purchase')" class="mt-1 block text-xs font-medium text-rose-700">{{ fieldError('date_of_purchase') }}</span>
                             </label>
@@ -136,7 +139,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                                     min="1"
                                     required
                                     placeholder="Number of pigs at setup"
-                                    class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm transition-all hover:bg-gray-50 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                                 >
                                 <span v-if="fieldError('initial_count')" class="mt-1 block text-xs font-medium text-rose-700">{{ fieldError('initial_count') }}</span>
                             </label>
@@ -153,7 +156,7 @@ const fieldError = (name) => props.errors[name]?.[0] ?? '';
                         notes-placeholder="Context or observations about this cycle..."
                     />
 
-                    <label class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <label class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                         <input v-model="form.has_pig_profiles" type="checkbox" name="has_pig_profiles" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]/40">
                         <span>
                             <span class="block text-sm font-semibold text-emerald-900">Auto-generate pig profiles</span>
