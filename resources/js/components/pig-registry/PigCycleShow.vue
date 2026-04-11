@@ -29,6 +29,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    automation: {
+        type: Object,
+        default: () => ({}),
+    },
     routes: {
         type: Object,
         required: true,
@@ -50,6 +54,26 @@ const props = defineProps({
 const isArchived = computed(() => props.cycle.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle.status));
 const isAdjustmentDialogOpen = ref(false);
 const isStatusDialogOpen = ref(false);
+const automation = computed(() => props.automation ?? {});
+
+const countdown = computed(() => automation.value.countdown ?? {});
+const suggestions = computed(() => (Array.isArray(automation.value.suggestions) ? automation.value.suggestions : []));
+const warnings = computed(() => (Array.isArray(automation.value.warnings) ? automation.value.warnings : []));
+
+const countSummary = computed(() => automation.value.counts ?? {});
+const expenseSummary = computed(() => automation.value.expenses ?? {});
+const profitabilitySummary = computed(() => automation.value.profitability ?? {});
+
+const formatCurrency = (value) => {
+    const amount = Number(value ?? 0);
+
+    return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
 
 const adjustmentHistory = computed(() => {
     const items = Array.isArray(props.cycle.adjustments) ? [...props.cycle.adjustments] : [];
@@ -158,6 +182,43 @@ const closeStatusDialog = () => {
             {{ props.errorMessage }}
         </div>
 
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Expected Sale Date</p>
+                <p class="mt-2 text-base font-bold text-gray-900">{{ formatDate(countdown.expected_ready_for_sale_date) }}</p>
+            </article>
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Harvest Month</p>
+                <p class="mt-2 text-base font-bold text-gray-900">{{ countdown.expected_harvest_month || '-' }}</p>
+            </article>
+            <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Days Since Acquisition</p>
+                <p class="mt-2 text-lg font-bold text-blue-900">{{ countdown.days_since_acquisition ?? '-' }}</p>
+            </article>
+            <article class="rounded-xl border p-4 shadow-sm" :class="countdown.is_overdue_for_sale_review ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em]" :class="countdown.is_overdue_for_sale_review ? 'text-rose-700' : 'text-emerald-700'">Days Until Ready for Sale</p>
+                <p class="mt-2 text-lg font-bold" :class="countdown.is_overdue_for_sale_review ? 'text-rose-900' : 'text-emerald-900'">{{ countdown.days_until_ready_for_sale ?? '-' }}</p>
+            </article>
+        </section>
+
+        <section v-if="warnings.length > 0" class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <h3 class="text-sm font-bold text-amber-900">Automation Warnings</h3>
+            <ul class="mt-3 space-y-2 text-sm text-amber-900">
+                <li v-for="warning in warnings" :key="warning.code" class="rounded-xl border border-amber-200 bg-white px-3 py-2">
+                    {{ warning.message }}
+                </li>
+            </ul>
+        </section>
+
+        <section v-if="suggestions.length > 0" class="rounded-xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4 shadow-sm">
+            <h3 class="text-sm font-bold text-[#0c6d57]">Suggested Next Actions (Requires Confirmation)</h3>
+            <ul class="mt-3 space-y-2 text-sm text-[#0a5a48]">
+                <li v-for="suggestion in suggestions" :key="suggestion.code" class="rounded-xl border border-[#0c6d57]/20 bg-white px-3 py-2">
+                    {{ suggestion.message }}
+                </li>
+            </ul>
+        </section>
+
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Count</p>
@@ -178,6 +239,27 @@ const closeStatusDialog = () => {
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Last Reviewed</p>
                 <p class="mt-2 text-sm font-bold text-gray-900">{{ formatDateTime(props.cycle.last_reviewed_at) }}</p>
+            </article>
+        </section>
+
+        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Total Expenses</p>
+                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_expense) }}</p>
+            </article>
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Total Sales</p>
+                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_sales) }}</p>
+            </article>
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Net Profit / Loss</p>
+                <p class="mt-2 text-base font-bold" :class="Number(profitabilitySummary.net_profit_or_loss || 0) < 0 ? 'text-rose-700' : 'text-emerald-700'">
+                    {{ formatCurrency(profitabilitySummary.net_profit_or_loss) }}
+                </p>
+            </article>
+            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Caretaker Share (50%)</p>
+                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(profitabilitySummary.caretaker_share) }}</p>
             </article>
         </section>
 
@@ -210,6 +292,21 @@ const closeStatusDialog = () => {
                     <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
                         {{ props.cycle.notes || 'No notes for this cycle yet.' }}
                     </div>
+
+                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                        <div>
+                            <dt class="font-semibold text-gray-500">Sick Count</dt>
+                            <dd class="mt-1 text-gray-800">{{ countSummary.sick_count ?? 0 }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Deceased Count</dt>
+                            <dd class="mt-1 text-gray-800">{{ countSummary.deceased_count ?? 0 }}</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-gray-500">Sold Count</dt>
+                            <dd class="mt-1 text-gray-800">{{ countSummary.sold_count ?? 0 }}</dd>
+                        </div>
+                    </dl>
                 </article>
 
                 <div class="grid gap-4 lg:grid-cols-2">

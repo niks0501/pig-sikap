@@ -14,7 +14,19 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased text-gray-900 bg-gray-50 h-screen flex overflow-hidden" x-data="{ sidebarOpen: true }">
+    @php
+        $userId = auth()->id() ?? 'guest';
+    @endphp
+    <body class="font-sans antialiased text-gray-900 bg-gray-50 h-screen flex overflow-hidden"
+        x-data="{
+            sidebarOpen: (function() {
+                let key = 'sidebarOpen_{{ $userId }}';
+                let stored = localStorage.getItem(key);
+                return stored === null ? false : stored === 'true';
+            })()
+        }"
+        x-init="$watch('sidebarOpen', value => localStorage.setItem('sidebarOpen_{{ $userId }}', value))"
+    >
         <!-- Sidebar -->
         @include('layouts.sidebar')
 

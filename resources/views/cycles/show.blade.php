@@ -8,6 +8,7 @@
             'statuses' => $statuses,
             'pigStatuses' => $pigStatuses,
             'sexOptions' => $sexOptions,
+            'automation' => $automation,
             'routes' => [
                 'index' => route('cycles.index'),
                 'edit' => route('cycles.edit', $cycle),

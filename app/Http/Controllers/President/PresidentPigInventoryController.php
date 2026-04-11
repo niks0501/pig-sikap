@@ -11,6 +11,7 @@ use App\Models\PigCycle;
 use App\Models\PigCycleAdjustment;
 use App\Models\PigCycleStatusHistory;
 use App\Models\User;
+use App\Services\PigRegistry\AnalyzePigCycleService;
 use App\Services\PigRegistry\CreatePigCycleService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -124,7 +125,7 @@ class PresidentPigInventoryController extends Controller
             ->with('status', 'Cycle was created successfully.');
     }
 
-    public function show(PigCycle $cycle): View
+    public function show(PigCycle $cycle, AnalyzePigCycleService $analyzePigCycleService): View
     {
         $cycle->load([
             'caretaker:id,name',
@@ -132,6 +133,8 @@ class PresidentPigInventoryController extends Controller
             'adjustments.createdBy:id,name',
             'statusHistories.changedBy:id,name',
         ]);
+
+        $automation = $analyzePigCycleService->handle($cycle);
 
         return view('cycles.show', [
             'cycle' => $cycle,
@@ -141,6 +144,7 @@ class PresidentPigInventoryController extends Controller
             'statuses' => PigCycle::STATUSES,
             'pigStatuses' => Pig::STATUSES,
             'sexOptions' => Pig::SEX_OPTIONS,
+            'automation' => $automation,
         ]);
     }
 

@@ -424,6 +424,23 @@ test('president can view batch details using batch code route model binding', fu
         ->assertViewHas('cycle', fn (PigCycle $viewCycle) => $viewCycle->batch_code === 'B-SHOW-001');
 });
 
+test('batch details page includes automation insights payload', function () {
+    $president = presidentUser();
+    $batch = makeBatch($president, ['batch_code' => 'B-AUTO-001']);
+
+    actingAs($president)
+        ->get(route('cycles.show', $batch->batch_code))
+        ->assertOk()
+        ->assertViewHas('automation', function (array $automation): bool {
+            return isset($automation['countdown'])
+                && isset($automation['counts'])
+                && isset($automation['expenses'])
+                && isset($automation['profitability'])
+                && isset($automation['suggestions'])
+                && isset($automation['warnings']);
+        });
+});
+
 test('updating batch details without status change records batch_updated audit', function () {
     $president = presidentUser();
     $batch = makeBatch($president, [
