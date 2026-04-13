@@ -176,6 +176,31 @@ test('task update and undo from health index redirects back to list page', funct
     $undoResponse->assertRedirect($indexUrl);
 });
 
+test('task update ignores referers that only match by host and not by configured app url', function () {
+    $president = healthPresident();
+    $cycle = makeHealthCycle($president);
+
+    app(CycleHealthPlanGenerator::class)->assignDefaultTemplateAndGenerateTasks($cycle);
+
+    /** @var CycleHealthTask $task */
+    $task = $cycle->healthTasks()->where('task_type', 'injectable')->firstOrFail();
+
+    $appUrl = parse_url((string) config('app.url')) ?: [];
+    $refererScheme = (($appUrl['scheme'] ?? 'http') === 'https') ? 'http' : 'https';
+    $refererHost = (string) ($appUrl['host'] ?? 'localhost');
+    $referer = $refererScheme.'://'.$refererHost.'/health/cycles';
+
+    $response = actingAs($president)
+        ->from($referer)
+        ->patch(route('health.cycles.tasks.update', [$cycle, $task]), [
+            'action' => 'complete_all',
+            'actual_date' => now()->toDateString(),
+        ]);
+
+    $response->assertRedirect(route('health.cycles.show', $cycle));
+    $response->assertSessionHas('undo_task');
+});
+
 test('president can update cycle health task and action is logged for health module', function () {
     $president = healthPresident();
     $cycle = makeHealthCycle($president);
@@ -252,6 +277,14 @@ test('president can undo accidental complete all task action', function () {
     expect((int) $task->completed_count)->toBe($beforeCompletedCount);
     expect((int) $task->remaining_count)->toBe($beforeRemainingCount);
     expect((string) $task->actual_date)->toBe((string) $beforeActualDate);
+
+    $repeatUndoResponse = actingAs($president)->patch(route('health.cycles.tasks.undo', [$cycle, $task]), [
+        'undo_token' => $undoToken,
+    ]);
+
+    $repeatUndoResponse->assertRedirect(route('health.cycles.show', $cycle));
+    $repeatUndoResponse->assertSessionHasErrors('undo');
+    expect((string) session('errors')->first('undo'))->toContain('already been used');
 
     assertDatabaseHas('audit_trails', [
         'action' => 'cycle_health_task_update_undone',

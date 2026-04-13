@@ -7,6 +7,10 @@ use Illuminate\Support\Carbon;
 
 class CycleHealthTaskStatusResolver
 {
+    public function __construct(
+        private readonly CycleHealthDateNormalizer $dateNormalizer
+    ) {}
+
     public function refreshTask(CycleHealthTask $task): CycleHealthTask
     {
         $targetCount = max(0, (int) $task->target_count);
@@ -74,9 +78,7 @@ class CycleHealthTaskStatusResolver
             return 'in_progress';
         }
 
-        $plannedDate = $plannedStartDate instanceof Carbon
-            ? $plannedStartDate->copy()->startOfDay()
-            : ($plannedStartDate !== null ? Carbon::parse((string) $plannedStartDate)->startOfDay() : null);
+        $plannedDate = $this->dateNormalizer->toCarbon($plannedStartDate);
 
         if ($plannedDate !== null && $plannedDate->lt(today())) {
             return 'overdue';

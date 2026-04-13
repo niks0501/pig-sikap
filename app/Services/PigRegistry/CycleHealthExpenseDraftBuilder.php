@@ -3,10 +3,13 @@
 namespace App\Services\PigRegistry;
 
 use App\Models\CycleHealthTask;
-use Illuminate\Support\Carbon;
 
 class CycleHealthExpenseDraftBuilder
 {
+    public function __construct(
+        private readonly CycleHealthDateNormalizer $dateNormalizer
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -15,7 +18,7 @@ class CycleHealthExpenseDraftBuilder
         return [
             'batch_id' => $task->batch_id,
             'category' => $this->mapExpenseCategory($task->task_type),
-            'expense_date' => $this->toDateString($task->actual_date) ?? $this->toDateString($task->planned_start_date),
+            'expense_date' => $this->dateNormalizer->toDateString($task->actual_date) ?? $this->dateNormalizer->toDateString($task->planned_start_date),
             'notes' => trim(implode(' | ', array_filter([
                 'Draft from health task',
                 $task->task_name,
@@ -36,18 +39,5 @@ class CycleHealthExpenseDraftBuilder
             'injectable', 'deworming', 'maintenance_optional' => 'medicine',
             default => 'emergency',
         };
-    }
-
-    private function toDateString(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if ($value instanceof Carbon) {
-            return $value->copy()->toDateString();
-        }
-
-        return Carbon::parse((string) $value)->toDateString();
     }
 }

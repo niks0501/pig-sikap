@@ -17,6 +17,10 @@ class PresidentCycleHealthTaskController extends Controller
 {
     use RecordsAuditTrail;
 
+    private const UNDO_SESSION_KEY = 'health_task_undo';
+
+    private const UNDO_EXPIRATION_MINUTES = 15;
+
     /**
      * @var list<string>
      */
@@ -64,13 +68,16 @@ class PresidentCycleHealthTaskController extends Controller
 
         if (is_array($undoSnapshot) && $this->taskStateChanged($undoSnapshot, $updatedTask)) {
             $undoToken = (string) Str::uuid();
-
-            $request->session()->put("health_task_undo.{$undoToken}", [
+            $undoState = $this->getUndoTaskState($request);
+            $undoState[$this->hashUndoToken($undoToken)] = [
                 'cycle_id' => $cycle->id,
                 'task_id' => $updatedTask->id,
                 'snapshot' => $undoSnapshot,
-                'expires_at' => now()->addMinutes(15)->timestamp,
-            ]);
+                'expires_at' => now()->addMinutes(self::UNDO_EXPIRATION_MINUTES)->timestamp,
+                'used_at' => null,
+            ];
+
+            $request->session()->put(self::UNDO_SESSION_KEY, $undoState);
 
             return $redirect
                 ->with('status', $this->buildTaskActionStatusMessage($action))
@@ -99,30 +106,23 @@ class PresidentCycleHealthTaskController extends Controller
         }
 
         $validated = $request->validate([
-            'undo_token' => ['required', 'string'],
+            'undo_token' => ['required', 'uuid'],
         ]);
 
-        $undoKey = 'health_task_undo.'.$validated['undo_token'];
-        $undoState = $request->session()->get($undoKey);
+        $undoTokenHash = $this->hashUndoToken($validated['undo_token']);
+        $undoState = $this->getUndoTaskState($request);
+        $undoEntry = $undoState[$undoTokenHash] ?? null;
 
-        if (! is_array($undoState)) {
+        if (! is_array($undoEntry)) {
             return $this->resolveHealthRedirect($request, $cycle)
                 ->withErrors([
                     'undo' => 'Undo action is no longer available.',
                 ]);
         }
 
-        if ((int) ($undoState['cycle_id'] ?? 0) !== $cycle->id || (int) ($undoState['task_id'] ?? 0) !== $healthTask->id) {
-            $request->session()->forget($undoKey);
-
-            return $this->resolveHealthRedirect($request, $cycle)
-                ->withErrors([
-                    'undo' => 'Undo token does not match this task.',
-                ]);
-        }
-
-        if ((int) ($undoState['expires_at'] ?? 0) < now()->timestamp) {
-            $request->session()->forget($undoKey);
+        if ((int) ($undoEntry['expires_at'] ?? 0) < now()->timestamp) {
+            unset($undoState[$undoTokenHash]);
+            $request->session()->put(self::UNDO_SESSION_KEY, $undoState);
 
             return $this->resolveHealthRedirect($request, $cycle)
                 ->withErrors([
@@ -130,11 +130,23 @@ class PresidentCycleHealthTaskController extends Controller
                 ]);
         }
 
-        $snapshot = $undoState['snapshot'] ?? null;
+        if (($undoEntry['used_at'] ?? null) !== null) {
+            return $this->resolveHealthRedirect($request, $cycle)
+                ->withErrors([
+                    'undo' => 'Undo token has already been used.',
+                ]);
+        }
+
+        if ((int) ($undoEntry['cycle_id'] ?? 0) !== $cycle->id || (int) ($undoEntry['task_id'] ?? 0) !== $healthTask->id) {
+            return $this->resolveHealthRedirect($request, $cycle)
+                ->withErrors([
+                    'undo' => 'Undo token does not match this task.',
+                ]);
+        }
+
+        $snapshot = $undoEntry['snapshot'] ?? null;
 
         if (! is_array($snapshot)) {
-            $request->session()->forget($undoKey);
-
             return $this->resolveHealthRedirect($request, $cycle)
                 ->withErrors([
                     'undo' => 'Unable to restore task state.',
@@ -156,7 +168,8 @@ class PresidentCycleHealthTaskController extends Controller
             $healthTask->save();
         });
 
-        $request->session()->forget($undoKey);
+        $undoState[$undoTokenHash]['used_at'] = now()->timestamp;
+        $request->session()->put(self::UNDO_SESSION_KEY, $undoState);
 
         $this->recordAudit(
             $request,
@@ -193,16 +206,85 @@ class PresidentCycleHealthTaskController extends Controller
             return false;
         }
 
-        $appHost = parse_url(url('/'), PHP_URL_HOST);
-        $candidateHost = parse_url($url, PHP_URL_HOST);
+        $candidate = parse_url($url);
+        $appUrl = parse_url((string) config('app.url'));
 
-        if ($candidateHost !== null && $appHost !== null && Str::lower((string) $candidateHost) !== Str::lower((string) $appHost)) {
+        if (! is_array($candidate) || ! is_array($appUrl)) {
             return false;
         }
 
-        $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+        if (! $this->isMatchingUrlComponent($candidate['scheme'] ?? null, $appUrl['scheme'] ?? null)) {
+            return false;
+        }
 
-        return Str::startsWith($path, '/health');
+        if (! $this->isMatchingUrlComponent($candidate['host'] ?? null, $appUrl['host'] ?? null)) {
+            return false;
+        }
+
+        if ($this->normalizeUrlPort($candidate['scheme'] ?? null, $candidate['port'] ?? null) !== $this->normalizeUrlPort($appUrl['scheme'] ?? null, $appUrl['port'] ?? null)) {
+            return false;
+        }
+
+        $candidatePath = $this->normalizeUrlPath((string) ($candidate['path'] ?? '/'));
+        $appPath = $this->normalizeUrlPath((string) ($appUrl['path'] ?? '/'));
+        $healthPath = $appPath === '/' ? '/health' : rtrim($appPath, '/').'/health';
+
+        return $candidatePath === $healthPath || Str::startsWith($candidatePath, $healthPath.'/');
+    }
+
+    private function isMatchingUrlComponent(mixed $candidate, mixed $expected): bool
+    {
+        if (! is_string($candidate) || ! is_string($expected) || $candidate === '' || $expected === '') {
+            return false;
+        }
+
+        return Str::lower($candidate) === Str::lower($expected);
+    }
+
+    private function normalizeUrlPort(mixed $scheme, mixed $port): int
+    {
+        if (is_numeric($port)) {
+            return (int) $port;
+        }
+
+        return match (Str::lower((string) $scheme)) {
+            'http' => 80,
+            'https' => 443,
+            default => 0,
+        };
+    }
+
+    private function normalizeUrlPath(string $path): string
+    {
+        $normalized = '/' . ltrim($path, '/');
+
+        // When $path is exactly '/', prefixing '/' to the ltrim() result produces '//'.
+        // Collapse that back to the root path before applying the general trailing-slash
+        // normalization so '/' and equivalent root-path inputs are treated consistently.
+        return $normalized === '//' ? '/' : (rtrim($normalized, '/') ?: '/');
+    }
+
+    private function hashUndoToken(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function getUndoTaskState(Request $request): array
+    {
+        $undoState = $request->session()->get(self::UNDO_SESSION_KEY, []);
+
+        if (! is_array($undoState)) {
+            return [];
+        }
+
+        $now = now()->timestamp;
+
+        return array_filter($undoState, function ($entry) use ($now): bool {
+            return is_array($entry) && (int) ($entry['expires_at'] ?? 0) >= $now;
+        });
     }
 
     /**

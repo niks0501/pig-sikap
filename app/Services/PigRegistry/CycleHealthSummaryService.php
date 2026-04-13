@@ -4,13 +4,15 @@ namespace App\Services\PigRegistry;
 
 use App\Models\CycleHealthTask;
 use App\Models\PigCycle;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class CycleHealthSummaryService
 {
+    private const RECENT_COMPLETION_WINDOW_DAYS = 14;
+
     public function __construct(
-        private readonly CycleHealthTaskStatusResolver $statusResolver
+        private readonly CycleHealthTaskStatusResolver $statusResolver,
+        private readonly CycleHealthDateNormalizer $dateNormalizer
     ) {}
 
     /**
@@ -30,7 +32,7 @@ class CycleHealthSummaryService
         $incidents = $cycle->healthIncidents()->get();
 
         $dueToday = $tasks->filter(function (CycleHealthTask $task): bool {
-            $plannedStartDate = $this->toCarbon($task->planned_start_date);
+            $plannedStartDate = $this->dateNormalizer->toCarbon($task->planned_start_date);
 
             return $plannedStartDate?->isToday() === true
                 && ! in_array($task->status, CycleHealthTask::TERMINAL_STATUSES, true);
@@ -41,14 +43,14 @@ class CycleHealthSummaryService
                 return true;
             }
 
-            $plannedStartDate = $this->toCarbon($task->planned_start_date);
+            $plannedStartDate = $this->dateNormalizer->toCarbon($task->planned_start_date);
 
             return $plannedStartDate?->lt(today()) === true
                 && ! in_array($task->status, CycleHealthTask::TERMINAL_STATUSES, true);
         });
 
         $upcoming = $tasks->filter(function (CycleHealthTask $task): bool {
-            $plannedStartDate = $this->toCarbon($task->planned_start_date);
+            $plannedStartDate = $this->dateNormalizer->toCarbon($task->planned_start_date);
 
             return $plannedStartDate?->gt(today()) === true;
         });
@@ -58,9 +60,9 @@ class CycleHealthSummaryService
                 return false;
             }
 
-            $actualDate = $this->toCarbon($task->actual_date);
+            $actualDate = $this->dateNormalizer->toCarbon($task->actual_date);
 
-            return $actualDate?->gte(today()->subDays(14)) === true;
+            return $actualDate?->gte(today()->subDays(self::RECENT_COMPLETION_WINDOW_DAYS)) === true;
         });
 
         $nextDueTask = $tasks
@@ -71,8 +73,8 @@ class CycleHealthSummaryService
         $activeOralMedication = $tasks
             ->filter(fn (CycleHealthTask $task): bool => $task->task_type === 'oral_medication_period')
             ->first(function (CycleHealthTask $task): bool {
-                $start = $this->toCarbon($task->planned_start_date);
-                $end = $this->toCarbon($task->planned_end_date);
+                $start = $this->dateNormalizer->toCarbon($task->planned_start_date);
+                $end = $this->dateNormalizer->toCarbon($task->planned_end_date);
 
                 if ($start === null) {
                     return false;
@@ -116,7 +118,7 @@ class CycleHealthSummaryService
             ->sortByDesc('actual_date')
             ->first();
 
-        return $this->toDateString($task?->actual_date);
+        return $this->dateNormalizer->toDateString($task?->actual_date);
     }
 
     /**
@@ -133,9 +135,9 @@ class CycleHealthSummaryService
             'task_name' => $task->task_name,
             'task_type' => $task->task_type,
             'status' => $task->status,
-            'planned_start_date' => $this->toDateString($task->planned_start_date),
-            'planned_end_date' => $this->toDateString($task->planned_end_date),
-            'actual_date' => $this->toDateString($task->actual_date),
+            'planned_start_date' => $this->dateNormalizer->toDateString($task->planned_start_date),
+            'planned_end_date' => $this->dateNormalizer->toDateString($task->planned_end_date),
+            'actual_date' => $this->dateNormalizer->toDateString($task->actual_date),
             'target_count' => (int) $task->target_count,
             'completed_count' => (int) $task->completed_count,
             'remaining_count' => (int) $task->remaining_count,
@@ -143,21 +145,4 @@ class CycleHealthSummaryService
         ];
     }
 
-    private function toCarbon(mixed $value): ?Carbon
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if ($value instanceof Carbon) {
-            return $value->copy()->startOfDay();
-        }
-
-        return Carbon::parse((string) $value)->startOfDay();
-    }
-
-    private function toDateString(mixed $value): ?string
-    {
-        return $this->toCarbon($value)?->toDateString();
-    }
 }
