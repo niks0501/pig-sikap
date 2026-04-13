@@ -16,6 +16,7 @@
                 'profilesIndex' => route('cycles.profiles.index', $cycle),
                 'adjustmentsStore' => route('cycles.adjustments.store', $cycle),
                 'statusStore' => route('cycles.status.store', $cycle),
+                'healthIndex' => route('health.index'),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\President;
 
 use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
+use App\Models\CycleHealthIncident;
+use App\Models\CycleHealthTask;
 use App\Http\Requests\PigRegistry\StorePigCycleRequest;
 use App\Http\Requests\PigRegistry\UpdatePigCycleRequest;
 use App\Models\Pig;
@@ -132,6 +134,9 @@ class PresidentPigInventoryController extends Controller
             'pigs' => fn ($query) => $query->orderBy('pig_no'),
             'adjustments.createdBy:id,name',
             'statusHistories.changedBy:id,name',
+            'healthTemplate:id,name,code',
+            'healthTasks' => fn ($query) => $query->orderBy('planned_start_date')->orderBy('id'),
+            'healthIncidents' => fn ($query) => $query->latest('date_reported')->latest('id'),
         ]);
 
         $automation = $analyzePigCycleService->handle($cycle);
@@ -320,6 +325,8 @@ class PresidentPigInventoryController extends Controller
      */
     private function summary(): array
     {
+        $terminalStatuses = CycleHealthTask::TERMINAL_STATUSES;
+
         return [
             'active_cycles' => PigCycle::query()->activeRecords()->count(),
             'total_piglets' => (int) PigCycle::query()->where('stage', 'Piglet')->sum('current_count'),
@@ -327,6 +334,31 @@ class PresidentPigInventoryController extends Controller
             'total_sick' => Pig::query()->where('status', 'Sick')->count(),
             'total_deceased' => Pig::query()->where('status', 'Deceased')->count(),
             'ready_for_sale_cycles' => PigCycle::query()->where('status', 'Ready for Sale')->count(),
+            'total_health_due_today' => CycleHealthTask::query()
+                ->whereDate('planned_start_date', today())
+                ->whereNotIn('status', $terminalStatuses)
+                ->count(),
+            'total_health_overdue' => CycleHealthTask::query()
+                ->whereDate('planned_start_date', '<', today())
+                ->whereNotIn('status', $terminalStatuses)
+                ->count(),
+            'total_health_active_oral_periods' => CycleHealthTask::query()
+                ->where('task_type', 'oral_medication_period')
+                ->whereDate('planned_start_date', '<=', today())
+                ->where(function ($query): void {
+                    $query->whereNull('planned_end_date')
+                        ->orWhereDate('planned_end_date', '>=', today());
+                })
+                ->whereNotIn('status', ['skipped', 'not_applicable'])
+                ->count(),
+            'total_health_incidents' => CycleHealthIncident::query()->count(),
+            'total_health_mortality' => (int) CycleHealthIncident::query()
+                ->where('incident_type', 'deceased')
+                ->sum('affected_count'),
+            'total_health_completed_recently' => CycleHealthTask::query()
+                ->where('status', 'completed')
+                ->whereDate('actual_date', '>=', today()->subDays(7))
+                ->count(),
         ];
     }
 

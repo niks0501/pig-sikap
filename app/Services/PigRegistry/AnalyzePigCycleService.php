@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class AnalyzePigCycleService
 {
+    public function __construct(
+        private readonly CycleHealthSummaryService $cycleHealthSummaryService
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -24,6 +28,7 @@ class AnalyzePigCycleService
             $expenseSummary['total_cycle_expense'],
             $expenseSummary['total_cycle_sales']
         );
+        $healthSummary = $this->cycleHealthSummaryService->handle($cycle);
 
         return [
             'countdown' => [
@@ -37,6 +42,7 @@ class AnalyzePigCycleService
             'counts' => $countSummary,
             'expenses' => $expenseSummary,
             'profitability' => $profitabilitySummary,
+            'health' => $healthSummary,
             'suggestions' => $this->buildSuggestions($cycle, $daysElapsed, $daysRemaining, $countSummary),
             'warnings' => $this->buildWarnings(
                 $cycle,

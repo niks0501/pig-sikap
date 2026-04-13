@@ -11,7 +11,8 @@ use Illuminate\Validation\ValidationException;
 class CreatePigCycleService
 {
     public function __construct(
-        private readonly GeneratePigProfilesService $generatePigProfilesService
+        private readonly GeneratePigProfilesService $generatePigProfilesService,
+        private readonly CycleHealthPlanGenerator $cycleHealthPlanGenerator,
     ) {}
 
     /**
@@ -58,6 +59,8 @@ class CreatePigCycleService
             if ($hasPigProfiles) {
                 $this->generatePigProfilesService->handle($cycle, $initialCount, $actor->id);
             }
+
+            $this->cycleHealthPlanGenerator->assignDefaultTemplateAndGenerateTasks($cycle);
 
             return $cycle;
         });

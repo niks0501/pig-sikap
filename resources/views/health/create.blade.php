@@ -1,93 +1,86 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="javascript:history.back()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <a href="{{ route('health.index') }}" class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Add Treatment / Health Record</h2>
-                <p class="text-sm text-gray-500 mt-1">Manually record a medication, vaccination, or treatment for a batch.</p>
+                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Record Health Incident</h2>
+                <p class="mt-1 text-sm text-gray-500">Log sick, isolated, or deceased incidents at cycle level.</p>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
-        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 sm:p-8">
-                <form action="#" method="POST" class="space-y-8">
-                    @csrf
-                    
-                    <!-- Batch Target -->
-                    <div>
-                        <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-5">Target Batch</h3>
-                        <div class="grid grid-cols-1 gap-5">
-                            <div>
-                                <label for="batch_id" class="block text-sm font-bold text-gray-700 mb-1.5">Select Batch / Litter *</label>
-                                <select id="batch_id" name="batch_id" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="" selected disabled>Select an active batch...</option>
-                                    <option value="BAT-001">BAT-001 (12 head, 7 days old)</option>
-                                    <option value="BAT-002">BAT-002 (8 head, 14 days old)</option>
-                                    <option value="BAT-003">BAT-003 (10 head, 21 days old)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+    <div class="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+        <section class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+            <form action="{{ route('health.incidents.store') }}" method="POST" class="space-y-6">
+                @csrf
 
-                    <!-- Treatment Details -->
-                    <div>
-                        <h3 class="text-base font-bold text-gray-900 border-b border-gray-100 pb-3 mb-5">Treatment Details</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            
-                            <!-- Treatment Type -->
-                            <div class="sm:col-span-2">
-                                <label for="treatment_type" class="block text-sm font-bold text-gray-700 mb-1.5">Type of Health Activity *</label>
-                                <select id="treatment_type" name="treatment_type" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="" selected disabled>Select Activity...</option>
-                                    <option value="vitamins">Vitamins (A, D, E)</option>
-                                    <option value="iron">Iron Injection</option>
-                                    <option value="deworming">Deworming</option>
-                                    <option value="vaccination_hc">Hog Cholera Vaccine</option>
-                                    <option value="illness_treatment">Sick Treatment / Antibiotic</option>
-                                    <option value="other">Other Activity</option>
-                                </select>
-                            </div>
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <label class="sm:col-span-2">
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Cycle *</span>
+                        <select name="cycle_id" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            <option value="" disabled @selected(!old('cycle_id', $selectedCycleId))>Select cycle...</option>
+                            @foreach ($cycles as $cycle)
+                                <option value="{{ $cycle->id }}" @selected((int) old('cycle_id', $selectedCycleId) === (int) $cycle->id)>
+                                    {{ $cycle->batch_code }} • Current {{ number_format((int) $cycle->current_count) }} pigs • Purchased {{ optional($cycle->date_of_purchase)->format('M d, Y') }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
 
-                            <!-- Date fields -->
-                            <div>
-                                <label for="scheduled_date" class="block text-sm font-bold text-gray-700 mb-1.5">Date Scheduled / Administered *</label>
-                                <input type="date" id="scheduled_date" name="scheduled_date" value="{{ date('Y-m-d') }}" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                            </div>
+                    <label>
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Incident Type *</span>
+                        <select name="incident_type" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            <option value="" disabled @selected(!old('incident_type'))>Select type...</option>
+                            @foreach ($incidentTypes as $incidentType)
+                                <option value="{{ $incidentType }}" @selected(old('incident_type') === $incidentType)>
+                                    {{ ucfirst($incidentType) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
 
-                            <!-- Status -->
-                            <div>
-                                <label for="status" class="block text-sm font-bold text-gray-700 mb-1.5">Action Status *</label>
-                                <select id="status" name="status" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                                    <option value="completed" selected>Already Completed Today</option>
-                                    <option value="pending">Schedule for Later (Pending)</option>
-                                </select>
-                            </div>
+                    <label>
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Date Reported *</span>
+                        <input type="date" name="date_reported" required value="{{ old('date_reported', now()->toDateString()) }}" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                    </label>
 
-                            <!-- Remarks / Color Marks -->
-                            <div class="sm:col-span-2">
-                                <label for="remarks" class="block text-sm font-bold text-gray-700 mb-1.5">Physical Marks & Remarks</label>
-                                <textarea id="remarks" name="remarks" rows="3" placeholder="e.g. Used red spray paint on back to indicate treated pigs. 1 pig skipped due to weakness." class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-700 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57] transition-all"></textarea>
-                                <p class="text-[10px] text-gray-500 mt-1 font-medium">Record any visual cues you placed on the pigs or any observations about the treatment.</p>
-                            </div>
+                    <label>
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Affected Count *</span>
+                        <input type="number" name="affected_count" min="1" required value="{{ old('affected_count', 1) }}" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                    </label>
 
-                        </div>
-                    </div>
+                    <label>
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Media Path (optional)</span>
+                        <input type="text" name="media_path" value="{{ old('media_path') }}" placeholder="storage/app/public/..." class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                    </label>
 
-                    <!-- Actions -->
-                    <div class="pt-6 border-t border-gray-100 flex flex-col sm:flex-row-reverse gap-3">
-                        <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3.5 bg-[#0c6d57] text-white font-bold text-sm rounded-xl hover:bg-[#0a5a48] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0c6d57]">
-                            Save Treatment Record
-                        </button>
-                        <a href="javascript:history.back()" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
+                    <label class="sm:col-span-2">
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Suspected Cause</span>
+                        <textarea name="suspected_cause" rows="2" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('suspected_cause') }}</textarea>
+                    </label>
+
+                    <label class="sm:col-span-2">
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Treatment Given</span>
+                        <textarea name="treatment_given" rows="2" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('treatment_given') }}</textarea>
+                    </label>
+
+                    <label class="sm:col-span-2">
+                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Remarks</span>
+                        <textarea name="remarks" rows="3" placeholder="Physical back markings, isolation notes, observations." class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('remarks') }}</textarea>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row-reverse">
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48] sm:w-auto">
+                        Save Incident
+                    </button>
+                    <a href="{{ route('health.index') }}" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </section>
     </div>
 </x-app-layout>

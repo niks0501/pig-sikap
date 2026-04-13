@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
 use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigBreederController;
+use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
+use App\Http\Controllers\President\PresidentCycleHealthTaskController;
+use App\Http\Controllers\President\PresidentHealthController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\ProfileController;
@@ -88,17 +91,19 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
             Route::get('/create', [PresidentPigBreederController::class, 'index'])->name('create');
             Route::post('/', [PresidentPigBreederController::class, 'store'])->name('store');
         });
-    });
 
-    // Health, Vaccination, and Treatment Module
-    Route::prefix('health')->name('health.')->group(function () {
-        Route::get('/', function () { return view('health.index'); })->name('index');
-        Route::get('/schedule', function () { return view('health.schedule'); })->name('schedule');
-        Route::get('/create', function () { return view('health.create'); })->name('create');
-        Route::get('/sick', function () { return view('health.sick'); })->name('sick');
+        Route::prefix('health')->name('health.')->scopeBindings()->group(function () {
+            Route::get('/', [PresidentHealthController::class, 'index'])->name('index');
+            Route::get('/schedule', [PresidentHealthController::class, 'schedule'])->name('schedule');
+            Route::get('/create', [PresidentHealthController::class, 'create'])->name('create');
+            Route::post('/incidents', [PresidentHealthController::class, 'storeIncident'])->name('incidents.store');
+            Route::get('/sick', [PresidentHealthController::class, 'sick'])->name('sick');
+            Route::get('/cycles/{cycle}', [PresidentHealthController::class, 'showCycle'])->name('cycles.show');
+            Route::patch('/cycles/{cycle}/tasks/{healthTask}', [PresidentCycleHealthTaskController::class, 'update'])->name('cycles.tasks.update');
+            Route::patch('/cycles/{cycle}/tasks/{healthTask}/undo', [PresidentCycleHealthTaskController::class, 'undo'])->name('cycles.tasks.undo');
+            Route::post('/cycles/{cycle}/incidents', [PresidentCycleHealthIncidentController::class, 'store'])->name('cycles.incidents.store');
+        });
     });
-    Route::get('/cycles/{cycle}/health', function ($id) { return view('cycles.health', ['id' => $id]); })->name('cycles.health');
-    Route::get('/batches/{batch}/health', function ($id) { return view('cycles.health', ['id' => $id]); })->name('batches.health');
 
     // Mortality / Deceased Pig Documentation Module
     Route::prefix('mortality')->name('mortality.')->group(function () {

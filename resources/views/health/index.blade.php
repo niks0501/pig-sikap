@@ -1,262 +1,336 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Health Records</h2>
-                <p class="text-sm text-gray-500 mt-1">Manage health, vaccination, and treatments by batch.</p>
+                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Health & Treatments</h2>
+                <p class="mt-1 text-sm text-gray-500">Track cycle health tasks, mark actions, and monitor incident load.</p>
             </div>
-            <div class="flex gap-3">
-                <a href="{{ route('health.schedule') }}" class="inline-flex justify-center items-center px-4 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('health.schedule') }}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
                     View Schedule
                 </a>
-                <a href="{{ route('health.create') }}" class="inline-flex justify-center items-center px-4 py-2.5 bg-[#0c6d57] text-white font-bold text-sm rounded-xl hover:bg-[#0a5a48] transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0c6d57]">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Add Record
+                <a href="{{ route('health.create') }}" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48]">
+                    Record Incident
                 </a>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto" x-data="{ activeTab: 'all', showCompleteModal: false }">
-        
-        <!-- Summary Cards for Quick Overview -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Upcoming</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">12</p>
-                </div>
-                <div class="p-2 bg-yellow-50 rounded-xl text-yellow-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Overdue</p>
-                    <p class="text-2xl font-bold text-red-600 mt-1">3</p>
-                </div>
-                <div class="p-2 bg-red-50 rounded-xl text-red-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                </div>
-            </div>
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Completed</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">45</p>
-                </div>
-                <div class="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-            <a href="{{ route('health.sick') }}" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:border-orange-300 transition-colors">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Sick Cases</p>
-                    <p class="text-2xl font-bold text-orange-600 mt-1">2</p>
-                </div>
-                <div class="p-2 bg-orange-50 rounded-xl text-orange-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
+    @php
+        $activeTab = (string) ($filters['tab'] ?? 'all');
+        $search = trim((string) ($filters['search'] ?? ''));
+        $tabQuery = fn (string $tab): array => array_filter([
+            'tab' => $tab,
+            'search' => $search !== '' ? $search : null,
+        ]);
+
+        $activeTabLabel = match ($activeTab) {
+            'upcoming' => 'Upcoming',
+            'overdue' => 'Overdue',
+            'completed' => 'Completed',
+            'sick' => 'Sick / Isolated',
+            default => 'All Records',
+        };
+
+        $hasNeedsAction = isset($needsAction['overdue'], $needsAction['due_today'], $needsAction['upcoming_soon'])
+            && ($needsAction['overdue']->isNotEmpty() || $needsAction['due_today']->isNotEmpty() || $needsAction['upcoming_soon']->isNotEmpty());
+
+        $needsActionGroups = [
+            [
+                'key' => 'overdue',
+                'title' => 'Overdue Tasks',
+                'hint' => 'Act first',
+                'cardClass' => 'border-red-200 bg-red-50/70',
+                'pillClass' => 'bg-red-100 text-red-700',
+                'buttonClass' => 'bg-red-600 hover:bg-red-700',
+            ],
+            [
+                'key' => 'due_today',
+                'title' => 'Due Today',
+                'hint' => 'Address today',
+                'cardClass' => 'border-amber-200 bg-amber-50/70',
+                'pillClass' => 'bg-amber-100 text-amber-700',
+                'buttonClass' => 'bg-amber-600 hover:bg-amber-700',
+            ],
+            [
+                'key' => 'upcoming_soon',
+                'title' => 'Due Soon',
+                'hint' => 'Plan ahead',
+                'cardClass' => 'border-blue-200 bg-blue-50/70',
+                'pillClass' => 'bg-blue-100 text-blue-700',
+                'buttonClass' => 'bg-blue-600 hover:bg-blue-700',
+            ],
+        ];
+    @endphp
+
+    <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <section class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <a
+                href="{{ route('health.index', $tabQuery('upcoming')) }}"
+                class="rounded-2xl border bg-white p-4 shadow-sm transition-colors {{ $activeTab === 'upcoming' ? 'border-[#0c6d57] ring-2 ring-[#0c6d57]/20' : 'border-gray-100 hover:border-gray-300' }}"
+            >
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Upcoming</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format((int) ($summary['upcoming'] ?? 0)) }}</p>
             </a>
-        </div>
+            <a
+                href="{{ route('health.index', $tabQuery('overdue')) }}"
+                class="rounded-2xl border bg-white p-4 shadow-sm transition-colors {{ $activeTab === 'overdue' ? 'border-red-500 ring-2 ring-red-500/20' : 'border-red-100 hover:border-red-300' }}"
+            >
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Overdue</p>
+                <p class="mt-1 text-2xl font-bold text-red-600">{{ number_format((int) ($summary['overdue'] ?? 0)) }}</p>
+            </a>
+            <a
+                href="{{ route('health.index', $tabQuery('completed')) }}"
+                class="rounded-2xl border bg-white p-4 shadow-sm transition-colors {{ $activeTab === 'completed' ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-emerald-100 hover:border-emerald-300' }}"
+            >
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Completed</p>
+                <p class="mt-1 text-2xl font-bold text-emerald-700">{{ number_format((int) ($summary['completed'] ?? 0)) }}</p>
+            </a>
+            <a
+                href="{{ route('health.index', $tabQuery('sick')) }}"
+                class="rounded-2xl border bg-white p-4 shadow-sm transition-colors {{ $activeTab === 'sick' ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-orange-100 hover:border-orange-300' }}"
+            >
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Sick / Isolated</p>
+                <p class="mt-1 text-2xl font-bold text-orange-600">{{ number_format((int) ($summary['sick_cases'] ?? 0)) }}</p>
+            </a>
+        </section>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <!-- Search & Filters -->
-            <div class="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                <div class="relative w-full sm:max-w-md">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <input type="text" placeholder="Search by batch ID or treatment..." class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57] sm:text-sm transition-colors">
+        <section class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex rounded-full bg-[#0c6d57]/10 px-3 py-1 text-xs font-bold text-[#0c6d57]">
+                Viewing: {{ $activeTabLabel }}
+            </span>
+            @if ($activeTab !== 'all' || $search !== '')
+                <a href="{{ route('health.index') }}" class="inline-flex rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50">
+                    Reset to All Records
+                </a>
+            @endif
+            <a href="{{ route('health.sick') }}" class="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 transition-colors hover:bg-orange-100">
+                Open Full Sick Log
+            </a>
+        </section>
+
+        <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+            <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-gray-900">Needs Action</h3>
+                    <p class="mt-1 text-sm text-gray-500">Priority order: overdue first, then due today, then upcoming soon.</p>
                 </div>
+                <a href="{{ route('health.schedule') }}" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
+                    Open Full Schedule
+                </a>
             </div>
 
-            <!-- Tabs -->
-            <div class="border-b border-gray-100">
-                <nav class="flex -mb-px overflow-x-auto">
-                    <button @click="activeTab = 'all'" :class="activeTab === 'all' ? 'border-[#0c6d57] text-[#0c6d57]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-bold text-sm transition-colors focus:outline-none">
-                        All Records
-                    </button>
-                    <button @click="activeTab = 'upcoming'" :class="activeTab === 'upcoming' ? 'border-[#0c6d57] text-[#0c6d57]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-bold text-sm transition-colors focus:outline-none">
-                        Upcoming & Pending
-                    </button>
-                    <button @click="activeTab = 'completed'" :class="activeTab === 'completed' ? 'border-[#0c6d57] text-[#0c6d57]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-6 border-b-2 font-bold text-sm transition-colors focus:outline-none">
-                        Completed
-                    </button>
-                </nav>
-            </div>
+            @if ($hasNeedsAction)
+                <div class="grid gap-3 lg:grid-cols-3">
+                    @foreach ($needsActionGroups as $group)
+                        @php
+                            $groupTasks = $needsAction[$group['key']] ?? collect();
+                        @endphp
+                        @if ($groupTasks->isNotEmpty())
+                            <article class="rounded-xl border p-3 {{ $group['cardClass'] }}">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h4 class="text-sm font-bold text-gray-900">{{ $group['title'] }}</h4>
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ $group['pillClass'] }}">{{ $group['hint'] }}</span>
+                                </div>
 
-            <!-- Desktop Table -->
-            <div class="hidden sm:block overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                                <ul class="mt-3 space-y-2">
+                                    @foreach ($groupTasks as $task)
+                                        @php
+                                            $cycle = $task->cycle;
+                                        @endphp
+                                        <li class="rounded-lg border border-white/80 bg-white p-2.5">
+                                            <div class="flex flex-col gap-2">
+                                                <div>
+                                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $cycle?->batch_code ?? 'Unknown cycle' }}</p>
+                                                    <p class="text-sm font-bold text-gray-900">{{ $task->task_name }}</p>
+                                                    <p class="text-xs text-gray-600">Planned {{ optional($task->planned_start_date)->format('M d, Y') }}</p>
+                                                </div>
+
+                                                @if ($cycle)
+                                                    <form action="{{ route('health.cycles.tasks.update', [$cycle, $task]) }}" method="POST" class="flex gap-2">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="action" value="complete_all">
+                                                        <input type="hidden" name="actual_date" value="{{ now()->toDateString() }}">
+                                                        <button type="submit" class="inline-flex flex-1 items-center justify-center rounded-lg px-3 py-2 text-xs font-bold text-white {{ $group['buttonClass'] }}">
+                                                            Complete
+                                                        </button>
+                                                        <a href="{{ route('health.cycles.show', $cycle) }}" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50">
+                                                            Open
+                                                        </a>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </article>
+                        @endif
+                    @endforeach
+                </div>
+            @else
+                <p class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-sm font-medium text-gray-600">
+                    No urgent tasks at the moment. You are all caught up.
+                </p>
+            @endif
+        </section>
+
+        <section class="rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <form method="GET" action="{{ route('health.index') }}" class="grid gap-3 border-b border-gray-100 p-4 sm:grid-cols-12 sm:p-5">
+                <input type="hidden" name="tab" value="{{ $activeTab }}">
+
+                <label class="sm:col-span-8">
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ $search }}"
+                        placeholder="Cycle code, task name, status"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                    >
+                </label>
+
+                <div class="flex items-end gap-2 sm:col-span-4">
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#0a5a48]">
+                        Apply Search
+                    </button>
+                    @if ($search !== '')
+                        <a href="{{ route('health.index', ['tab' => $activeTab]) }}" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50">
+                            Clear
+                        </a>
+                    @endif
+                </div>
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Batch ID</th>
-                            <th scope="col" class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Activity / Treatment</th>
-                            <th scope="col" class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Scheduled Date</th>
-                            <th scope="col" class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Remarks</th>
-                            <th scope="col" class="px-6 py-3.5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Cycle</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Task</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Planned</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Coverage</th>
+                            <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
-                        
-                        <!-- Record 1 (Overdue) -->
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="{{ route('batches.health', 'BAT-001') }}" class="text-sm font-bold text-gray-900 border-b border-transparent hover:border-gray-900 transition-colors">BAT-001</a>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-bold text-gray-900">Iron Injection</div>
-                                <div class="text-xs text-gray-500">Day 3 Schedule</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">Apr 2, 2026</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-800">
-                                    <span class="w-1.5 h-1.5 bg-red-600 rounded-full mr-1.5"></span> Overdue
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500">No marks yet.</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button @click="showCompleteModal = true" class="text-[#0c6d57] hover:text-[#0a5a48] bg-[#0c6d57]/10 hover:bg-[#0c6d57]/20 px-3 py-1.5 rounded-lg transition-colors font-bold">
-                                    Mark Done
-                                </button>
-                            </td>
-                        </tr>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @forelse ($tasks as $task)
+                            @php
+                                $cycle = $task->cycle;
+                                $status = (string) $task->status;
+                                $isTerminal = in_array($status, $terminalStatuses, true);
+                                $plannedStartDate = $task->planned_start_date;
+                                $hasPlannedStartDate = $plannedStartDate instanceof \Carbon\CarbonInterface;
+                                $isOralMedication = (string) $task->task_type === 'oral_medication_period';
 
-                        <!-- Record 2 (Upcoming) -->
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="{{ route('batches.health', 'BAT-002') }}" class="text-sm font-bold text-gray-900 border-b border-transparent hover:border-gray-900 transition-colors">BAT-002</a>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-bold text-gray-900">Deworming</div>
-                                <div class="text-xs text-gray-500">Regular Schedule</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">Apr 8, 2026</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800">
-                                    <span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></span> Pending
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500">To be marked on 2nd schedule.</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button @click="showCompleteModal = true" class="text-[#0c6d57] hover:text-[#0a5a48] bg-[#0c6d57]/10 hover:bg-[#0c6d57]/20 px-3 py-1.5 rounded-lg transition-colors font-bold">
-                                    Mark Done
-                                </button>
-                            </td>
-                        </tr>
+                                $reminderLabel = null;
+                                $reminderClass = '';
 
-                        <!-- Record 3 (Completed) -->
-                        <tr class="hover:bg-gray-50/50 transition-colors" x-show="activeTab === 'all' || activeTab === 'completed'">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="{{ route('batches.health', 'BAT-003') }}" class="text-sm font-bold text-gray-900 border-b border-transparent hover:border-gray-900 transition-colors">BAT-003</a>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-bold text-gray-900">Vitamins (A,D,E)</div>
-                                <div class="text-xs text-gray-500">Day 14 Schedule</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">Mar 25, 2026</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
-                                    <span class="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-1.5"></span> Completed
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500">Marked red on back. All 12 treated.</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <span class="text-gray-400 font-bold px-3 py-1.5">Done</span>
-                            </td>
-                        </tr>
+                                if (! $isTerminal && $hasPlannedStartDate && ! $isOralMedication) {
+                                    if ($plannedStartDate->lt(today())) {
+                                        $reminderLabel = 'Overdue';
+                                        $reminderClass = 'bg-red-100 text-red-700';
+                                    } elseif ($plannedStartDate->isToday()) {
+                                        $reminderLabel = 'Due Today';
+                                        $reminderClass = 'bg-amber-100 text-amber-700';
+                                    } elseif ($plannedStartDate->lte(today()->copy()->addDays(3))) {
+                                        $reminderLabel = 'Due Soon';
+                                        $reminderClass = 'bg-blue-100 text-blue-700';
+                                    }
+                                }
 
+                                if (
+                                    $reminderLabel === null
+                                    && ! $isTerminal
+                                    && (bool) $task->is_optional
+                                    && $hasPlannedStartDate
+                                    && $plannedStartDate->isCurrentMonth()
+                                ) {
+                                    $reminderLabel = 'Optional This Month';
+                                    $reminderClass = 'bg-gray-200 text-gray-700';
+                                }
+
+                                $statusClass = match ($status) {
+                                    'completed' => 'bg-emerald-100 text-emerald-800',
+                                    'partially_completed' => 'bg-amber-100 text-amber-800',
+                                    'overdue' => 'bg-red-100 text-red-800',
+                                    'skipped', 'not_applicable' => 'bg-gray-200 text-gray-700',
+                                    'rescheduled' => 'bg-blue-100 text-blue-800',
+                                    default => 'bg-gray-100 text-gray-700',
+                                };
+                            @endphp
+                            <tr>
+                                <td class="px-4 py-3 align-top">
+                                    @if ($cycle)
+                                        <a href="{{ route('health.cycles.show', $cycle) }}" class="text-sm font-bold text-gray-900 hover:text-[#0c6d57]">
+                                            {{ $cycle->batch_code }}
+                                        </a>
+                                    @else
+                                        <span class="text-sm text-gray-400">Unknown</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 align-top">
+                                    <p class="text-sm font-bold text-gray-900">{{ $task->task_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ str_replace('_', ' ', (string) $task->task_type) }}</p>
+                                    @if ($reminderLabel)
+                                        <span class="mt-1 inline-flex rounded-lg px-2.5 py-1 text-[11px] font-bold {{ $reminderClass }}">
+                                            {{ $reminderLabel }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 align-top text-sm text-gray-700">
+                                    <p>{{ optional($task->planned_start_date)->format('M d, Y') }}</p>
+                                    @if ($task->planned_end_date)
+                                        <p class="text-xs text-gray-500">to {{ optional($task->planned_end_date)->format('M d, Y') }}</p>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 align-top">
+                                    <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-bold {{ $statusClass }}">
+                                        {{ $task->formatted_status }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 align-top text-sm text-gray-700">
+                                    {{ number_format((int) $task->completed_count) }} / {{ number_format((int) $task->target_count) }}
+                                </td>
+                                <td class="px-4 py-3 text-right align-top">
+                                    @if ($cycle)
+                                        <div class="inline-flex flex-col items-end gap-1.5">
+                                            <a href="{{ route('health.cycles.show', $cycle) }}" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50">
+                                                Open Timeline
+                                            </a>
+
+                                            @if (! $isTerminal)
+                                                <form action="{{ route('health.cycles.tasks.update', [$cycle, $task]) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="action" value="complete_all">
+                                                    <input type="hidden" name="actual_date" value="{{ now()->toDateString() }}">
+                                                    <button type="submit" class="rounded-lg bg-[#0c6d57]/10 px-3 py-1.5 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/20">
+                                                        Mark Complete
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-xs font-semibold text-gray-400">No action</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500">
+                                    No health tasks found for the selected view.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
 
-            <!-- Mobile Cards -->
-            <div class="sm:hidden divide-y divide-gray-100">
-                <div class="p-4 flex flex-col gap-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-800 mb-2">Overdue</span>
-                            <h3 class="text-sm font-bold text-gray-900"><a href="{{ route('batches.health', 'BAT-001') }}">BAT-001: Iron Injection</a></h3>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-xs font-bold text-gray-500 block">Due Date</span>
-                            <span class="text-sm font-bold text-red-600">Apr 2, 2026</span>
-                        </div>
-                    </div>
-                    <div class="text-sm text-gray-600">
-                        <span class="font-bold text-gray-900">Remarks:</span> No marks yet.
-                    </div>
-                    <button @click="showCompleteModal = true" class="w-full mt-2 inline-flex justify-center items-center px-3 py-2.5 bg-[#0c6d57]/10 text-[#0c6d57] font-bold text-sm rounded-xl hover:bg-[#0c6d57]/20 transition-colors">
-                        Mark as Completed
-                    </button>
-                </div>
-
-                <div class="p-4 flex flex-col gap-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 mb-2">Pending</span>
-                            <h3 class="text-sm font-bold text-gray-900"><a href="{{ route('batches.health', 'BAT-002') }}">BAT-002: Deworming</a></h3>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-xs font-bold text-gray-500 block">Due Date</span>
-                            <span class="text-sm font-bold text-gray-900">Apr 8, 2026</span>
-                        </div>
-                    </div>
-                    <div class="text-sm text-gray-600">
-                        <span class="font-bold text-gray-900">Remarks:</span> To be marked on 2nd schedule.
-                    </div>
-                    <button @click="showCompleteModal = true" class="w-full mt-2 inline-flex justify-center items-center px-3 py-2.5 bg-[#0c6d57]/10 text-[#0c6d57] font-bold text-sm rounded-xl hover:bg-[#0c6d57]/20 transition-colors">
-                        Mark as Completed
-                    </button>
-                </div>
+            <div class="border-t border-gray-100 px-4 py-3 sm:px-5">
+                {{ $tasks->links() }}
             </div>
-        </div>
-        
-        <!-- Quick Completion Modal (Mark as Completed) -->
-        <div x-show="showCompleteModal" class="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
-            <div x-show="showCompleteModal" x-transition.opacity class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
-            <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
-                <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                    <div x-show="showCompleteModal" 
-                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" 
-                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
-                         class="relative transform overflow-hidden rounded-3xl bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-                        
-                        <div>
-                            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                                <svg class="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            </div>
-                            <div class="mt-5 text-center sm:mt-6">
-                                <h3 class="text-xl font-bold leading-6 text-gray-900" id="modal-title">Mark Treatment as Completed</h3>
-                                <p class="text-sm text-gray-500 mt-2">Confirm that <span class="font-bold text-gray-900">BAT-001</span> received <span class="font-bold text-gray-900">Iron Injection</span>.</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 space-y-4 text-left">
-                            <div>
-                                <label for="completion_date" class="block text-sm font-bold text-gray-700 mb-1.5">Date Completed</label>
-                                <input type="date" id="completion_date" name="completion_date" value="2026-04-06" class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 font-medium sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]">
-                            </div>
-                            <div>
-                                <label for="remarks" class="block text-sm font-bold text-gray-700 mb-1.5">Remarks / Visual Markings</label>
-                                <textarea id="remarks" name="remarks" rows="2" placeholder="e.g. Marked red on the back, all pigs treated..." class="block w-full py-3 px-4 border border-gray-200 rounded-xl bg-white text-gray-900 sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57]"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="mt-8 sm:mt-8 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                            <button type="button" @click="showCompleteModal = false" class="inline-flex w-full justify-center rounded-xl bg-[#0c6d57] px-3 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-[#0a5a48] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0c6d57] sm:col-start-2">
-                                Confirm Completed
-                            </button>
-                            <button type="button" @click="showCompleteModal = false" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-3 py-3.5 text-sm font-bold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0">
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        </section>
     </div>
 </x-app-layout>

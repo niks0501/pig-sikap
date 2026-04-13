@@ -48,6 +48,7 @@ class PigCycle extends Model
         'batch_code',
         'caretaker_user_id',
         'cycle_number',
+        'health_template_id',
         'date_of_purchase',
         'initial_count',
         'current_count',
@@ -108,6 +109,11 @@ class PigCycle extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function healthTemplate(): BelongsTo
+    {
+        return $this->belongsTo(HealthTemplate::class, 'health_template_id');
+    }
+
     public function pigs(): HasMany
     {
         return $this->hasMany(Pig::class, 'batch_id');
@@ -131,6 +137,16 @@ class PigCycle extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(PigCycleSale::class, 'batch_id');
+    }
+
+    public function healthTasks(): HasMany
+    {
+        return $this->hasMany(CycleHealthTask::class, 'batch_id');
+    }
+
+    public function healthIncidents(): HasMany
+    {
+        return $this->hasMany(CycleHealthIncident::class, 'batch_id');
     }
 
     public function scopeActiveRecords(Builder $query): Builder

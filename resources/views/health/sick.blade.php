@@ -1,111 +1,101 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-4">
-                <a href="{{ route('health.index') }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <a href="{{ route('health.index') }}" class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </a>
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900 leading-tight">Sick & Isolated Cases</h2>
-                    <p class="text-sm text-gray-500 mt-1">Monitor groups requiring immediate care and treatments.</p>
+                    <p class="mt-1 text-sm text-gray-500">Open incident records requiring monitoring and follow-up.</p>
                 </div>
             </div>
-            <div>
-                <a href="{{ route('health.create') }}" class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-orange-600 text-white font-bold text-sm rounded-xl hover:bg-orange-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-600">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    Report Sick Case
-                </a>
-            </div>
+            <a href="{{ route('health.create') }}" class="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-700">
+                Record New Incident
+            </a>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto" x-data="{ showResolveModal: false }">
-        
-        <!-- Search -->
-        <div class="mb-6 relative">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
-            <input type="text" placeholder="Search sick records..." class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 sm:text-sm shadow-sm transition-colors">
+    <div class="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <form method="GET" action="{{ route('health.sick') }}" class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+            <label class="block">
+                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ $search }}"
+                        placeholder="Cycle code, cause, treatment"
+                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                    >
+                    <button type="submit" class="rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-700">
+                        Filter
+                    </button>
+                </div>
+            </label>
+        </form>
+
+        <section class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            @forelse ($incidents as $incident)
+                @php
+                    $cycle = $incident->cycle;
+                    $isIsolated = $incident->incident_type === 'isolated';
+                @endphp
+                <article class="relative overflow-hidden rounded-3xl border bg-white p-5 shadow-sm sm:p-6 {{ $isIsolated ? 'border-amber-200' : 'border-orange-200' }}">
+                    <div class="absolute right-0 top-0 h-full w-2 {{ $isIsolated ? 'bg-amber-500' : 'bg-orange-500' }}"></div>
+
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-bold {{ $isIsolated ? 'bg-amber-100 text-amber-800' : 'bg-orange-100 text-orange-800' }}">
+                            {{ ucfirst((string) $incident->incident_type) }}
+                        </span>
+                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {{ optional($incident->date_reported)->format('M d, Y') }}
+                        </span>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-900">
+                        @if ($cycle)
+                            <a href="{{ route('health.cycles.show', $cycle) }}" class="hover:text-[#0c6d57]">{{ $cycle->batch_code }}</a>
+                        @else
+                            Unknown cycle
+                        @endif
+                    </h3>
+
+                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                        <p><span class="font-bold text-gray-900">Affected:</span> {{ number_format((int) $incident->affected_count) }} pig(s)</p>
+                        @if ($incident->suspected_cause)
+                            <p><span class="font-bold text-gray-900">Cause:</span> {{ $incident->suspected_cause }}</p>
+                        @endif
+                        @if ($incident->treatment_given)
+                            <p><span class="font-bold text-gray-900">Treatment:</span> {{ $incident->treatment_given }}</p>
+                        @endif
+                        @if ($incident->remarks)
+                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                {{ $incident->remarks }}
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @if ($cycle)
+                            <a href="{{ route('cycles.show', $cycle) }}" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                                Open Cycle
+                            </a>
+                            <a href="{{ route('health.cycles.show', $cycle) }}" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57]/10 px-3 py-2 text-xs font-semibold text-[#0c6d57] transition-colors hover:bg-[#0c6d57]/20">
+                                Open Health Timeline
+                            </a>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <p class="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-sm text-gray-500 lg:col-span-2">
+                    No sick or isolated incidents found.
+                </p>
+            @endforelse
+        </section>
+
+        <div>
+            {{ $incidents->links() }}
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            <!-- Case Card 1 (Active) -->
-            <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-orange-200 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-2 h-full bg-orange-500"></div>
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-100 text-orange-800 mb-2">Active Care Underway</span>
-                        <h3 class="text-lg font-bold text-gray-900 border-b border-transparent hover:border-gray-900 transition-colors">
-                            <a href="{{ route('batches.health', 'BAT-005') }}">BAT-005: Scouring / Diarrhea</a>
-                        </h3>
-                    </div>
-                </div>
-                
-                <div class="space-y-3 text-sm mb-6">
-                    <div class="flex gap-2">
-                        <span class="font-bold text-gray-500 w-24">Date Found:</span>
-                        <span class="text-gray-900 font-medium">Apr 5, 2026 (Yesterday)</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <span class="font-bold text-gray-500 w-24">Treatment:</span>
-                        <span class="text-gray-900 font-medium">Antibiotics & Electrolytes given.</span>
-                    </div>
-                    <div class="bg-orange-50 rounded-xl p-3 border border-orange-100">
-                        <span class="block font-bold text-orange-800 mb-1">Condition Remarks:</span>
-                        <span class="text-orange-900">2 piglets appear weak. Separated to corner pen. Marked with yellow spray.</span>
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-white text-gray-700 font-bold text-sm rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                        Update Notes
-                    </button>
-                    <button @click="showResolveModal = true" class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-orange-100 text-orange-700 font-bold text-sm rounded-xl hover:bg-orange-200 transition-colors shadow-none">
-                        Mark Cured
-                    </button>
-                </div>
-            </div>
-
-            <!-- Case Card 2 (Active) -->
-            <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-red-200 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-800 mb-2">Needs Re-Check</span>
-                        <h3 class="text-lg font-bold text-gray-900 border-b border-transparent hover:border-gray-900 transition-colors">
-                            <a href="{{ route('batches.health', 'BAT-002') }}">BAT-002: Lameness / Joint Issues</a>
-                        </h3>
-                    </div>
-                </div>
-                
-                <div class="space-y-3 text-sm mb-6">
-                    <div class="flex gap-2">
-                        <span class="font-bold text-gray-500 w-24">Date Found:</span>
-                        <span class="text-gray-900 font-medium">Apr 2, 2026</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <span class="font-bold text-gray-500 w-24">Treatment:</span>
-                        <span class="text-gray-900 font-medium">Anti-inflammatory shot administered.</span>
-                    </div>
-                    <div class="bg-red-50 rounded-xl p-3 border border-red-100">
-                        <span class="block font-bold text-red-800 mb-1">Condition Remarks:</span>
-                        <span class="text-red-900">1 gilt struggling to stand. Placed on soft bedding alone.</span>
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-white text-gray-700 font-bold text-sm rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                        Update Notes
-                    </button>
-                    <button @click="showResolveModal = true" class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-red-100 text-red-700 font-bold text-sm rounded-xl hover:bg-red-200 transition-colors shadow-none">
-                        Mark Cured
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
     </div>
 </x-app-layout>

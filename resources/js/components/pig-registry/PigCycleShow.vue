@@ -219,6 +219,20 @@ const closeStatusDialog = () => {
             </ul>
         </section>
 
+        <section class="rounded-xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4 shadow-sm sm:p-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-[#0a5a48]">Health & Treatments</h3>
+                    <p class="mt-1 text-sm text-[#0a5a48]/80">
+                        Task Actions, treatment entries, and incident records are managed in the Health & Treatments module.
+                    </p>
+                </div>
+                <a :href="props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                    Open Health & Treatments
+                </a>
+            </div>
+        </section>
+
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Count</p>

@@ -48,6 +48,10 @@
             <main class="flex-1">
                 {{ $slot }}
             </main>
+
+            @if (request()->routeIs('health.*'))
+                <x-health-floating-toast />
+            @endif
         </div>
     </body>
 </html>

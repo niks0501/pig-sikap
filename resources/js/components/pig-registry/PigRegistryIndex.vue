@@ -64,6 +64,7 @@ const summary = ref({
     ...props.summary,
 });
 const recentUpdates = ref(Array.isArray(props.recentUpdates) ? props.recentUpdates : []);
+const summaryView = ref('operations');
 
 const meta = reactive({
     current_page: props.initialData?.meta?.current_page ?? 1,
@@ -272,31 +273,79 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
             {{ flashError }}
         </div>
 
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Cycles</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_cycles || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Piglets</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Fatteners</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Sick Pigs</p>
-                <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_sick || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
-                <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
-            </article>
-            <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Cycles</p>
-                <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_cycles || 0).toLocaleString() }}</p>
-            </article>
+        <section class="space-y-3">
+            <div class="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                    :class="summaryView === 'operations' ? 'bg-[#0c6d57] text-white' : 'text-gray-700 hover:bg-gray-100'"
+                    @click="summaryView = 'operations'"
+                >
+                    Operational View
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                    :class="summaryView === 'health' ? 'bg-[#0c6d57] text-white' : 'text-gray-700 hover:bg-gray-100'"
+                    @click="summaryView = 'health'"
+                >
+                    Health Tracking
+                </button>
+            </div>
+
+            <div v-if="summaryView === 'operations'" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Cycles</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_cycles || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Piglets</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Fatteners</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Sick Pigs</p>
+                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_sick || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
+                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Cycles</p>
+                    <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_cycles || 0).toLocaleString() }}</p>
+                </article>
+            </div>
+
+            <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Due Today</p>
+                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_health_due_today || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Overdue Tasks</p>
+                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_overdue || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Active Oral Periods</p>
+                    <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.total_health_active_oral_periods || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Incident Reports</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_health_incidents || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Mortality Reports</p>
+                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_mortality || 0).toLocaleString() }}</p>
+                </article>
+                <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Completed (7 Days)</p>
+                    <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(summary.total_health_completed_recently || 0).toLocaleString() }}</p>
+                </article>
+            </div>
         </section>
 
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
