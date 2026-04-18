@@ -22,6 +22,8 @@
 /.vscode
 /.github
 /md_files
+/docs
+/plans
 *.md
 .playwright-cli
 .serena

@@ -1103,7 +1103,7 @@ test('auto status adjustment rejects transitions that would produce negative bat
             'pig_no' => 1,
             'status' => 'Deceased',
         ])
-        ->assertSessionHasErrors(['status']);
+        ->assertSessionHasErrors(['quantity_change']);
 
     $batch->refresh();
     expect($batch->current_count)->toBe(0);
@@ -1393,7 +1393,7 @@ test('status update can change status while keeping current stage', function () 
     expect($batch->status)->toBe('Ready for Sale');
 });
 
-test('status update can reopen archived batch', function () {
+test('dedicated reopen endpoint can reopen archived batch', function () {
     $president = presidentUser();
     $batch = makeBatch($president, [
         'stage' => 'Completed',
@@ -1401,7 +1401,7 @@ test('status update can reopen archived batch', function () {
     ]);
 
     actingAs($president)
-        ->post(route('cycles.status.store', $batch), [
+        ->patch(route('cycles.reopen', $batch), [
             'new_stage' => 'Piglet',
             'new_status' => 'Active',
             'remarks' => 'Reopened after reassessment.',

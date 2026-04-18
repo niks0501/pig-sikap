@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 class AnalyzePigCycleService
 {
     public function __construct(
-        private readonly CycleHealthSummaryService $cycleHealthSummaryService
+        private readonly CycleHealthSummaryService $cycleHealthSummaryService,
+        private readonly CycleSummaryService $cycleSummaryService
     ) {}
 
     /**
@@ -81,33 +82,7 @@ class AnalyzePigCycleService
      */
     private function buildCountSummary(PigCycle $cycle): array
     {
-        $statusCounts = $cycle->pigs()
-            ->select('status', DB::raw('COUNT(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $initialCount = (int) $cycle->initial_count;
-        $currentCount = (int) $cycle->current_count;
-
-        $sickCount = (int) ($statusCounts['Sick'] ?? 0);
-        $deceasedCount = (int) ($statusCounts['Deceased'] ?? 0);
-        $soldCount = (int) ($statusCounts['Sold'] ?? 0);
-        $isolatedCount = (int) ($statusCounts['Isolated'] ?? 0);
-
-        $mortalityRate = $initialCount > 0
-            ? round(($deceasedCount / $initialCount) * 100, 2)
-            : 0.0;
-
-        return [
-            'initial_acquired_count' => $initialCount,
-            'current_active_count' => $currentCount,
-            'sick_count' => $sickCount,
-            'deceased_count' => $deceasedCount,
-            'sold_count' => $soldCount,
-            'isolated_count' => $isolatedCount,
-            'remaining_count' => $currentCount,
-            'mortality_rate' => $mortalityRate,
-        ];
+        return $this->cycleSummaryService->forCycle($cycle);
     }
 
     /**

@@ -9,10 +9,10 @@ use App\Http\Requests\PigRegistry\UpdatePigRequest;
 use App\Models\Pig;
 use App\Models\PigCycle;
 use App\Models\PigCycleAdjustment;
+use App\Services\PigRegistry\CycleInventoryImpactService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PresidentPigProfileController extends Controller
@@ -30,7 +30,11 @@ class PresidentPigProfileController extends Controller
         ]);
     }
 
-    public function store(StorePigRequest $request, PigCycle $cycle): RedirectResponse
+    public function store(
+        StorePigRequest $request,
+        PigCycle $cycle,
+        CycleInventoryImpactService $cycleInventoryImpactService
+    ): RedirectResponse
     {
         if ($cycle->isArchived()) {
             return back()->withErrors([
@@ -39,7 +43,7 @@ class PresidentPigProfileController extends Controller
         }
 
         /** @var array{pig: Pig, adjustment: PigCycleAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $cycle): array {
+        $result = DB::transaction(function () use ($request, $cycle, $cycleInventoryImpactService): array {
             $pig = $cycle->pigs()->create([
                 ...$request->validated(),
                 'created_by' => $request->user()->id,
@@ -52,13 +56,20 @@ class PresidentPigProfileController extends Controller
                 ]);
             }
 
-            $adjustment = $this->syncCycleCountForPigStatusTransition(
-                $cycle,
+            $adjustmentPayload = $this->buildStatusTransitionAdjustmentPayload(
                 null,
                 (string) $pig->status,
-                (int) $request->user()->id,
-                (int) $pig->pig_no
+                (int) $pig->pig_no,
+                [
+                    'source_type' => 'pig_profile_create',
+                    'source_id' => $pig->id,
+                    'source_event_key' => 'pig-profile-'.$pig->id.'-create',
+                ]
             );
+
+            $adjustment = $adjustmentPayload !== null
+                ? $cycleInventoryImpactService->apply($cycle, $adjustmentPayload, $request->user())
+                : null;
 
             return [
                 'pig' => $pig,
@@ -88,7 +99,12 @@ class PresidentPigProfileController extends Controller
             ->with('status', 'Pig profile added successfully.');
     }
 
-    public function update(UpdatePigRequest $request, PigCycle $cycle, Pig $pig): RedirectResponse
+    public function update(
+        UpdatePigRequest $request,
+        PigCycle $cycle,
+        Pig $pig,
+        CycleInventoryImpactService $cycleInventoryImpactService
+    ): RedirectResponse
     {
         if ($pig->batch_id !== $cycle->id) {
             abort(404);
@@ -103,16 +119,23 @@ class PresidentPigProfileController extends Controller
         $previousStatus = (string) $pig->status;
 
         /** @var array{pig: Pig, adjustment: PigCycleAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $cycle, $pig, $previousStatus): array {
+        $result = DB::transaction(function () use ($request, $cycle, $pig, $previousStatus, $cycleInventoryImpactService): array {
             $pig->update($request->validated());
 
-            $adjustment = $this->syncCycleCountForPigStatusTransition(
-                $cycle,
+            $adjustmentPayload = $this->buildStatusTransitionAdjustmentPayload(
                 $previousStatus,
                 (string) $pig->status,
-                (int) $request->user()->id,
-                (int) $pig->pig_no
+                (int) $pig->pig_no,
+                [
+                    'source_type' => 'pig_profile_update',
+                    'source_id' => $pig->id,
+                    'source_event_key' => 'pig-profile-'.$pig->id.'-status-'.strtolower($previousStatus).'-to-'.strtolower((string) $pig->status),
+                ]
             );
+
+            $adjustment = $adjustmentPayload !== null
+                ? $cycleInventoryImpactService->apply($cycle, $adjustmentPayload, $request->user())
+                : null;
 
             return [
                 'pig' => $pig,
@@ -142,7 +165,12 @@ class PresidentPigProfileController extends Controller
             ->with('status', 'Pig profile updated successfully.');
     }
 
-    public function destroy(Request $request, PigCycle $cycle, Pig $pig): RedirectResponse
+    public function destroy(
+        Request $request,
+        PigCycle $cycle,
+        Pig $pig,
+        CycleInventoryImpactService $cycleInventoryImpactService
+    ): RedirectResponse
     {
         if ($pig->batch_id !== $cycle->id) {
             abort(404);
@@ -158,17 +186,24 @@ class PresidentPigProfileController extends Controller
         $statusBeforeDelete = (string) $pig->status;
 
         /** @var array{adjustment: PigCycleAdjustment|null} $result */
-        $result = DB::transaction(function () use ($request, $cycle, $pig): array {
+        $result = DB::transaction(function () use ($request, $cycle, $pig, $cycleInventoryImpactService): array {
             $adjustment = null;
 
             if (Pig::statusCountsTowardBatch((string) $pig->status)) {
-                $adjustment = $this->syncCycleCountForPigStatusTransition(
-                    $cycle,
+                $adjustmentPayload = $this->buildStatusTransitionAdjustmentPayload(
                     (string) $pig->status,
                     'Deleted',
-                    (int) $request->user()->id,
-                    (int) $pig->pig_no
+                    (int) $pig->pig_no,
+                    [
+                        'source_type' => 'pig_profile_delete',
+                        'source_id' => $pig->id,
+                        'source_event_key' => 'pig-profile-'.$pig->id.'-delete',
+                    ]
                 );
+
+                $adjustment = $adjustmentPayload !== null
+                    ? $cycleInventoryImpactService->apply($cycle, $adjustmentPayload, $request->user())
+                    : null;
             }
 
             $pig->delete();
@@ -199,13 +234,16 @@ class PresidentPigProfileController extends Controller
             ->with('status', 'Pig profile deleted successfully.');
     }
 
-    private function syncCycleCountForPigStatusTransition(
-        PigCycle $cycle,
+    /**
+     * @param  array<string, mixed>  $extraPayload
+     * @return array<string, mixed>|null
+     */
+    private function buildStatusTransitionAdjustmentPayload(
         ?string $previousStatus,
         string $newStatus,
-        int $actorId,
-        int $pigNo
-    ): ?PigCycleAdjustment {
+        int $pigNo,
+        array $extraPayload = []
+    ): ?array {
         $wasCounted = Pig::statusCountsTowardBatch($previousStatus);
         $isCounted = Pig::statusCountsTowardBatch($newStatus);
 
@@ -215,36 +253,15 @@ class PresidentPigProfileController extends Controller
 
         $delta = $isCounted ? 1 : -1;
 
-        $lockedCycle = PigCycle::query()
-            ->whereKey($cycle->id)
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        $before = (int) $lockedCycle->current_count;
-        $after = $before + $delta;
-
-        if ($after < 0) {
-            throw ValidationException::withMessages([
-                'status' => 'Status change cannot reduce cycle count below zero.',
-            ]);
-        }
-
-        $lockedCycle->update([
-            'current_count' => $after,
-            'last_reviewed_at' => now(),
-        ]);
-
-        return PigCycleAdjustment::create([
-            'batch_id' => $lockedCycle->id,
+        return [
             'adjustment_type' => $delta > 0 ? 'increase' : 'decrease',
-            'quantity_before' => $before,
-            'quantity_change' => $delta,
-            'quantity_after' => $after,
+            'quantity_change' => abs($delta),
             'reason' => $delta > 0
                 ? Pig::autoIncreaseReasonForStatus($previousStatus)
                 : Pig::autoDecreaseReasonForStatus($newStatus),
             'remarks' => "Auto-adjusted from pig profile #{$pigNo}: ".($previousStatus ?? 'Counted')." -> {$newStatus}.",
-            'created_by' => $actorId,
-        ]);
+            'source_module' => 'pig_registry',
+            ...$extraPayload,
+        ];
     }
 }

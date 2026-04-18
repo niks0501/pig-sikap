@@ -1,0 +1,153 @@
+<script setup>
+import { computed } from 'vue';
+import CycleHealthIncidentList from './CycleHealthIncidentList.vue';
+import CycleHealthTaskList from './CycleHealthTaskList.vue';
+
+const props = defineProps({
+    cycle: {
+        type: Object,
+        required: true,
+    },
+    healthSummary: {
+        type: Object,
+        default: () => ({}),
+    },
+    oralMedicationTask: {
+        type: Object,
+        default: null,
+    },
+    timelineItems: {
+        type: Array,
+        default: () => [],
+    },
+    routes: {
+        type: Object,
+        required: true,
+    },
+    csrfToken: {
+        type: String,
+        required: true,
+    },
+    todayDate: {
+        type: String,
+        required: true,
+    },
+});
+
+const counts = computed(() => props.healthSummary?.counts ?? {});
+const isArchived = computed(() => props.cycle?.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle?.status ?? ''));
+
+const formatDate = (value) => {
+    if (!value) {
+        return '-';
+    }
+
+    return new Date(value).toLocaleDateString(undefined, {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+};
+</script>
+
+<template>
+    <section class="relative overflow-hidden rounded-3xl bg-[#0c6d57] p-6 text-white shadow-md">
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-[#86d4c1]">Purchase Date</p>
+                <p class="mt-1 text-lg font-bold">{{ formatDate(props.cycle.date_of_purchase) }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-[#86d4c1]">Days Since Acquisition</p>
+                <p class="mt-1 text-lg font-bold">{{ props.cycle.days_since_acquisition ?? '-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-[#86d4c1]">Current Count</p>
+                <p class="mt-1 text-lg font-bold">{{ Number(props.cycle.current_count || 0).toLocaleString() }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-[#86d4c1]">Overdue Tasks</p>
+                <p class="mt-1 text-lg font-bold">{{ Number(counts.overdue || 0).toLocaleString() }}</p>
+            </div>
+            <div>
+                <a :href="props.routes.cycleShow" class="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#0c6d57] transition-colors hover:bg-gray-50">
+                    Open Cycle Detail
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-4 sm:grid-cols-2">
+        <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Post-Purchase Health Plan</p>
+            <p class="mt-2 text-lg font-bold text-gray-900">
+                {{ props.cycle.health_template?.name || 'No assigned template' }}
+            </p>
+            <p v-if="props.cycle.health_template?.code" class="mt-1 text-sm text-gray-600">Template Code: {{ props.cycle.health_template.code }}</p>
+        </article>
+
+        <article class="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Oral Medication Period</p>
+            <template v-if="props.oralMedicationTask">
+                <p class="mt-2 text-lg font-bold text-emerald-900">{{ props.oralMedicationTask.task_name }}</p>
+                <p class="mt-1 text-sm text-emerald-800">
+                    {{ formatDate(props.oralMedicationTask.planned_start_date) }}
+                    <template v-if="props.oralMedicationTask.planned_end_date"> to {{ formatDate(props.oralMedicationTask.planned_end_date) }}</template>
+                </p>
+            </template>
+            <p v-else class="mt-2 text-sm font-semibold text-emerald-900">No oral medication period task configured for this cycle.</p>
+        </article>
+    </section>
+
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Due Today</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(counts.due_today || 0).toLocaleString() }}</p>
+        </article>
+        <article class="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-700">Overdue</p>
+            <p class="mt-2 text-2xl font-bold text-red-900">{{ Number(counts.overdue || 0).toLocaleString() }}</p>
+        </article>
+        <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Upcoming</p>
+            <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(counts.upcoming || 0).toLocaleString() }}</p>
+        </article>
+        <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Incidents</p>
+            <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(counts.incidents || 0).toLocaleString() }}</p>
+        </article>
+        <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Mortality</p>
+            <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(counts.mortality || 0).toLocaleString() }}</p>
+        </article>
+    </section>
+
+    <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">Cycle Timeline</h3>
+                <p class="mt-1 text-sm text-gray-500">A single chronological view of scheduled tasks, treatment actions, and incidents.</p>
+            </div>
+            <a :href="props.routes.recordIncident" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/10">
+                Record Incident
+            </a>
+        </div>
+
+        <div class="mt-5 space-y-4">
+            <template v-for="item in props.timelineItems" :key="`${item.kind}-${item.id}`">
+                <CycleHealthTaskList
+                    v-if="item.kind === 'task'"
+                    :item="item"
+                    :cycle-archived="isArchived"
+                    :csrf-token="props.csrfToken"
+                    :today-date="props.todayDate"
+                />
+                <CycleHealthIncidentList v-else :item="item" />
+            </template>
+
+            <p v-if="props.timelineItems.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-sm text-gray-500">
+                No timeline records available for this cycle yet.
+            </p>
+        </div>
+    </section>
+</template>

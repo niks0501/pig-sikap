@@ -18,6 +18,7 @@ class AuditTrail extends Model
         'action',
         'module',
         'description',
+        'context_json',
         'ip_address',
         'user_agent',
     ];
@@ -28,6 +29,7 @@ class AuditTrail extends Model
     protected function casts(): array
     {
         return [
+            'context_json' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

@@ -8,8 +8,9 @@ use App\Http\Requests\PigRegistry\StoreHealthIncidentFromModuleRequest;
 use App\Models\CycleHealthIncident;
 use App\Models\CycleHealthTask;
 use App\Models\PigCycle;
+use App\Services\PigRegistry\CycleSummaryService;
 use App\Services\PigRegistry\CycleHealthSummaryService;
-use App\Services\PigRegistry\RecordCycleHealthIncidentService;
+use App\Services\PigRegistry\RecordHealthIncidentWithOperationalImpactService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -19,7 +20,7 @@ class PresidentHealthController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(Request $request): View
+    public function index(Request $request, CycleSummaryService $cycleSummaryService): View
     {
         $search = trim((string) $request->query('search', ''));
         $tab = trim((string) $request->query('tab', 'all'));
@@ -99,20 +100,7 @@ class PresidentHealthController extends Controller
                 ->get(),
         ];
 
-        $summary = [
-            'upcoming' => CycleHealthTask::query()
-                ->whereDate('planned_start_date', '>', today())
-                ->whereNotIn('status', $terminalStatuses)
-                ->count(),
-            'overdue' => CycleHealthTask::query()
-                ->whereDate('planned_start_date', '<', today())
-                ->whereNotIn('status', $terminalStatuses)
-                ->count(),
-            'completed' => CycleHealthTask::query()->where('status', 'completed')->count(),
-            'sick_cases' => (int) CycleHealthIncident::query()
-                ->whereIn('incident_type', ['sick', 'isolated'])
-                ->sum('affected_count'),
-        ];
+        $summary = $cycleSummaryService->forHealthDashboard();
 
         return view('health.index', [
             'tasks' => $tasks,
@@ -222,15 +210,18 @@ class PresidentHealthController extends Controller
 
     public function storeIncident(
         StoreHealthIncidentFromModuleRequest $request,
-        RecordCycleHealthIncidentService $recordCycleHealthIncidentService
+        RecordHealthIncidentWithOperationalImpactService $recordHealthIncidentWithOperationalImpactService
     ): RedirectResponse {
         $payload = $request->validated();
 
         $cycle = PigCycle::query()->findOrFail((int) $payload['cycle_id']);
 
-        $incident = $recordCycleHealthIncidentService->handle(
+        $incident = $recordHealthIncidentWithOperationalImpactService->handle(
             $cycle,
-            Arr::except($payload, ['cycle_id']),
+            [
+                ...Arr::except($payload, ['cycle_id']),
+                'source_channel' => 'health_module',
+            ],
             $request->user()
         );
 
@@ -238,7 +229,12 @@ class PresidentHealthController extends Controller
             $request,
             'health_incident_created_from_module',
             "Created {$incident->incident_type} incident for cycle {$cycle->batch_code} via Health module.",
-            'health_monitoring'
+            'health_monitoring',
+            [
+                'cycle_id' => $cycle->id,
+                'incident_id' => $incident->id,
+                'event_key' => $incident->event_key,
+            ]
         );
 
         return redirect()

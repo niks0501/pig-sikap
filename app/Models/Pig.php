@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
 class Pig extends Model
@@ -69,6 +70,11 @@ class Pig extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function healthIncidents(): HasMany
+    {
+        return $this->hasMany(CycleHealthIncident::class, 'pig_id');
     }
 
     public static function statusCountsTowardBatch(?string $status): bool

@@ -22,6 +22,9 @@ class StoreHealthIncidentFromModuleRequest extends FormRequest
     {
         return [
             'cycle_id' => ['required', 'integer', 'exists:pig_cycles,id'],
+            'event_key' => ['required', 'uuid'],
+            'pig_id' => ['nullable', 'integer', 'exists:pigs,id'],
+            'source_channel' => ['nullable', 'string', 'max:80'],
             'incident_type' => ['required', 'string', Rule::in(CycleHealthIncident::INCIDENT_TYPES)],
             'date_reported' => ['required', 'date'],
             'affected_count' => ['required', 'integer', 'min:1'],
@@ -36,8 +39,10 @@ class StoreHealthIncidentFromModuleRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $cycleId = (int) $this->input('cycle_id', 0);
+            $eventKey = (string) $this->input('event_key', '');
             $incidentType = (string) $this->input('incident_type', '');
             $affectedCount = (int) $this->input('affected_count', 0);
+            $pigId = (int) $this->input('pig_id', 0);
 
             if ($cycleId < 1) {
                 return;
@@ -50,8 +55,23 @@ class StoreHealthIncidentFromModuleRequest extends FormRequest
                 return;
             }
 
+            $existingIncident = $eventKey !== ''
+                ? CycleHealthIncident::query()
+                    ->where('batch_id', $cycle->id)
+                    ->where('event_key', $eventKey)
+                    ->first()
+                : null;
+
+            if ($existingIncident !== null) {
+                return;
+            }
+
             if ($cycle->isArchived()) {
                 $validator->errors()->add('cycle_id', 'Archived cycles cannot accept new health incidents.');
+            }
+
+            if ($pigId > 0 && ! $cycle->pigs()->whereKey($pigId)->exists()) {
+                $validator->errors()->add('pig_id', 'The selected pig does not belong to the selected cycle.');
             }
 
             if ($incidentType === 'deceased' && $affectedCount > (int) $cycle->current_count) {

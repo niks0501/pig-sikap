@@ -36,6 +36,10 @@ class PigCycleAdjustment extends Model
         'quantity_after',
         'reason',
         'remarks',
+        'source_module',
+        'source_type',
+        'source_id',
+        'source_event_key',
         'created_by',
     ];
 
@@ -45,6 +49,7 @@ class PigCycleAdjustment extends Model
     protected function casts(): array
     {
         return [
+            'source_id' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

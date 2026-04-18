@@ -53,6 +53,8 @@ class CreatePigCycleService
                 'old_status' => null,
                 'new_status' => $cycle->status,
                 'remarks' => 'Initial cycle registration.',
+                'transition_type' => 'initial_registration',
+                'transition_origin' => 'cycle_creation',
                 'changed_by' => $actor->id,
             ]);
 

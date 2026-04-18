@@ -58,6 +58,10 @@ class PigCycle extends Model
         'has_pig_profiles',
         'notes',
         'last_reviewed_at',
+        'archived_at',
+        'archived_by',
+        'reopened_at',
+        'reopened_by',
         'created_by',
     ];
 
@@ -83,6 +87,8 @@ class PigCycle extends Model
             'average_weight' => 'decimal:2',
             'has_pig_profiles' => 'boolean',
             'last_reviewed_at' => 'datetime',
+            'archived_at' => 'datetime',
+            'reopened_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -107,6 +113,16 @@ class PigCycle extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function archivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'archived_by');
+    }
+
+    public function reopenedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reopened_by');
     }
 
     public function healthTemplate(): BelongsTo

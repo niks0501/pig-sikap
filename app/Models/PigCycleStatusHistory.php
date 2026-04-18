@@ -20,6 +20,10 @@ class PigCycleStatusHistory extends Model
         'old_status',
         'new_status',
         'remarks',
+        'transition_type',
+        'transition_origin',
+        'transition_key',
+        'context_json',
         'changed_by',
     ];
 
@@ -29,6 +33,7 @@ class PigCycleStatusHistory extends Model
     protected function casts(): array
     {
         return [
+            'context_json' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

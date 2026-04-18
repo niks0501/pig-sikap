@@ -55,6 +55,8 @@ const isArchived = computed(() => props.cycle.stage === 'Completed' || ['Sold', 
 const isAdjustmentDialogOpen = ref(false);
 const isStatusDialogOpen = ref(false);
 const automation = computed(() => props.automation ?? {});
+const reopenStage = computed(() => (Array.isArray(props.stages) ? props.stages.find((stage) => stage !== 'Completed') : null) ?? 'Growing');
+const reopenStatus = computed(() => (Array.isArray(props.statuses) ? props.statuses.find((status) => !['Sold', 'Closed'].includes(status)) : null) ?? 'Active');
 
 const countdown = computed(() => automation.value.countdown ?? {});
 const suggestions = computed(() => (Array.isArray(automation.value.suggestions) ? automation.value.suggestions : []));
@@ -120,7 +122,9 @@ const openAdjustmentDialog = () => {
 };
 
 const openStatusDialog = () => {
-    isStatusDialogOpen.value = true;
+    if (!isArchived.value) {
+        isStatusDialogOpen.value = true;
+    }
 };
 
 const closeAdjustmentDialog = () => {
@@ -160,7 +164,7 @@ const closeStatusDialog = () => {
                     <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-60" @click="openAdjustmentDialog">
                         Adjust Count
                     </button>
-                    <button type="button" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] sm:col-span-2" @click="openStatusDialog">
+                    <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2" @click="openStatusDialog">
                         Update Stage / Status
                     </button>
                     <form v-if="!isArchived" :action="props.routes.archive" method="POST" class="sm:col-span-2" onsubmit="return confirm('Archive this cycle? Operational editing will be restricted.');">
@@ -168,6 +172,16 @@ const closeStatusDialog = () => {
                         <input type="hidden" name="_method" value="PATCH">
                         <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900">
                             Archive / Close
+                        </button>
+                    </form>
+                    <form v-else-if="props.routes.reopen" :action="props.routes.reopen" method="POST" class="sm:col-span-2" onsubmit="return confirm('Reopen this archived cycle?');">
+                        <input type="hidden" name="_token" :value="props.csrfToken">
+                        <input type="hidden" name="_method" value="PATCH">
+                        <input type="hidden" name="new_stage" :value="reopenStage">
+                        <input type="hidden" name="new_status" :value="reopenStatus">
+                        <input type="hidden" name="remarks" value="Cycle reopened from archived state.">
+                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                            Reopen Cycle
                         </button>
                     </form>
                 </div>

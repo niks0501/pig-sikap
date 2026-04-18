@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
+use App\Http\Controllers\President\PresidentPigCycleReopenController;
 use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigBreederController;
 use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
@@ -65,6 +66,7 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
 
             Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
+            Route::patch('/{cycle}/reopen', [PresidentPigCycleReopenController::class, 'store'])->name('reopen');
         });
 
         Route::prefix('batches')->name('batches.')->scopeBindings()->group(function () {
@@ -85,6 +87,7 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
 
             Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
+            Route::patch('/{cycle}/reopen', [PresidentPigCycleReopenController::class, 'store'])->name('reopen');
         });
 
         Route::prefix('breeders')->name('breeders.')->group(function () {

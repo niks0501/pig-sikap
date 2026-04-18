@@ -1,0 +1,67 @@
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    item: {
+        type: Object,
+        required: true,
+    },
+});
+
+const incident = computed(() => props.item?.incident ?? {});
+const timelineDateLabel = computed(() => props.item?.timeline_date_label ?? 'Timeline Date');
+const timelineDateText = computed(() => formatDate(props.item?.timeline_date));
+
+const incidentToneClass = computed(() => {
+    switch (incident.value.incident_type) {
+        case 'deceased':
+            return 'border-rose-200 bg-rose-50/60';
+        case 'isolated':
+            return 'border-amber-200 bg-amber-50/60';
+        default:
+            return 'border-orange-200 bg-orange-50/60';
+    }
+});
+
+const incidentDotClass = computed(() => (incident.value.incident_type === 'deceased' ? 'bg-rose-500' : 'bg-orange-500'));
+
+const formatDate = (value) => {
+    if (!value) {
+        return '-';
+    }
+
+    return new Date(value).toLocaleDateString(undefined, {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+};
+</script>
+
+<template>
+    <article class="relative rounded-2xl border p-4 shadow-sm sm:p-5" :class="incidentToneClass">
+        <span class="absolute left-3 top-5 h-2.5 w-2.5 rounded-full" :class="incidentDotClass" />
+
+        <div class="pl-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h4 class="text-base font-bold text-gray-900">{{ incident.incident_type_label }} Incident</h4>
+                    <span class="inline-flex rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-gray-700">
+                        {{ Number(incident.affected_count || 0).toLocaleString() }} pig(s) affected
+                    </span>
+                </div>
+
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {{ timelineDateLabel }}: {{ timelineDateText }}
+                </span>
+            </div>
+
+            <p v-if="incident.suspected_cause" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Cause:</span> {{ incident.suspected_cause }}</p>
+            <p v-if="incident.treatment_given" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Treatment:</span> {{ incident.treatment_given }}</p>
+
+            <p v-if="incident.remarks" class="mt-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
+                {{ incident.remarks }}
+            </p>
+        </div>
+    </article>
+</template>

@@ -6,7 +6,7 @@ use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PigRegistry\StoreCycleHealthIncidentRequest;
 use App\Models\PigCycle;
-use App\Services\PigRegistry\RecordCycleHealthIncidentService;
+use App\Services\PigRegistry\RecordHealthIncidentWithOperationalImpactService;
 use Illuminate\Http\RedirectResponse;
 
 class PresidentCycleHealthIncidentController extends Controller
@@ -16,7 +16,7 @@ class PresidentCycleHealthIncidentController extends Controller
     public function store(
         StoreCycleHealthIncidentRequest $request,
         PigCycle $cycle,
-        RecordCycleHealthIncidentService $recordCycleHealthIncidentService
+        RecordHealthIncidentWithOperationalImpactService $recordHealthIncidentWithOperationalImpactService
     ): RedirectResponse {
         if ($cycle->isArchived()) {
             return back()->withErrors([
@@ -24,13 +24,25 @@ class PresidentCycleHealthIncidentController extends Controller
             ]);
         }
 
-        $incident = $recordCycleHealthIncidentService->handle($cycle, $request->validated(), $request->user());
+        $incident = $recordHealthIncidentWithOperationalImpactService->handle(
+            $cycle,
+            [
+                ...$request->validated(),
+                'source_channel' => 'cycle_timeline',
+            ],
+            $request->user()
+        );
 
         $this->recordAudit(
             $request,
             'cycle_health_incident_recorded',
             "Recorded {$incident->incident_type} incident for cycle {$cycle->batch_code} affecting {$incident->affected_count} pig(s).",
-            'health_monitoring'
+            'health_monitoring',
+            [
+                'cycle_id' => $cycle->id,
+                'incident_id' => $incident->id,
+                'event_key' => $incident->event_key,
+            ]
         );
 
         return redirect()

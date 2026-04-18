@@ -501,6 +501,7 @@ test('president can record deceased incident and cycle count is auto adjusted', 
     ]);
 
     $response = actingAs($president)->post(route('health.cycles.incidents.store', $cycle), [
+        'event_key' => fake()->uuid(),
         'incident_type' => 'deceased',
         'date_reported' => now()->toDateString(),
         'affected_count' => 2,
@@ -539,6 +540,7 @@ test('president can record incident from health module form route', function () 
 
     $response = actingAs($president)->post(route('health.incidents.store'), [
         'cycle_id' => $cycle->id,
+        'event_key' => fake()->uuid(),
         'incident_type' => 'sick',
         'date_reported' => now()->toDateString(),
         'affected_count' => 3,

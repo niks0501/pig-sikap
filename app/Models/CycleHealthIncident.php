@@ -21,6 +21,9 @@ class CycleHealthIncident extends Model
      */
     protected $fillable = [
         'batch_id',
+        'event_key',
+        'pig_id',
+        'source_channel',
         'incident_type',
         'date_reported',
         'affected_count',
@@ -37,6 +40,7 @@ class CycleHealthIncident extends Model
     protected function casts(): array
     {
         return [
+            'pig_id' => 'integer',
             'date_reported' => 'date',
             'affected_count' => 'integer',
             'created_at' => 'datetime',
@@ -62,5 +66,10 @@ class CycleHealthIncident extends Model
     public function reportedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function pig(): BelongsTo
+    {
+        return $this->belongsTo(Pig::class, 'pig_id');
     }
 }

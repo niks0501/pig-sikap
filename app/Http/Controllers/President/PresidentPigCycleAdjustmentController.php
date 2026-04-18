@@ -24,12 +24,22 @@ class PresidentPigCycleAdjustmentController extends Controller
             ]);
         }
 
-        $adjustment = $adjustPigCycleCountService->handle($cycle, $request->validated(), $request->user());
+        $adjustment = $adjustPigCycleCountService->handle($cycle, [
+            ...$request->validated(),
+            'source_module' => 'pig_registry',
+            'source_type' => 'manual_adjustment',
+        ], $request->user());
 
         $this->recordAudit(
             $request,
             'cycle_count_adjusted',
-            "Adjusted {$cycle->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} ({$adjustment->reason})."
+            "Adjusted {$cycle->batch_code} from {$adjustment->quantity_before} to {$adjustment->quantity_after} ({$adjustment->reason}).",
+            'pig_registry',
+            [
+                'cycle_id' => $cycle->id,
+                'adjustment_id' => $adjustment->id,
+                'source_event_key' => $adjustment->source_event_key,
+            ]
         );
 
         return redirect()

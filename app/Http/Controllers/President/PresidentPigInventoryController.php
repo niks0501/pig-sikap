@@ -4,8 +4,6 @@ namespace App\Http\Controllers\President;
 
 use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
-use App\Models\CycleHealthIncident;
-use App\Models\CycleHealthTask;
 use App\Http\Requests\PigRegistry\StorePigCycleRequest;
 use App\Http\Requests\PigRegistry\UpdatePigCycleRequest;
 use App\Models\Pig;
@@ -14,11 +12,14 @@ use App\Models\PigCycleAdjustment;
 use App\Models\PigCycleStatusHistory;
 use App\Models\User;
 use App\Services\PigRegistry\AnalyzePigCycleService;
+use App\Services\PigRegistry\CycleSummaryService;
 use App\Services\PigRegistry\CreatePigCycleService;
+use App\Services\PigRegistry\UpdatePigCycleStatusService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class PresidentPigInventoryController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request, CycleSummaryService $cycleSummaryService): View|JsonResponse
     {
         $search = trim((string) $request->query('search', ''));
         $stage = trim((string) $request->query('stage', ''));
@@ -73,7 +74,7 @@ class PresidentPigInventoryController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $summary = $this->summary();
+        $summary = $cycleSummaryService->forDashboard();
         $recentUpdates = $this->recentUpdates();
 
         if ($request->expectsJson()) {
@@ -150,6 +151,7 @@ class PresidentPigInventoryController extends Controller
             'pigStatuses' => Pig::STATUSES,
             'sexOptions' => Pig::SEX_OPTIONS,
             'automation' => $automation,
+            'reopenRoute' => route('cycles.reopen', $cycle),
         ]);
     }
 
@@ -171,7 +173,11 @@ class PresidentPigInventoryController extends Controller
         ]);
     }
 
-    public function update(UpdatePigCycleRequest $request, PigCycle $cycle): RedirectResponse
+    public function update(
+        UpdatePigCycleRequest $request,
+        PigCycle $cycle,
+        UpdatePigCycleStatusService $updatePigCycleStatusService
+    ): RedirectResponse
     {
         if ($cycle->isArchived()) {
             return back()->withErrors([
@@ -179,29 +185,39 @@ class PresidentPigInventoryController extends Controller
             ]);
         }
 
+        $validated = $request->validated();
         $oldStage = $cycle->stage;
         $oldStatus = $cycle->status;
 
         $cycle->update([
-            ...$request->validated(),
+            ...Arr::except($validated, ['stage', 'status']),
             'last_reviewed_at' => now(),
         ]);
 
-        if ($oldStage !== $cycle->stage || $oldStatus !== $cycle->status) {
-            PigCycleStatusHistory::create([
-                'batch_id' => $cycle->id,
-                'old_stage' => $oldStage,
-                'new_stage' => $cycle->stage,
-                'old_status' => $oldStatus,
-                'new_status' => $cycle->status,
-                'remarks' => 'Updated from edit cycle form.',
-                'changed_by' => $request->user()->id,
-            ]);
+        if ($oldStage !== (string) $validated['stage'] || $oldStatus !== (string) $validated['status']) {
+            $history = $updatePigCycleStatusService->handle(
+                $cycle,
+                [
+                    'new_stage' => (string) $validated['stage'],
+                    'new_status' => (string) $validated['status'],
+                    'remarks' => 'Updated from edit cycle form.',
+                ],
+                $request->user(),
+                [
+                    'transition_origin' => 'cycle_edit_form',
+                    'transition_type' => 'status_update',
+                ]
+            );
 
             $this->recordAudit(
                 $request,
                 'cycle_status_updated',
-                "Updated stage/status for cycle {$cycle->batch_code} to {$cycle->stage} / {$cycle->status}."
+                "Updated stage/status for cycle {$cycle->batch_code} to {$history->new_stage} / {$history->new_status}.",
+                'pig_registry',
+                [
+                    'cycle_id' => $cycle->id,
+                    'history_id' => $history->id,
+                ]
             );
         } else {
             $this->recordAudit(
@@ -216,32 +232,36 @@ class PresidentPigInventoryController extends Controller
             ->with('status', 'Cycle details were updated.');
     }
 
-    public function archive(Request $request, PigCycle $cycle): RedirectResponse
+    public function archive(
+        Request $request,
+        PigCycle $cycle,
+        UpdatePigCycleStatusService $updatePigCycleStatusService
+    ): RedirectResponse
     {
         if (! $cycle->isArchived()) {
-            $oldStage = $cycle->stage;
-            $oldStatus = $cycle->status;
-
-            $cycle->update([
-                'stage' => 'Completed',
-                'status' => 'Closed',
-                'last_reviewed_at' => now(),
-            ]);
-
-            PigCycleStatusHistory::create([
-                'batch_id' => $cycle->id,
-                'old_stage' => $oldStage,
-                'new_stage' => 'Completed',
-                'old_status' => $oldStatus,
-                'new_status' => 'Closed',
-                'remarks' => (string) $request->input('remarks', 'Cycle archived from Cycles module.'),
-                'changed_by' => $request->user()->id,
-            ]);
+            $history = $updatePigCycleStatusService->handle(
+                $cycle,
+                [
+                    'new_stage' => 'Completed',
+                    'new_status' => 'Closed',
+                    'remarks' => (string) $request->input('remarks', 'Cycle archived from Cycles module.'),
+                ],
+                $request->user(),
+                [
+                    'transition_origin' => 'cycle_archive_endpoint',
+                    'transition_type' => 'archive',
+                ]
+            );
 
             $this->recordAudit(
                 $request,
                 'cycle_archived',
-                "Archived cycle {$cycle->batch_code}."
+                "Archived cycle {$cycle->batch_code}.",
+                'pig_registry',
+                [
+                    'cycle_id' => $cycle->id,
+                    'history_id' => $history->id,
+                ]
             );
         }
 
@@ -317,48 +337,6 @@ class PresidentPigInventoryController extends Controller
             'last_page' => $paginator->lastPage(),
             'per_page' => $paginator->perPage(),
             'total' => $paginator->total(),
-        ];
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private function summary(): array
-    {
-        $terminalStatuses = CycleHealthTask::TERMINAL_STATUSES;
-
-        return [
-            'active_cycles' => PigCycle::query()->activeRecords()->count(),
-            'total_piglets' => (int) PigCycle::query()->where('stage', 'Piglet')->sum('current_count'),
-            'total_fatteners' => (int) PigCycle::query()->where('stage', 'Fattening')->sum('current_count'),
-            'total_sick' => Pig::query()->where('status', 'Sick')->count(),
-            'total_deceased' => Pig::query()->where('status', 'Deceased')->count(),
-            'ready_for_sale_cycles' => PigCycle::query()->where('status', 'Ready for Sale')->count(),
-            'total_health_due_today' => CycleHealthTask::query()
-                ->whereDate('planned_start_date', today())
-                ->whereNotIn('status', $terminalStatuses)
-                ->count(),
-            'total_health_overdue' => CycleHealthTask::query()
-                ->whereDate('planned_start_date', '<', today())
-                ->whereNotIn('status', $terminalStatuses)
-                ->count(),
-            'total_health_active_oral_periods' => CycleHealthTask::query()
-                ->where('task_type', 'oral_medication_period')
-                ->whereDate('planned_start_date', '<=', today())
-                ->where(function ($query): void {
-                    $query->whereNull('planned_end_date')
-                        ->orWhereDate('planned_end_date', '>=', today());
-                })
-                ->whereNotIn('status', ['skipped', 'not_applicable'])
-                ->count(),
-            'total_health_incidents' => CycleHealthIncident::query()->count(),
-            'total_health_mortality' => (int) CycleHealthIncident::query()
-                ->where('incident_type', 'deceased')
-                ->sum('affected_count'),
-            'total_health_completed_recently' => CycleHealthTask::query()
-                ->where('status', 'completed')
-                ->whereDate('actual_date', '>=', today()->subDays(7))
-                ->count(),
         ];
     }
 

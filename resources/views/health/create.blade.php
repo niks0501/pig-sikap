@@ -1,4 +1,8 @@
 <x-app-layout>
+    @php
+        $eventKey = old('event_key', (string) \Illuminate\Support\Str::uuid());
+    @endphp
+
     <x-slot name="header">
         <div class="flex items-center gap-4">
             <a href="{{ route('health.index') }}" class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
@@ -15,6 +19,8 @@
         <section class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
             <form action="{{ route('health.incidents.store') }}" method="POST" class="space-y-6">
                 @csrf
+                <input type="hidden" name="event_key" value="{{ $eventKey }}">
+                <input type="hidden" name="source_channel" value="health_module">
 
                 <div class="grid gap-5 sm:grid-cols-2">
                     <label class="sm:col-span-2">

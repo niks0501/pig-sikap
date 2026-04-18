@@ -29,8 +29,24 @@ class StorePigCycleStatusRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $cycle = $this->route('cycle');
+            $targetStage = (string) ($this->input('new_stage') ?: ($cycle?->stage ?? ''));
+            $targetStatus = (string) ($this->input('new_status') ?: ($cycle?->status ?? ''));
+
             if (! $this->filled('new_stage') && ! $this->filled('new_status')) {
                 $validator->errors()->add('new_status', 'Select a new stage or status.');
+            }
+
+            if ($cycle instanceof PigCycle && $cycle->isArchived()) {
+                $validator->errors()->add('cycle', 'Archived cycles must be reopened via the dedicated reopen action.');
+            }
+
+            if ($targetStatus === 'Closed' && $targetStage !== 'Completed') {
+                $validator->errors()->add('new_status', 'Closed status requires Completed stage.');
+            }
+
+            if ($targetStage === 'Completed' && ! in_array($targetStatus, ['Sold', 'Closed'], true)) {
+                $validator->errors()->add('new_stage', 'Completed stage requires Sold or Closed status.');
             }
         });
     }

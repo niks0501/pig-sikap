@@ -6,7 +6,7 @@ use App\Models\CycleHealthTask;
 use App\Models\User;
 use App\Services\PigRegistry\CycleHealthPlanGenerator;
 use App\Services\PigRegistry\CycleHealthSummaryService;
-use App\Services\PigRegistry\RecordCycleHealthIncidentService;
+use App\Services\PigRegistry\RecordHealthIncidentWithOperationalImpactService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -93,7 +93,7 @@ test('cycle health summary service returns due counts and mortality totals', fun
     expect($summary['next_due_task'])->not->toBeNull();
 });
 
-test('recording deceased incident auto deducts cycle current count via adjustment', function () {
+test('recording deceased incident via orchestrator auto deducts cycle current count', function () {
     $cycle = makeCycleForHealthTests([
         'current_count' => 12,
         'initial_count' => 12,
@@ -101,7 +101,8 @@ test('recording deceased incident auto deducts cycle current count via adjustmen
 
     $actor = User::query()->findOrFail($cycle->created_by);
 
-    $incident = app(RecordCycleHealthIncidentService::class)->handle($cycle, [
+    $incident = app(RecordHealthIncidentWithOperationalImpactService::class)->handle($cycle, [
+        'event_key' => fake()->uuid(),
         'incident_type' => 'deceased',
         'date_reported' => now()->toDateString(),
         'affected_count' => 3,
