@@ -44,13 +44,6 @@
                     </div>
                 </a>
 
-                <a href="{{ route('mortality.index') }}" class="flex items-center px-3 py-2.5 rounded-xl mb-1 transition-colors {{ request()->routeIs('mortality.*') ? 'bg-[#0c6d57]/10 text-[#0c6d57] font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium' }}" :class="sidebarOpen ? 'justify-between' : 'justify-center'" title="Mortality Records">
-                    <div class="flex items-center gap-3">
-                        <svg class="w-5 h-5 shrink-0 {{ request()->routeIs('mortality.*') ? 'text-[#0c6d57]' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span x-show="sidebarOpen" class="whitespace-nowrap">Mortality Records</span>
-                    </div>
-                </a>
-
                 <!-- Sales -->
                 <a href="{{ route('sales.index') }}" class="flex items-center px-3 py-2.5 rounded-xl mb-1 transition-colors {{ request()->routeIs('sales.*') ? 'bg-[#0c6d57]/10 text-[#0c6d57] font-semibold' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 font-medium' }}" :class="sidebarOpen ? 'justify-between' : 'justify-center'" title="Sales Transactions">
                     <div class="flex items-center gap-3">

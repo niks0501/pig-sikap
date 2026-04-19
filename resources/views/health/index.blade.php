@@ -28,7 +28,7 @@
             'upcoming' => 'Upcoming',
             'overdue' => 'Overdue',
             'completed' => 'Completed',
-            'sick' => 'Sick / Isolated',
+            'sick' => 'Currently Sick / Isolated',
             default => 'All Records',
         };
 
@@ -90,8 +90,8 @@
                 href="{{ route('health.index', $tabQuery('sick')) }}"
                 class="rounded-2xl border bg-white p-4 shadow-sm transition-colors {{ $activeTab === 'sick' ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-orange-100 hover:border-orange-300' }}"
             >
-                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Sick / Isolated</p>
-                <p class="mt-1 text-2xl font-bold text-orange-600">{{ number_format((int) ($summary['sick_cases'] ?? 0)) }}</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-gray-400">Currently Sick / Isolated</p>
+                <p class="mt-1 text-2xl font-bold text-orange-600">{{ number_format((int) ($summary['currently_affected'] ?? $summary['sick_cases'] ?? 0)) }}</p>
             </a>
         </section>
 

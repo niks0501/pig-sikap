@@ -4,6 +4,7 @@ use App\Models\CycleHealthIncident;
 use App\Models\CycleHealthTask;
 use App\Models\PigCycle;
 use App\Models\Role;
+use App\Models\AuditTrail;
 use App\Models\User;
 use App\Services\PigRegistry\CycleHealthPlanGenerator;
 use Database\Seeders\RoleSeeder;
@@ -231,6 +232,17 @@ test('president can update cycle health task and action is logged for health mod
         'action' => 'cycle_health_task_updated',
         'module' => 'health_monitoring',
     ]);
+
+    $audit = AuditTrail::query()
+        ->where('action', 'cycle_health_task_updated')
+        ->latest('id')
+        ->first();
+
+    expect($audit)->not->toBeNull();
+    expect((int) ($audit?->context_json['cycle_id'] ?? 0))->toBe($cycle->id);
+    expect((int) ($audit?->context_json['task_id'] ?? 0))->toBe($task->id);
+    expect((string) ($audit?->context_json['requested_action'] ?? ''))->toBe('partial');
+    expect((string) ($audit?->context_json['after_status'] ?? ''))->toBe('partially_completed');
 });
 
 test('president can undo accidental complete all task action', function () {
@@ -561,6 +573,17 @@ test('president can record incident from health module form route', function () 
         'action' => 'health_incident_created_from_module',
         'module' => 'health_monitoring',
     ]);
+
+    $audit = AuditTrail::query()
+        ->where('action', 'health_incident_created_from_module')
+        ->latest('id')
+        ->first();
+
+    expect($audit)->not->toBeNull();
+    expect((int) ($audit?->context_json['cycle_id'] ?? 0))->toBe($cycle->id);
+    expect((string) ($audit?->context_json['incident_type'] ?? ''))->toBe('sick');
+    expect((int) ($audit?->context_json['affected_count'] ?? 0))->toBe(3);
+    expect((string) ($audit?->context_json['source_channel'] ?? ''))->toBe('health_module');
 });
 
 test('non president cannot access or submit health module actions', function () {

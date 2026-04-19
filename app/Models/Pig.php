@@ -26,7 +26,6 @@ class Pig extends Model
     ];
 
     public const OUT_OF_COUNT_STATUSES = [
-        'Isolated',
         'Sold',
         'Deceased',
         'Deleted',
@@ -91,7 +90,6 @@ class Pig extends Model
         return match ($status) {
             'Deceased' => 'mortality',
             'Sold' => 'sale deduction',
-            'Isolated' => 'isolated pig',
             default => 'data correction',
         };
     }

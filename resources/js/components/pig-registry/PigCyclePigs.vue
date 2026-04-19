@@ -46,7 +46,7 @@ const rowFormId = (pigId) => `pig-profile-row-form-${pigId}`;
 const isDeleteModalOpen = ref(false);
 const pigToDelete = ref(null);
 
-const countsTowardCycle = (status) => !['Isolated', 'Sold', 'Deceased'].includes(status);
+const countsTowardCycle = (status) => !['Sold', 'Deceased'].includes(status);
 
 const statusBadgeClass = (status) => {
     if (status === 'Deceased') {
@@ -146,7 +146,7 @@ const closeDeleteModal = () => {
                 </div>
 
                 <p class="md:col-span-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                    Automation: setting status to Isolated, Sold, or Deceased will auto-adjust the cycle current count.
+                    Automation: setting status to Sold or Deceased will auto-adjust the cycle current count.
                 </p>
             </form>
         </section>

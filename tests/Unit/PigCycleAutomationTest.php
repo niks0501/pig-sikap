@@ -105,6 +105,22 @@ test('analysis service computes count expense and profitability summaries', func
         'created_by' => $cycle->created_by,
     ]);
 
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'sick',
+        'date_reported' => now()->subDays(8)->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $cycle->created_by,
+    ]);
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'deceased',
+        'date_reported' => now()->subDays(6)->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $cycle->created_by,
+    ]);
+
     PigCycleExpense::query()->create([
         'batch_id' => $cycle->id,
         'category' => 'feed',

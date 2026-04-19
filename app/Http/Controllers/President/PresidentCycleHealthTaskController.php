@@ -44,15 +44,16 @@ class PresidentCycleHealthTaskController extends Controller
 
         if ($cycle->isArchived()) {
             return back()->withErrors([
-                'cycle' => 'Archived cycles cannot update health tasks without reopening.',
+                'cycle' => 'Archived cycles are final and cannot update health tasks.',
             ]);
         }
 
         $validatedPayload = $request->validated();
 
         $action = (string) $validatedPayload['action'];
+        $beforeSnapshot = $this->snapshotTaskState($healthTask);
         $undoSnapshot = $this->shouldPrepareUndo($action)
-            ? $this->snapshotTaskState($healthTask)
+            ? $beforeSnapshot
             : null;
 
         $updatedTask = $updateCycleHealthTaskService->handle($healthTask, $validatedPayload, $request->user());
@@ -61,7 +62,24 @@ class PresidentCycleHealthTaskController extends Controller
             $request,
             'cycle_health_task_updated',
             "Updated health task {$updatedTask->task_name} ({$updatedTask->status}) for cycle {$cycle->batch_code}.",
-            'health_monitoring'
+            'health_monitoring',
+            [
+                'cycle_id' => $cycle->id,
+                'cycle_batch_code' => $cycle->batch_code,
+                'task_id' => $updatedTask->id,
+                'task_name' => $updatedTask->task_name,
+                'task_type' => $updatedTask->task_type,
+                'requested_action' => $action,
+                'before_status' => (string) ($beforeSnapshot['status'] ?? ''),
+                'after_status' => (string) $updatedTask->status,
+                'before_completed_count' => (int) ($beforeSnapshot['completed_count'] ?? 0),
+                'after_completed_count' => (int) $updatedTask->completed_count,
+                'before_remaining_count' => (int) ($beforeSnapshot['remaining_count'] ?? 0),
+                'after_remaining_count' => (int) $updatedTask->remaining_count,
+                'actual_date' => $this->normalizeDateValue($updatedTask->actual_date),
+                'follow_up_date' => $this->normalizeDateValue($updatedTask->follow_up_date),
+                'planned_start_date' => $this->normalizeDateValue($updatedTask->planned_start_date),
+            ]
         );
 
         $redirect = $this->resolveHealthRedirect($request, $cycle);
@@ -101,7 +119,7 @@ class PresidentCycleHealthTaskController extends Controller
 
         if ($cycle->isArchived()) {
             return back()->withErrors([
-                'cycle' => 'Archived cycles cannot update health tasks without reopening.',
+                'cycle' => 'Archived cycles are final and cannot update health tasks.',
             ]);
         }
 
@@ -153,6 +171,8 @@ class PresidentCycleHealthTaskController extends Controller
                 ]);
         }
 
+            $stateBeforeUndo = $this->snapshotTaskState($healthTask);
+
         DB::transaction(function () use ($healthTask, $snapshot): void {
             $healthTask->forceFill([
                 'status' => (string) ($snapshot['status'] ?? $healthTask->status),
@@ -175,7 +195,21 @@ class PresidentCycleHealthTaskController extends Controller
             $request,
             'cycle_health_task_update_undone',
             "Undid task action for {$healthTask->task_name} on cycle {$cycle->batch_code}.",
-            'health_monitoring'
+            'health_monitoring',
+            [
+                'cycle_id' => $cycle->id,
+                'cycle_batch_code' => $cycle->batch_code,
+                'task_id' => $healthTask->id,
+                'task_name' => $healthTask->task_name,
+                'task_type' => $healthTask->task_type,
+                'undo_token_hash' => $undoTokenHash,
+                'status_before_undo' => (string) ($stateBeforeUndo['status'] ?? ''),
+                'status_after_undo' => (string) $healthTask->status,
+                'completed_count_before_undo' => (int) ($stateBeforeUndo['completed_count'] ?? 0),
+                'completed_count_after_undo' => (int) $healthTask->completed_count,
+                'remaining_count_before_undo' => (int) ($stateBeforeUndo['remaining_count'] ?? 0),
+                'remaining_count_after_undo' => (int) $healthTask->remaining_count,
+            ]
         );
 
         return $this->resolveHealthRedirect($request, $cycle)

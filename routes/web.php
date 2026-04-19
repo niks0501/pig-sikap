@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
-use App\Http\Controllers\President\PresidentPigCycleReopenController;
 use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigBreederController;
 use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
@@ -66,7 +65,6 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
 
             Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
-            Route::patch('/{cycle}/reopen', [PresidentPigCycleReopenController::class, 'store'])->name('reopen');
         });
 
         Route::prefix('batches')->name('batches.')->scopeBindings()->group(function () {
@@ -87,7 +85,6 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
 
             Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
-            Route::patch('/{cycle}/reopen', [PresidentPigCycleReopenController::class, 'store'])->name('reopen');
         });
 
         Route::prefix('breeders')->name('breeders.')->group(function () {
@@ -106,13 +103,6 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
             Route::patch('/cycles/{cycle}/tasks/{healthTask}/undo', [PresidentCycleHealthTaskController::class, 'undo'])->name('cycles.tasks.undo');
             Route::post('/cycles/{cycle}/incidents', [PresidentCycleHealthIncidentController::class, 'store'])->name('cycles.incidents.store');
         });
-    });
-
-    // Mortality / Deceased Pig Documentation Module
-    Route::prefix('mortality')->name('mortality.')->group(function () {
-        Route::get('/', function () { return view('mortality.index'); })->name('index');
-        Route::get('/create', function () { return view('mortality.create'); })->name('create');
-        Route::get('/{id}', function ($id) { return view('mortality.show', ['id' => $id]); })->name('show');
     });
 
     // Sales Transaction Module

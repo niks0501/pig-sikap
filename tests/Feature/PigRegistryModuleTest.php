@@ -840,7 +840,7 @@ test('adding pig profile with out-of-count status automatically decreases batch 
     ]);
 });
 
-test('adding isolated pig profile also auto decreases active batch count', function () {
+test('adding isolated pig profile keeps active batch count unchanged', function () {
     $president = presidentUser();
     $batch = makeBatch($president, [
         'current_count' => 4,
@@ -856,16 +856,8 @@ test('adding isolated pig profile also auto decreases active batch count', funct
 
     $batch->refresh();
 
-    expect($batch->current_count)->toBe(3);
-
-    assertDatabaseHas('pig_cycle_adjustments', [
-        'batch_id' => $batch->id,
-        'adjustment_type' => 'decrease',
-        'quantity_before' => 4,
-        'quantity_change' => -1,
-        'quantity_after' => 3,
-        'reason' => 'isolated pig',
-    ]);
+    expect($batch->current_count)->toBe(4);
+    assertDatabaseCount('pig_cycle_adjustments', 0);
 });
 
 test('cannot add pig profile to archived batch', function () {
@@ -1393,7 +1385,7 @@ test('status update can change status while keeping current stage', function () 
     expect($batch->status)->toBe('Ready for Sale');
 });
 
-test('dedicated reopen endpoint can reopen archived batch', function () {
+test('archived batch cannot be updated through regular status endpoint', function () {
     $president = presidentUser();
     $batch = makeBatch($president, [
         'stage' => 'Completed',
@@ -1401,16 +1393,16 @@ test('dedicated reopen endpoint can reopen archived batch', function () {
     ]);
 
     actingAs($president)
-        ->patch(route('cycles.reopen', $batch), [
+        ->post(route('cycles.status.store', $batch), [
             'new_stage' => 'Piglet',
             'new_status' => 'Active',
-            'remarks' => 'Reopened after reassessment.',
+            'remarks' => 'Archived cycle should remain final.',
         ])
-        ->assertRedirect(route('cycles.show', $batch));
+        ->assertSessionHasErrors(['cycle']);
 
     $batch->refresh();
-    expect($batch->stage)->toBe('Piglet');
-    expect($batch->status)->toBe('Active');
+    expect($batch->stage)->toBe('Completed');
+    expect($batch->status)->toBe('Closed');
 });
 
 test('status update requires at least one new value', function () {

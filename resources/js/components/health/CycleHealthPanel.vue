@@ -35,6 +35,8 @@ const props = defineProps({
 });
 
 const counts = computed(() => props.healthSummary?.counts ?? {});
+const activeMetrics = computed(() => props.healthSummary?.active ?? {});
+const lifetimeMetrics = computed(() => props.healthSummary?.lifetime ?? {});
 const isArchived = computed(() => props.cycle?.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle?.status ?? ''));
 
 const formatDate = (value) => {
@@ -99,7 +101,7 @@ const formatDate = (value) => {
         </article>
     </section>
 
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Due Today</p>
             <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(counts.due_today || 0).toLocaleString() }}</p>
@@ -112,13 +114,47 @@ const formatDate = (value) => {
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Upcoming</p>
             <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(counts.upcoming || 0).toLocaleString() }}</p>
         </article>
-        <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Incidents</p>
-            <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(counts.incidents || 0).toLocaleString() }}</p>
+        <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Completed Recently</p>
+            <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(counts.completed_recently || 0).toLocaleString() }}</p>
         </article>
-        <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Mortality</p>
-            <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(counts.mortality || 0).toLocaleString() }}</p>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-2">
+        <article class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Current Active State</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-white/80 bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Healthy Now</p>
+                    <p class="mt-1 text-xl font-bold text-gray-900">{{ Number(activeMetrics.healthy_now ?? counts.healthy_now ?? 0).toLocaleString() }}</p>
+                </div>
+                <div class="rounded-xl border border-white/80 bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Currently Sick</p>
+                    <p class="mt-1 text-xl font-bold text-amber-900">{{ Number(activeMetrics.currently_sick ?? counts.currently_sick ?? 0).toLocaleString() }}</p>
+                </div>
+                <div class="rounded-xl border border-white/80 bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Currently Isolated</p>
+                    <p class="mt-1 text-xl font-bold text-orange-900">{{ Number(activeMetrics.currently_isolated ?? counts.currently_isolated ?? 0).toLocaleString() }}</p>
+                </div>
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600">Historical Totals</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-white bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Recovered</p>
+                    <p class="mt-1 text-xl font-bold text-emerald-800">{{ Number(lifetimeMetrics.total_recovered_reported ?? counts.total_recovered_reported ?? 0).toLocaleString() }}</p>
+                </div>
+                <div class="rounded-xl border border-white bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Deceased</p>
+                    <p class="mt-1 text-xl font-bold text-rose-800">{{ Number(lifetimeMetrics.total_deceased_reported ?? counts.total_deceased_reported ?? counts.mortality ?? 0).toLocaleString() }}</p>
+                </div>
+                <div class="rounded-xl border border-white bg-white p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">Incident Events</p>
+                    <p class="mt-1 text-xl font-bold text-gray-900">{{ Number(counts.incidents || 0).toLocaleString() }}</p>
+                </div>
+            </div>
         </article>
     </section>
 
@@ -128,9 +164,24 @@ const formatDate = (value) => {
                 <h3 class="text-lg font-bold text-gray-900">Cycle Timeline</h3>
                 <p class="mt-1 text-sm text-gray-500">A single chronological view of scheduled tasks, treatment actions, and incidents.</p>
             </div>
-            <a :href="props.routes.recordIncident" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/10">
+            <a v-if="!isArchived" :href="props.routes.recordIncident" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/10">
                 Record Incident
             </a>
+            <span v-else class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600">
+                Archived cycle: incident recording disabled
+            </span>
+        </div>
+
+        <div class="mt-3 grid gap-2" aria-live="polite">
+            <p class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">
+                Deceased incidents deduct cycle current count immediately.
+            </p>
+            <p class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                Isolated incidents remain health records only and do not deduct cycle current count.
+            </p>
+            <p class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                Recovered events close one active bucket per entry, and deceased events can close a bucket when a resolution target is provided.
+            </p>
         </div>
 
         <div class="mt-5 space-y-4">

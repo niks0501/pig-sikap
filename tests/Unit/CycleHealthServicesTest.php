@@ -89,6 +89,8 @@ test('cycle health summary service returns due counts and mortality totals', fun
 
     expect($summary['counts']['incidents'])->toBe(1);
     expect($summary['counts']['mortality'])->toBe(2);
+    expect($summary['counts']['currently_affected'])->toBe(0);
+    expect($summary['counts']['total_deceased_reported'])->toBe(2);
     expect($summary['last_injectable_date'])->toBe(now()->subDay()->toDateString());
     expect($summary['next_due_task'])->not->toBeNull();
 });

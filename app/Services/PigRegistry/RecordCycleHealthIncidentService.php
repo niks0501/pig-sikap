@@ -16,6 +16,9 @@ class RecordCycleHealthIncidentService
     {
         return DB::transaction(function () use ($cycle, $payload, $actor): CycleHealthIncident {
             $eventKey = $this->normalizeString($payload['event_key'] ?? null);
+            $incidentType = CycleHealthIncident::normalizeIncidentType($payload['incident_type'] ?? null);
+            $resolutionTarget = CycleHealthIncident::normalizeResolutionTarget($payload['resolution_target'] ?? null);
+            $resolvedIncidentId = $this->resolveResolvedIncidentId($cycle, $payload, $resolutionTarget);
 
             if ($eventKey !== null) {
                 $existing = CycleHealthIncident::query()
@@ -33,13 +36,15 @@ class RecordCycleHealthIncidentService
                 'event_key' => $eventKey,
                 'pig_id' => $payload['pig_id'] ?? null,
                 'source_channel' => $this->normalizeString($payload['source_channel'] ?? null) ?? 'health_module',
-                'incident_type' => (string) $payload['incident_type'],
+                'incident_type' => $incidentType,
                 'date_reported' => (string) $payload['date_reported'],
                 'affected_count' => (int) $payload['affected_count'],
                 'suspected_cause' => $payload['suspected_cause'] ?? null,
                 'treatment_given' => $payload['treatment_given'] ?? null,
                 'remarks' => $payload['remarks'] ?? null,
                 'media_path' => $payload['media_path'] ?? null,
+                'resolution_target' => $resolutionTarget,
+                'resolved_incident_id' => $resolvedIncidentId,
                 'reported_by' => $actor->id,
             ]);
 
@@ -56,5 +61,47 @@ class RecordCycleHealthIncidentService
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveResolvedIncidentId(PigCycle $cycle, array $payload, ?string $resolutionTarget): ?int
+    {
+        $resolvedIncidentId = $this->normalizePositiveInt($payload['resolved_incident_id'] ?? null);
+
+        if ($resolvedIncidentId === null) {
+            return null;
+        }
+
+        $resolvedIncident = CycleHealthIncident::query()
+            ->whereKey($resolvedIncidentId)
+            ->where('batch_id', $cycle->id)
+            ->first();
+
+        if ($resolvedIncident === null) {
+            return null;
+        }
+
+        if ($resolutionTarget === null) {
+            return $resolvedIncident->id;
+        }
+
+        $resolvedIncidentType = CycleHealthIncident::normalizeIncidentType((string) $resolvedIncident->incident_type);
+
+        return $resolvedIncidentType === $resolutionTarget
+            ? $resolvedIncident->id
+            : null;
+    }
+
+    private function normalizePositiveInt(mixed $value): ?int
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $integerValue = (int) $value;
+
+        return $integerValue > 0 ? $integerValue : null;
     }
 }

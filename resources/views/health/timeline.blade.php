@@ -86,6 +86,8 @@
 
                 /** @var \App\Models\CycleHealthIncident $incident */
                 $incident = $item['incident'];
+                $normalizedIncidentType = \App\Models\CycleHealthIncident::normalizeIncidentType((string) $incident->incident_type);
+                $isResolutionEvent = \App\Models\CycleHealthIncident::isResolutionIncidentType($normalizedIncidentType);
 
                 return [
                     'kind' => 'incident',
@@ -94,12 +96,16 @@
                     'timeline_date_label' => (string) ($item['timeline_date_label'] ?? 'Timeline Date'),
                     'incident' => [
                         'id' => (int) $incident->id,
-                        'incident_type' => (string) $incident->incident_type,
-                        'incident_type_label' => str((string) $incident->incident_type)->title()->toString(),
+                        'incident_type' => $normalizedIncidentType,
+                        'incident_type_label' => str($normalizedIncidentType)->replace('_', ' ')->title()->toString(),
                         'affected_count' => (int) $incident->affected_count,
                         'suspected_cause' => $incident->suspected_cause,
                         'treatment_given' => $incident->treatment_given,
                         'remarks' => $incident->remarks,
+                        'resolution_target' => $incident->resolution_target,
+                        'resolved_incident_id' => $incident->resolved_incident_id,
+                        'is_resolution_event' => $isResolutionEvent,
+                        'is_active_case_event' => in_array($normalizedIncidentType, ['sick', 'isolated'], true),
                     ],
                 ];
             })->values(),

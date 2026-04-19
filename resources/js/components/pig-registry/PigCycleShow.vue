@@ -55,8 +55,6 @@ const isArchived = computed(() => props.cycle.stage === 'Completed' || ['Sold', 
 const isAdjustmentDialogOpen = ref(false);
 const isStatusDialogOpen = ref(false);
 const automation = computed(() => props.automation ?? {});
-const reopenStage = computed(() => (Array.isArray(props.stages) ? props.stages.find((stage) => stage !== 'Completed') : null) ?? 'Growing');
-const reopenStatus = computed(() => (Array.isArray(props.statuses) ? props.statuses.find((status) => !['Sold', 'Closed'].includes(status)) : null) ?? 'Active');
 
 const countdown = computed(() => automation.value.countdown ?? {});
 const suggestions = computed(() => (Array.isArray(automation.value.suggestions) ? automation.value.suggestions : []));
@@ -65,6 +63,12 @@ const warnings = computed(() => (Array.isArray(automation.value.warnings) ? auto
 const countSummary = computed(() => automation.value.counts ?? {});
 const expenseSummary = computed(() => automation.value.expenses ?? {});
 const profitabilitySummary = computed(() => automation.value.profitability ?? {});
+const currentlySick = computed(() => Number(countSummary.value.currently_sick ?? countSummary.value.sick_count ?? 0));
+const currentlyIsolated = computed(() => Number(countSummary.value.currently_isolated ?? countSummary.value.isolated_count ?? 0));
+const currentlyAffected = computed(() => Number(countSummary.value.currently_affected ?? (currentlySick.value + currentlyIsolated.value)));
+const healthyNow = computed(() => Number(countSummary.value.healthy_now ?? Math.max(Number(props.cycle.current_count || 0) - currentlyAffected.value, 0)));
+const totalRecoveredReported = computed(() => Number(countSummary.value.total_recovered_reported ?? 0));
+const totalDeceasedReported = computed(() => Number(countSummary.value.total_deceased_reported ?? countSummary.value.deceased_count ?? 0));
 
 const formatCurrency = (value) => {
     const amount = Number(value ?? 0);
@@ -174,16 +178,6 @@ const closeStatusDialog = () => {
                             Archive / Close
                         </button>
                     </form>
-                    <form v-else-if="props.routes.reopen" :action="props.routes.reopen" method="POST" class="sm:col-span-2" onsubmit="return confirm('Reopen this archived cycle?');">
-                        <input type="hidden" name="_token" :value="props.csrfToken">
-                        <input type="hidden" name="_method" value="PATCH">
-                        <input type="hidden" name="new_stage" :value="reopenStage">
-                        <input type="hidden" name="new_status" :value="reopenStatus">
-                        <input type="hidden" name="remarks" value="Cycle reopened from archived state.">
-                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
-                            Reopen Cycle
-                        </button>
-                    </form>
                 </div>
             </div>
         </section>
@@ -238,12 +232,17 @@ const closeStatusDialog = () => {
                 <div>
                     <h3 class="text-base font-bold text-[#0a5a48]">Health & Treatments</h3>
                     <p class="mt-1 text-sm text-[#0a5a48]/80">
-                        Task Actions, treatment entries, and incident records are managed in the Health & Treatments module.
+                        Cycle health is tracked as Current Active State and Historical Totals. Use the timeline for treatment closures and incident flow.
                     </p>
                 </div>
-                <a :href="props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
-                    Open Health & Treatments
-                </a>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <a :href="props.routes.healthCycleTimeline || props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                        Open Health Timeline
+                    </a>
+                    <a :href="props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-4 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5">
+                        Open Health Dashboard
+                    </a>
+                </div>
             </div>
         </section>
 
@@ -321,20 +320,43 @@ const closeStatusDialog = () => {
                         {{ props.cycle.notes || 'No notes for this cycle yet.' }}
                     </div>
 
-                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                        <div>
-                            <dt class="font-semibold text-gray-500">Sick Count</dt>
-                            <dd class="mt-1 text-gray-800">{{ countSummary.sick_count ?? 0 }}</dd>
+                    <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
+                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Current Active State</p>
+                            <dl class="mt-2 grid gap-2 sm:grid-cols-3">
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Healthy Now</dt>
+                                    <dd class="mt-1 text-gray-900">{{ healthyNow.toLocaleString() }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Currently Sick</dt>
+                                    <dd class="mt-1 text-gray-900">{{ currentlySick.toLocaleString() }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Currently Isolated</dt>
+                                    <dd class="mt-1 text-gray-900">{{ currentlyIsolated.toLocaleString() }}</dd>
+                                </div>
+                            </dl>
                         </div>
-                        <div>
-                            <dt class="font-semibold text-gray-500">Deceased Count</dt>
-                            <dd class="mt-1 text-gray-800">{{ countSummary.deceased_count ?? 0 }}</dd>
+
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
+                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-gray-600">Historical Totals</p>
+                            <dl class="mt-2 grid gap-2 sm:grid-cols-3">
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Recovered</dt>
+                                    <dd class="mt-1 text-gray-900">{{ totalRecoveredReported.toLocaleString() }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Deceased</dt>
+                                    <dd class="mt-1 text-gray-900">{{ totalDeceasedReported.toLocaleString() }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-gray-600">Sold</dt>
+                                    <dd class="mt-1 text-gray-900">{{ Number(countSummary.sold_count ?? 0).toLocaleString() }}</dd>
+                                </div>
+                            </dl>
                         </div>
-                        <div>
-                            <dt class="font-semibold text-gray-500">Sold Count</dt>
-                            <dd class="mt-1 text-gray-800">{{ countSummary.sold_count ?? 0 }}</dd>
-                        </div>
-                    </dl>
+                    </div>
                 </article>
 
                 <div class="grid gap-4 lg:grid-cols-2">
@@ -344,7 +366,7 @@ const closeStatusDialog = () => {
                             Use this when transfers, corrections, death, or sales require a current count adjustment.
                         </p>
                         <p v-if="isArchived" class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
-                            Cycle is archived. Reopen status first before adjusting count.
+                            Cycle is archived and final. Count adjustments are disabled.
                         </p>
                         <button type="button" :disabled="isArchived" class="mt-4 inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:bg-[#0c6d57]/60" @click="openAdjustmentDialog">
                             Open Adjust Count Form
@@ -356,7 +378,7 @@ const closeStatusDialog = () => {
                         <p class="mt-2 text-sm text-gray-600">
                             Move the cycle through stages and statuses without leaving this page.
                         </p>
-                        <button type="button" class="mt-4 inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/40 bg-white px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5" @click="openStatusDialog">
+                        <button type="button" :disabled="isArchived" class="mt-4 inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/40 bg-white px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-60" @click="openStatusDialog">
                             Open Status Update Form
                         </button>
                     </article>

@@ -1,6 +1,6 @@
 <x-admin-layout
     title="Activity Logs"
-    subtitle="Track authentication events, user changes, and account administration actions."
+    subtitle="Track authentication events, account changes, and module-level updates including health workflow actions."
     breadcrumb="Dashboard / Activity Logs"
 >
     @php

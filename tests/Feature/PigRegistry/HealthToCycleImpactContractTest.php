@@ -110,3 +110,120 @@ test('non deceased incidents remain medical-only and do not change operational c
         'incident_type' => 'sick',
     ]);
 });
+
+
+test('recovered incidents remain medical-only and do not change operational count', function () {
+    $president = contractPresident();
+    $cycle = makeContractCycle($president);
+    $eventKey = fake()->uuid();
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'sick',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => $eventKey,
+            'incident_type' => 'recovered',
+            'resolution_target' => 'sick',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 1,
+            'source_channel' => 'cycle_timeline',
+            'remarks' => 'Recovered after treatment',
+        ])
+        ->assertRedirect(route('health.cycles.show', $cycle));
+
+    $cycle->refresh();
+
+    expect($cycle->current_count)->toBe(12);
+
+    assertDatabaseMissing('pig_cycle_adjustments', [
+        'batch_id' => $cycle->id,
+        'source_event_key' => $eventKey,
+    ]);
+
+    assertDatabaseHas('cycle_health_incidents', [
+        'batch_id' => $cycle->id,
+        'event_key' => $eventKey,
+        'incident_type' => 'recovered',
+        'resolution_target' => 'sick',
+    ]);
+});
+
+test('recovered incidents require resolution target', function () {
+    $president = contractPresident();
+    $cycle = makeContractCycle($president);
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'sick',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->from(route('health.cycles.show', $cycle))
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'recovered',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 1,
+            'source_channel' => 'cycle_timeline',
+        ])
+        ->assertSessionHasErrors(['resolution_target']);
+});
+
+test('recovered incidents cannot resolve beyond unresolved target cases', function () {
+    $president = contractPresident();
+    $cycle = makeContractCycle($president);
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'sick',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->from(route('health.cycles.show', $cycle))
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'recovered',
+            'resolution_target' => 'sick',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 2,
+            'source_channel' => 'cycle_timeline',
+        ])
+        ->assertSessionHasErrors(['affected_count']);
+});
+
+test('deceased incidents enforce unresolved cap only when target is provided', function () {
+    $president = contractPresident();
+    $cycle = makeContractCycle($president);
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'isolated',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'reported_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->from(route('health.cycles.show', $cycle))
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'deceased',
+            'resolution_target' => 'isolated',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 2,
+            'source_channel' => 'cycle_timeline',
+        ])
+        ->assertSessionHasErrors(['affected_count']);
+});

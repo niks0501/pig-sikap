@@ -11,19 +11,57 @@ const props = defineProps({
 const incident = computed(() => props.item?.incident ?? {});
 const timelineDateLabel = computed(() => props.item?.timeline_date_label ?? 'Timeline Date');
 const timelineDateText = computed(() => formatDate(props.item?.timeline_date));
+const isResolutionEvent = computed(() => Boolean(incident.value.is_resolution_event));
 
 const incidentToneClass = computed(() => {
-    switch (incident.value.incident_type) {
-        case 'deceased':
-            return 'border-rose-200 bg-rose-50/60';
-        case 'isolated':
-            return 'border-amber-200 bg-amber-50/60';
-        default:
-            return 'border-orange-200 bg-orange-50/60';
+    if (incident.value.incident_type === 'deceased') {
+        return 'border-rose-200 bg-rose-50/60';
     }
+
+    if (incident.value.incident_type === 'recovered') {
+        return 'border-emerald-200 bg-emerald-50/60';
+    }
+
+    if (incident.value.incident_type === 'isolated') {
+        return 'border-amber-200 bg-amber-50/60';
+    }
+
+    return 'border-orange-200 bg-orange-50/60';
 });
 
-const incidentDotClass = computed(() => (incident.value.incident_type === 'deceased' ? 'bg-rose-500' : 'bg-orange-500'));
+const incidentDotClass = computed(() => {
+    if (incident.value.incident_type === 'deceased') {
+        return 'bg-rose-500';
+    }
+
+    if (incident.value.incident_type === 'recovered') {
+        return 'bg-emerald-500';
+    }
+
+    if (incident.value.incident_type === 'isolated') {
+        return 'bg-amber-500';
+    }
+
+    return 'bg-orange-500';
+});
+
+const incidentStateBadgeClass = computed(() => {
+    if (isResolutionEvent.value) {
+        return 'bg-gray-100 text-gray-700';
+    }
+
+    return 'bg-orange-100 text-orange-800';
+});
+
+const resolutionTargetLabel = computed(() => {
+    const target = String(incident.value.resolution_target ?? '').trim();
+
+    if (target === '') {
+        return '';
+    }
+
+    return `${target.charAt(0).toUpperCase()}${target.slice(1)}`;
+});
 
 const formatDate = (value) => {
     if (!value) {
@@ -48,6 +86,12 @@ const formatDate = (value) => {
                     <h4 class="text-base font-bold text-gray-900">{{ incident.incident_type_label }} Incident</h4>
                     <span class="inline-flex rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-gray-700">
                         {{ Number(incident.affected_count || 0).toLocaleString() }} pig(s) affected
+                    </span>
+                    <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-bold" :class="incidentStateBadgeClass">
+                        {{ isResolutionEvent ? 'Resolved Event' : 'Active Case Event' }}
+                    </span>
+                    <span v-if="resolutionTargetLabel" class="inline-flex rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-gray-700">
+                        Target: {{ resolutionTargetLabel }}
                     </span>
                 </div>
 

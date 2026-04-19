@@ -20,7 +20,7 @@ class PresidentPigCycleAdjustmentController extends Controller
     ): RedirectResponse {
         if ($cycle->isArchived()) {
             return back()->withErrors([
-                'cycle' => 'Archived cycles cannot be adjusted without reopening.',
+                'cycle' => 'Archived cycles are final and cannot be adjusted.',
             ]);
         }
 

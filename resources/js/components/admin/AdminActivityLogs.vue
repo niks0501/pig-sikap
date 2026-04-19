@@ -65,6 +65,34 @@ watch(
 );
 
 onMounted(() => fetchLogs());
+
+const hasContext = (value) => {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return false;
+    }
+
+    return Object.keys(value).length > 0;
+};
+
+const contextEntries = (value) => {
+    if (!hasContext(value)) {
+        return [];
+    }
+
+    return Object.entries(value);
+};
+
+const formatContextValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+
+    if (typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+};
 </script>
 
 <template>
@@ -109,6 +137,7 @@ onMounted(() => fetchLogs());
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Module</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Context</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200">
@@ -118,9 +147,22 @@ onMounted(() => fetchLogs());
                                 <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ log.action }}</td>
                                 <td class="px-4 py-3 text-sm text-slate-700">{{ log.module }}</td>
                                 <td class="px-4 py-3 text-sm text-slate-700">{{ log.description }}</td>
+                                <td class="px-4 py-3 text-sm text-slate-700">
+                                    <p v-if="log.reference" class="text-xs font-semibold text-[#0c6d57]">{{ log.reference }}</p>
+                                    <details v-if="hasContext(log.context_json)" class="mt-1">
+                                        <summary class="cursor-pointer text-xs font-semibold text-slate-600">View context</summary>
+                                        <dl class="mt-2 grid gap-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                                            <div v-for="[key, value] in contextEntries(log.context_json)" :key="`${log.id}-${key}`" class="grid grid-cols-[120px_1fr] gap-2 text-xs">
+                                                <dt class="font-semibold text-slate-600">{{ key }}</dt>
+                                                <dd class="break-all text-slate-700">{{ formatContextValue(value) }}</dd>
+                                            </div>
+                                        </dl>
+                                    </details>
+                                    <span v-if="!log.reference && !hasContext(log.context_json)" class="text-xs text-slate-500">-</span>
+                                </td>
                             </tr>
                             <tr v-if="logs.length === 0">
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No activity logs found.</td>
+                                <td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No activity logs found.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -132,6 +174,17 @@ onMounted(() => fetchLogs());
                         <p class="mt-1 text-sm font-semibold text-slate-900">{{ log.action }} • {{ log.module }}</p>
                         <p class="text-xs text-slate-600">{{ log.user }}</p>
                         <p class="mt-1 text-sm text-slate-700">{{ log.description }}</p>
+                        <p v-if="log.reference" class="mt-1 text-xs font-semibold text-[#0c6d57]">{{ log.reference }}</p>
+
+                        <details v-if="hasContext(log.context_json)" class="mt-2">
+                            <summary class="cursor-pointer text-xs font-semibold text-slate-600">View context</summary>
+                            <dl class="mt-2 grid gap-1 rounded-lg border border-slate-200 bg-white p-2">
+                                <div v-for="[key, value] in contextEntries(log.context_json)" :key="`mobile-${log.id}-${key}`" class="grid grid-cols-[120px_1fr] gap-2 text-xs">
+                                    <dt class="font-semibold text-slate-600">{{ key }}</dt>
+                                    <dd class="break-all text-slate-700">{{ formatContextValue(value) }}</dd>
+                                </div>
+                            </dl>
+                        </details>
                     </article>
 
                     <p v-if="logs.length === 0" class="py-4 text-center text-sm text-slate-500">No activity logs found.</p>

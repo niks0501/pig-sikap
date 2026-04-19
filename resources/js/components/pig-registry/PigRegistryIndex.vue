@@ -60,7 +60,12 @@ const summary = ref({
     total_fatteners: 0,
     total_sick: 0,
     total_deceased: 0,
+    total_currently_sick: 0,
+    total_currently_isolated: 0,
+    total_currently_affected: 0,
     ready_for_sale_cycles: 0,
+    total_health_recovered_reported: 0,
+    total_health_deceased_reported: 0,
     ...props.summary,
 });
 const recentUpdates = ref(Array.isArray(props.recentUpdates) ? props.recentUpdates : []);
@@ -307,8 +312,8 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                     <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Sick Pigs</p>
-                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_sick || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Currently Sick / Isolated</p>
+                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_currently_affected || summary.total_sick || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
@@ -339,11 +344,11 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </article>
                 <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Mortality Reports</p>
-                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_mortality || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_deceased_reported || summary.total_health_mortality || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Completed (7 Days)</p>
-                    <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(summary.total_health_completed_recently || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Recovered Reports</p>
+                    <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(summary.total_health_recovered_reported || 0).toLocaleString() }}</p>
                 </article>
             </div>
         </section>

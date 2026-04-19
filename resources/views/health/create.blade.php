@@ -1,6 +1,58 @@
 <x-app-layout>
     @php
         $eventKey = old('event_key', (string) \Illuminate\Support\Str::uuid());
+        $formProps = [
+            'cycles' => $cycles
+                ->map(function ($cycle): array {
+                    return [
+                        'id' => (int) $cycle->id,
+                        'batch_code' => (string) $cycle->batch_code,
+                        'date_of_purchase' => optional($cycle->date_of_purchase)->toDateString(),
+                        'current_count' => (int) $cycle->current_count,
+                        'has_pig_profiles' => (bool) $cycle->has_pig_profiles,
+                        'pig_count' => (int) ($cycle->pigs_count ?? $cycle->pigs->count()),
+                        'pigs' => $cycle->pigs
+                            ->map(fn ($pig): array => [
+                                'id' => (int) $pig->id,
+                                'pig_no' => (int) $pig->pig_no,
+                                'status' => (string) $pig->status,
+                            ])
+                            ->values()
+                            ->all(),
+                        'active_health' => [
+                            'currently_sick' => (int) data_get($cycle->active_health, 'currently_sick', 0),
+                            'currently_isolated' => (int) data_get($cycle->active_health, 'currently_isolated', 0),
+                            'currently_affected' => (int) data_get($cycle->active_health, 'currently_affected', 0),
+                        ],
+                    ];
+                })
+                ->values()
+                ->all(),
+            'incidentTypes' => array_values($incidentTypes),
+            'pigSpecificIncidentTypes' => \App\Models\CycleHealthIncident::PIG_SPECIFIC_INCIDENT_TYPES,
+            'selectedCycleId' => (int) $selectedCycleId,
+            'routes' => [
+                'store' => route('health.incidents.store'),
+                'index' => route('health.index'),
+            ],
+            'csrfToken' => csrf_token(),
+            'eventKey' => $eventKey,
+            'oldInput' => [
+                'cycle_id' => (string) old('cycle_id', $selectedCycleId),
+                'incident_type' => (string) old('incident_type', ''),
+                'date_reported' => (string) old('date_reported', now()->toDateString()),
+                'affected_count' => (string) old('affected_count', '1'),
+                'pig_id' => (string) old('pig_id', ''),
+                'resolution_target' => (string) old('resolution_target', ''),
+                'media_path' => (string) old('media_path', ''),
+                'suspected_cause' => (string) old('suspected_cause', ''),
+                'treatment_given' => (string) old('treatment_given', ''),
+                'remarks' => (string) old('remarks', ''),
+            ],
+            'errors' => collect($errors->toArray())
+                ->map(fn ($messages): string => (string) ($messages[0] ?? ''))
+                ->all(),
+        ];
     @endphp
 
     <x-slot name="header">
@@ -10,83 +62,12 @@
             </a>
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 leading-tight">Record Health Incident</h2>
-                <p class="mt-1 text-sm text-gray-500">Log sick, isolated, or deceased incidents at cycle level.</p>
+                <p class="mt-1 text-sm text-gray-500">Log sick, isolated, deceased, and recovered events at cycle level.</p>
             </div>
         </div>
     </x-slot>
 
     <div class="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-        <section class="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-            <form action="{{ route('health.incidents.store') }}" method="POST" class="space-y-6">
-                @csrf
-                <input type="hidden" name="event_key" value="{{ $eventKey }}">
-                <input type="hidden" name="source_channel" value="health_module">
-
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <label class="sm:col-span-2">
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Cycle *</span>
-                        <select name="cycle_id" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                            <option value="" disabled @selected(!old('cycle_id', $selectedCycleId))>Select cycle...</option>
-                            @foreach ($cycles as $cycle)
-                                <option value="{{ $cycle->id }}" @selected((int) old('cycle_id', $selectedCycleId) === (int) $cycle->id)>
-                                    {{ $cycle->batch_code }} • Current {{ number_format((int) $cycle->current_count) }} pigs • Purchased {{ optional($cycle->date_of_purchase)->format('M d, Y') }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <label>
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Incident Type *</span>
-                        <select name="incident_type" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                            <option value="" disabled @selected(!old('incident_type'))>Select type...</option>
-                            @foreach ($incidentTypes as $incidentType)
-                                <option value="{{ $incidentType }}" @selected(old('incident_type') === $incidentType)>
-                                    {{ ucfirst($incidentType) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <label>
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Date Reported *</span>
-                        <input type="date" name="date_reported" required value="{{ old('date_reported', now()->toDateString()) }}" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                    </label>
-
-                    <label>
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Affected Count *</span>
-                        <input type="number" name="affected_count" min="1" required value="{{ old('affected_count', 1) }}" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                    </label>
-
-                    <label>
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Media Path (optional)</span>
-                        <input type="text" name="media_path" value="{{ old('media_path') }}" placeholder="storage/app/public/..." class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                    </label>
-
-                    <label class="sm:col-span-2">
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Suspected Cause</span>
-                        <textarea name="suspected_cause" rows="2" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('suspected_cause') }}</textarea>
-                    </label>
-
-                    <label class="sm:col-span-2">
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Treatment Given</span>
-                        <textarea name="treatment_given" rows="2" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('treatment_given') }}</textarea>
-                    </label>
-
-                    <label class="sm:col-span-2">
-                        <span class="mb-1.5 block text-sm font-bold text-gray-700">Remarks</span>
-                        <textarea name="remarks" rows="3" placeholder="Physical back markings, isolation notes, observations." class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">{{ old('remarks') }}</textarea>
-                    </label>
-                </div>
-
-                <div class="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row-reverse">
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48] sm:w-auto">
-                        Save Incident
-                    </button>
-                    <a href="{{ route('health.index') }}" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
-                        Cancel
-                    </a>
-                </div>
-            </form>
-        </section>
+        <div data-vue-component="health-incident-create-form" data-props='@json($formProps)'></div>
     </div>
 </x-app-layout>

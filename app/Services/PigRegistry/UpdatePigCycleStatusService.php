@@ -28,7 +28,6 @@ class UpdatePigCycleStatusService
 
             $newStage = (string) ($payload['new_stage'] ?? $lockedCycle->stage);
             $newStatus = (string) ($payload['new_status'] ?? $lockedCycle->status);
-            $allowArchivedTransition = (bool) ($options['allow_archived_transition'] ?? false);
 
             if ($newStage === $lockedCycle->stage && $newStatus === $lockedCycle->status) {
                 throw ValidationException::withMessages([
@@ -39,8 +38,7 @@ class UpdatePigCycleStatusService
             $this->cycleStatusTransitionPolicy->assertAllowed(
                 $lockedCycle,
                 $newStage,
-                $newStatus,
-                $allowArchivedTransition
+                $newStatus
             );
 
             $wasArchived = $lockedCycle->isArchived();
@@ -76,11 +74,6 @@ class UpdatePigCycleStatusService
                 $updates['archived_by'] = $actor->id;
             }
 
-            if ($wasArchived && ! $willBeArchived) {
-                $updates['reopened_at'] = now();
-                $updates['reopened_by'] = $actor->id;
-            }
-
             $lockedCycle->update($updates);
 
             return $history;
@@ -100,10 +93,6 @@ class UpdatePigCycleStatusService
 
         if (! $wasArchived && $willBeArchived) {
             return 'archive';
-        }
-
-        if ($wasArchived && ! $willBeArchived) {
-            return 'reopen';
         }
 
         return 'status_update';

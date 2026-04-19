@@ -38,7 +38,7 @@ class StorePigCycleStatusRequest extends FormRequest
             }
 
             if ($cycle instanceof PigCycle && $cycle->isArchived()) {
-                $validator->errors()->add('cycle', 'Archived cycles must be reopened via the dedicated reopen action.');
+                $validator->errors()->add('cycle', 'Archived cycles are final and cannot be modified.');
             }
 
             if ($targetStatus === 'Closed' && $targetStage !== 'Completed') {

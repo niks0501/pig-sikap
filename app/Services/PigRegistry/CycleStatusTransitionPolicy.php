@@ -19,7 +19,7 @@ class CycleStatusTransitionPolicy
         'Completed' => 60,
     ];
 
-    public function assertAllowed(PigCycle $cycle, string $newStage, string $newStatus, bool $allowArchivedTransition = false): void
+    public function assertAllowed(PigCycle $cycle, string $newStage, string $newStatus): void
     {
         if (! in_array($newStage, PigCycle::STAGES, true)) {
             throw ValidationException::withMessages([
@@ -33,21 +33,19 @@ class CycleStatusTransitionPolicy
             ]);
         }
 
-        if ($cycle->isArchived() && ! $allowArchivedTransition) {
+        if ($cycle->isArchived()) {
             throw ValidationException::withMessages([
-                'cycle' => 'Archived cycles must be reopened using the dedicated reopen flow.',
+                'cycle' => 'Archived cycles are final and cannot be modified.',
             ]);
         }
 
-        if (! $allowArchivedTransition) {
-            $oldStageOrder = self::STAGE_ORDER[$cycle->stage] ?? 0;
-            $newStageOrder = self::STAGE_ORDER[$newStage] ?? 0;
+        $oldStageOrder = self::STAGE_ORDER[$cycle->stage] ?? 0;
+        $newStageOrder = self::STAGE_ORDER[$newStage] ?? 0;
 
-            if ($newStageOrder < $oldStageOrder) {
-                throw ValidationException::withMessages([
-                    'new_stage' => 'Cycle stage cannot move backward during regular status updates.',
-                ]);
-            }
+        if ($newStageOrder < $oldStageOrder) {
+            throw ValidationException::withMessages([
+                'new_stage' => 'Cycle stage cannot move backward during regular status updates.',
+            ]);
         }
 
         if ($newStatus === 'Closed' && $newStage !== 'Completed') {

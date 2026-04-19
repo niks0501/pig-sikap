@@ -68,6 +68,8 @@ class ActivityLogController extends Controller
             'action' => $log->action,
             'module' => $log->module,
             'description' => $log->description,
+            'reference' => $this->buildReference($log),
+            'context_json' => is_array($log->context_json) ? $log->context_json : [],
             'ip_address' => $log->ip_address,
             'created_at' => optional($log->created_at)->toDateTimeString(),
         ]);
@@ -85,5 +87,32 @@ class ActivityLogController extends Controller
                 'actions' => AuditTrail::query()->select('action')->distinct()->orderBy('action')->pluck('action')->values(),
             ],
         ];
+    }
+
+    private function buildReference(AuditTrail $log): ?string
+    {
+        $context = is_array($log->context_json) ? $log->context_json : [];
+
+        $parts = [];
+
+        if (isset($context['cycle_batch_code']) && is_string($context['cycle_batch_code']) && $context['cycle_batch_code'] !== '') {
+            $parts[] = "Cycle {$context['cycle_batch_code']}";
+        } elseif (isset($context['cycle_id']) && is_numeric($context['cycle_id'])) {
+            $parts[] = 'Cycle #'.(int) $context['cycle_id'];
+        }
+
+        if (isset($context['task_id']) && is_numeric($context['task_id'])) {
+            $parts[] = 'Task #'.(int) $context['task_id'];
+        }
+
+        if (isset($context['incident_id']) && is_numeric($context['incident_id'])) {
+            $parts[] = 'Incident #'.(int) $context['incident_id'];
+        }
+
+        if ($parts === []) {
+            return null;
+        }
+
+        return implode(' • ', $parts);
     }
 }

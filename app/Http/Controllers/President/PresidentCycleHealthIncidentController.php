@@ -20,7 +20,7 @@ class PresidentCycleHealthIncidentController extends Controller
     ): RedirectResponse {
         if ($cycle->isArchived()) {
             return back()->withErrors([
-                'cycle' => 'Archived cycles cannot accept new health incidents without reopening.',
+                'cycle' => 'Archived cycles are final and cannot accept new health incidents.',
             ]);
         }
 
@@ -40,8 +40,15 @@ class PresidentCycleHealthIncidentController extends Controller
             'health_monitoring',
             [
                 'cycle_id' => $cycle->id,
+                'cycle_batch_code' => $cycle->batch_code,
                 'incident_id' => $incident->id,
                 'event_key' => $incident->event_key,
+                'incident_type' => $incident->incident_type,
+                'affected_count' => (int) $incident->affected_count,
+                'resolution_target' => $incident->resolution_target,
+                'resolved_incident_id' => $incident->resolved_incident_id,
+                'pig_id' => $incident->pig_id,
+                'source_channel' => $incident->source_channel,
             ]
         );
 

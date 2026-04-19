@@ -81,7 +81,7 @@ test('status endpoint rejects closed status unless stage is completed', function
         ->assertSessionHasErrors(['new_status']);
 });
 
-test('archived cycles require dedicated reopen endpoint and can be reopened there', function () {
+test('archived cycles are terminal and cannot be updated', function () {
     $president = transitionPresident();
     $cycle = makeTransitionCycle($president, [
         'stage' => 'Completed',
@@ -92,22 +92,12 @@ test('archived cycles require dedicated reopen endpoint and can be reopened ther
         ->post(route('cycles.status.store', $cycle), [
             'new_stage' => 'Piglet',
             'new_status' => 'Active',
-            'remarks' => 'Wrong endpoint',
+            'remarks' => 'Attempt status change on archived cycle',
         ])
         ->assertSessionHasErrors(['cycle']);
 
-    actingAs($president)
-        ->patch(route('cycles.reopen', $cycle), [
-            'new_stage' => 'Piglet',
-            'new_status' => 'Active',
-            'remarks' => 'Reopening with documented flow',
-        ])
-        ->assertRedirect(route('cycles.show', $cycle));
-
     $cycle->refresh();
 
-    expect($cycle->stage)->toBe('Piglet');
-    expect($cycle->status)->toBe('Active');
-    expect($cycle->reopened_at)->not->toBeNull();
-    expect($cycle->reopened_by)->toBe($president->id);
+    expect($cycle->stage)->toBe('Completed');
+    expect($cycle->status)->toBe('Closed');
 });

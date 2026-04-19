@@ -12,7 +12,8 @@ class CycleHealthSummaryService
 
     public function __construct(
         private readonly CycleHealthTaskStatusResolver $statusResolver,
-        private readonly CycleHealthDateNormalizer $dateNormalizer
+        private readonly CycleHealthDateNormalizer $dateNormalizer,
+        private readonly CycleHealthStateProjector $cycleHealthStateProjector
     ) {}
 
     /**
@@ -30,6 +31,9 @@ class CycleHealthSummaryService
         });
 
         $incidents = $cycle->healthIncidents()->get();
+        $projectedHealth = $this->cycleHealthStateProjector->projectIncidents($incidents, (int) $cycle->current_count);
+        $activeMetrics = $projectedHealth['active'] ?? [];
+        $lifetimeMetrics = $projectedHealth['lifetime'] ?? [];
 
         $dueToday = $tasks->filter(function (CycleHealthTask $task): bool {
             $plannedStartDate = $this->dateNormalizer->toCarbon($task->planned_start_date);
@@ -90,9 +94,7 @@ class CycleHealthSummaryService
         $lastInjectable = $this->lastCompletedDateByTaskType($tasks, 'injectable');
         $lastDeworming = $this->lastCompletedDateByTaskType($tasks, 'deworming');
 
-        $mortalityCount = (int) $incidents
-            ->where('incident_type', 'deceased')
-            ->sum('affected_count');
+        $mortalityCount = (int) ($lifetimeMetrics['total_deceased_reported'] ?? 0);
 
         return [
             'counts' => [
@@ -102,6 +104,26 @@ class CycleHealthSummaryService
                 'completed_recently' => $completedRecently->count(),
                 'incidents' => $incidents->count(),
                 'mortality' => $mortalityCount,
+                'currently_sick' => (int) ($activeMetrics['currently_sick'] ?? 0),
+                'currently_isolated' => (int) ($activeMetrics['currently_isolated'] ?? 0),
+                'currently_affected' => (int) ($activeMetrics['currently_affected'] ?? 0),
+                'healthy_now' => (int) ($activeMetrics['healthy_now'] ?? 0),
+                'total_sick_reported' => (int) ($lifetimeMetrics['total_sick_reported'] ?? 0),
+                'total_isolated_reported' => (int) ($lifetimeMetrics['total_isolated_reported'] ?? 0),
+                'total_recovered_reported' => (int) ($lifetimeMetrics['total_recovered_reported'] ?? 0),
+                'total_deceased_reported' => (int) ($lifetimeMetrics['total_deceased_reported'] ?? 0),
+            ],
+            'active' => [
+                'currently_sick' => (int) ($activeMetrics['currently_sick'] ?? 0),
+                'currently_isolated' => (int) ($activeMetrics['currently_isolated'] ?? 0),
+                'currently_affected' => (int) ($activeMetrics['currently_affected'] ?? 0),
+                'healthy_now' => (int) ($activeMetrics['healthy_now'] ?? 0),
+            ],
+            'lifetime' => [
+                'total_sick_reported' => (int) ($lifetimeMetrics['total_sick_reported'] ?? 0),
+                'total_isolated_reported' => (int) ($lifetimeMetrics['total_isolated_reported'] ?? 0),
+                'total_recovered_reported' => (int) ($lifetimeMetrics['total_recovered_reported'] ?? 0),
+                'total_deceased_reported' => (int) ($lifetimeMetrics['total_deceased_reported'] ?? 0),
             ],
             'next_due_task' => $this->mapTask($nextDueTask),
             'active_oral_medication' => $this->mapTask($activeOralMedication),

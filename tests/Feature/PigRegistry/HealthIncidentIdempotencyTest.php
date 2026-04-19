@@ -3,6 +3,7 @@
 use App\Models\PigCycle;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\PigRegistry\CycleSummaryService;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use function Pest\Laravel\actingAs;
@@ -81,6 +82,55 @@ test('module route retries with same event key do not duplicate incident or oper
         'batch_id' => $cycle->id,
         'event_key' => $eventKey,
         'incident_type' => 'deceased',
+        'source_channel' => 'health_module',
+    ]);
+});
+
+test('module route retries with same recovered event key do not duplicate resolution', function () {
+    $president = idempotencyPresident();
+    $cycle = makeIdempotencyCycle($president);
+    $eventKey = fake()->uuid();
+
+    $cycle->healthIncidents()->create([
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'sick',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 2,
+        'reported_by' => $president->id,
+    ]);
+
+    $payload = [
+        'cycle_id' => $cycle->id,
+        'event_key' => $eventKey,
+        'incident_type' => 'recovered',
+        'resolution_target' => 'sick',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'source_channel' => 'health_module',
+        'remarks' => 'Recovered retry simulation',
+    ];
+
+    actingAs($president)
+        ->post(route('health.incidents.store'), $payload)
+        ->assertRedirect(route('health.cycles.show', $cycle));
+
+    actingAs($president)
+        ->post(route('health.incidents.store'), $payload)
+        ->assertRedirect(route('health.cycles.show', $cycle));
+
+    expect($cycle->healthIncidents()->where('event_key', $eventKey)->count())->toBe(1);
+    expect($cycle->adjustments()->where('source_event_key', $eventKey)->count())->toBe(0);
+
+    $summary = app(CycleSummaryService::class)->forCycle($cycle);
+
+    expect($summary['currently_sick'])->toBe(1);
+    expect($summary['total_recovered_reported'])->toBe(1);
+
+    assertDatabaseHas('cycle_health_incidents', [
+        'batch_id' => $cycle->id,
+        'event_key' => $eventKey,
+        'incident_type' => 'recovered',
+        'resolution_target' => 'sick',
         'source_channel' => 'health_module',
     ]);
 });

@@ -151,7 +151,6 @@ class PresidentPigInventoryController extends Controller
             'pigStatuses' => Pig::STATUSES,
             'sexOptions' => Pig::SEX_OPTIONS,
             'automation' => $automation,
-            'reopenRoute' => route('cycles.reopen', $cycle),
         ]);
     }
 
@@ -181,7 +180,7 @@ class PresidentPigInventoryController extends Controller
     {
         if ($cycle->isArchived()) {
             return back()->withErrors([
-                'cycle' => 'Archived cycles cannot be edited without reopening.',
+                'cycle' => 'Archived cycles are final and cannot be edited.',
             ]);
         }
 

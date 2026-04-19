@@ -55,7 +55,7 @@ test('policy rejects closed status without completed stage', function () {
     })->toThrow(ValidationException::class);
 });
 
-test('policy allows archived transition only with explicit override', function () {
+test('policy rejects any transition from archived cycles', function () {
     $policy = app(CycleStatusTransitionPolicy::class);
     $archivedCycle = makePolicyCycle([
         'stage' => 'Completed',
@@ -65,8 +65,4 @@ test('policy allows archived transition only with explicit override', function (
     expect(function () use ($policy, $archivedCycle): void {
         $policy->assertAllowed($archivedCycle, 'Piglet', 'Active');
     })->toThrow(ValidationException::class);
-
-    $policy->assertAllowed($archivedCycle, 'Piglet', 'Active', true);
-
-    expect(true)->toBeTrue();
 });

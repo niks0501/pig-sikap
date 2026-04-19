@@ -10,6 +10,7 @@ use App\Models\CycleHealthTask;
 use App\Models\PigCycle;
 use App\Services\PigRegistry\CycleSummaryService;
 use App\Services\PigRegistry\CycleHealthSummaryService;
+use App\Services\PigRegistry\CycleHealthStateProjector;
 use App\Services\PigRegistry\RecordHealthIncidentWithOperationalImpactService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -161,12 +162,33 @@ class PresidentHealthController extends Controller
         ]);
     }
 
-    public function create(Request $request): View
+    public function create(Request $request, CycleHealthStateProjector $cycleHealthStateProjector): View
     {
         $cycles = PigCycle::query()
             ->activeRecords()
+            ->withCount('pigs')
+            ->with([
+                'pigs' => fn ($query) => $query
+                    ->select(['id', 'batch_id', 'pig_no', 'status'])
+                    ->orderBy('pig_no'),
+                'healthIncidents' => fn ($query) => $query
+                    ->select(['id', 'batch_id', 'incident_type', 'affected_count', 'resolution_target', 'date_reported'])
+                    ->orderBy('date_reported')
+                    ->orderBy('id'),
+            ])
             ->orderByDesc('updated_at')
-            ->get(['id', 'batch_code', 'date_of_purchase', 'current_count']);
+            ->get(['id', 'batch_code', 'date_of_purchase', 'current_count', 'has_pig_profiles']);
+
+        $cycles->each(function (PigCycle $cycle) use ($cycleHealthStateProjector): void {
+            $projected = $cycleHealthStateProjector->projectIncidents($cycle->healthIncidents, (int) $cycle->current_count);
+            $activeMetrics = $projected['active'] ?? [];
+
+            $cycle->setAttribute('active_health', [
+                'currently_sick' => (int) ($activeMetrics['currently_sick'] ?? 0),
+                'currently_isolated' => (int) ($activeMetrics['currently_isolated'] ?? 0),
+                'currently_affected' => (int) ($activeMetrics['currently_affected'] ?? 0),
+            ]);
+        });
 
         $selectedCycleId = (int) $request->query('cycle_id', 0);
 
@@ -232,8 +254,15 @@ class PresidentHealthController extends Controller
             'health_monitoring',
             [
                 'cycle_id' => $cycle->id,
+                'cycle_batch_code' => $cycle->batch_code,
                 'incident_id' => $incident->id,
                 'event_key' => $incident->event_key,
+                'incident_type' => $incident->incident_type,
+                'affected_count' => (int) $incident->affected_count,
+                'resolution_target' => $incident->resolution_target,
+                'resolved_incident_id' => $incident->resolved_incident_id,
+                'pig_id' => $incident->pig_id,
+                'source_channel' => $incident->source_channel,
             ]
         );
 

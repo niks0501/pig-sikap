@@ -22,7 +22,10 @@ class RecordHealthIncidentWithOperationalImpactService
         return DB::transaction(function () use ($cycle, $payload, $actor): CycleHealthIncident {
             $incident = $this->recordCycleHealthIncidentService->handle($cycle, $payload, $actor);
 
-            if ($incident->incident_type === 'deceased' && $incident->affected_count > 0) {
+            if (
+                CycleHealthIncident::normalizeIncidentType((string) $incident->incident_type) === CycleHealthIncident::INCIDENT_TYPE_DECEASED
+                && $incident->affected_count > 0
+            ) {
                 $this->cycleInventoryImpactService->applyDelta(
                     $cycle,
                     -((int) $incident->affected_count),

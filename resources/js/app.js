@@ -16,6 +16,7 @@ import AdminRoleManagement from './components/admin/AdminRoleManagement.vue';
 import AdminUserManagement from './components/admin/AdminUserManagement.vue';
 import ForcePasswordChangeForm from './components/auth/ForcePasswordChangeForm.vue';
 import CycleHealthPanel from './components/health/CycleHealthPanel.vue';
+import HealthIncidentCreateForm from './components/health/HealthIncidentCreateForm.vue';
 import PigCycleArchived from './components/pig-registry/PigCycleArchived.vue';
 import PigCycleCreate from './components/pig-registry/PigCycleCreate.vue';
 import PigCycleEdit from './components/pig-registry/PigCycleEdit.vue';
@@ -33,6 +34,7 @@ const componentRegistry = {
     'admin-profile': AdminProfile,
     'force-password-change': ForcePasswordChangeForm,
     'cycle-health-panel': CycleHealthPanel,
+    'health-incident-create-form': HealthIncidentCreateForm,
     'pig-registry-index': PigRegistryIndex,
     'pig-cycle-create': PigCycleCreate,
     'pig-cycle-edit': PigCycleEdit,

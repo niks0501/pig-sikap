@@ -10,10 +10,42 @@ class CycleHealthIncident extends Model
 {
     use HasFactory;
 
+    public const INCIDENT_TYPE_SICK = 'sick';
+
+    public const INCIDENT_TYPE_ISOLATED = 'isolated';
+
+    public const INCIDENT_TYPE_DECEASED = 'deceased';
+
+    public const INCIDENT_TYPE_RECOVERED = 'recovered';
+
+    public const LEGACY_INCIDENT_TYPE_TREATED = 'treated';
+
     public const INCIDENT_TYPES = [
-        'sick',
-        'isolated',
-        'deceased',
+        self::INCIDENT_TYPE_SICK,
+        self::INCIDENT_TYPE_ISOLATED,
+        self::INCIDENT_TYPE_DECEASED,
+        self::INCIDENT_TYPE_RECOVERED,
+    ];
+
+    public const ACCEPTED_INCIDENT_TYPES = [
+        ...self::INCIDENT_TYPES,
+        self::LEGACY_INCIDENT_TYPE_TREATED,
+    ];
+
+    public const PIG_SPECIFIC_INCIDENT_TYPES = [
+        self::INCIDENT_TYPE_ISOLATED,
+        self::INCIDENT_TYPE_DECEASED,
+        self::INCIDENT_TYPE_RECOVERED,
+    ];
+
+    public const RESOLUTION_INCIDENT_TYPES = [
+        self::INCIDENT_TYPE_DECEASED,
+        self::INCIDENT_TYPE_RECOVERED,
+    ];
+
+    public const RESOLUTION_TARGETS = [
+        self::INCIDENT_TYPE_SICK,
+        self::INCIDENT_TYPE_ISOLATED,
     ];
 
     /**
@@ -31,6 +63,8 @@ class CycleHealthIncident extends Model
         'treatment_given',
         'remarks',
         'media_path',
+        'resolution_target',
+        'resolved_incident_id',
         'reported_by',
     ];
 
@@ -43,6 +77,7 @@ class CycleHealthIncident extends Model
             'pig_id' => 'integer',
             'date_reported' => 'date',
             'affected_count' => 'integer',
+            'resolved_incident_id' => 'integer',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -72,4 +107,44 @@ class CycleHealthIncident extends Model
     {
         return $this->belongsTo(Pig::class, 'pig_id');
     }
+
+    public function resolvedIncident(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'resolved_incident_id');
+    }
+
+    public static function normalizeIncidentType(mixed $incidentType): string
+    {
+        $normalized = strtolower(trim((string) $incidentType));
+
+        return match ($normalized) {
+            self::LEGACY_INCIDENT_TYPE_TREATED => self::INCIDENT_TYPE_RECOVERED,
+            default => $normalized,
+        };
+    }
+
+    public static function normalizeResolutionTarget(mixed $resolutionTarget): ?string
+    {
+        $normalized = strtolower(trim((string) $resolutionTarget));
+
+        return in_array($normalized, self::RESOLUTION_TARGETS, true)
+            ? $normalized
+            : null;
+    }
+
+    public static function isPigSpecificIncidentType(string $incidentType): bool
+    {
+        return in_array(self::normalizeIncidentType($incidentType), self::PIG_SPECIFIC_INCIDENT_TYPES, true);
+    }
+
+    public static function isResolutionIncidentType(string $incidentType): bool
+    {
+        return in_array(self::normalizeIncidentType($incidentType), self::RESOLUTION_INCIDENT_TYPES, true);
+    }
+
+    public static function requiresResolutionTarget(string $incidentType): bool
+    {
+        return self::normalizeIncidentType($incidentType) === self::INCIDENT_TYPE_RECOVERED;
+    }
 }
+
