@@ -48,6 +48,7 @@ class StoreHealthIncidentFromModuleRequest extends FormRequest
             'suspected_cause' => ['nullable', 'string', 'max:1000'],
             'treatment_given' => ['nullable', 'string', 'max:1000'],
             'remarks' => ['nullable', 'string', 'max:2000'],
+            'media' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'media_path' => ['nullable', 'string', 'max:2048'],
             'resolution_target' => ['nullable', 'string', Rule::in(CycleHealthIncident::RESOLUTION_TARGETS)],
             'resolved_incident_id' => ['nullable', 'integer', 'exists:cycle_health_incidents,id'],

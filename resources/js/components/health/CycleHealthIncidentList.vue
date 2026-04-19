@@ -106,6 +106,13 @@ const formatDate = (value) => {
             <p v-if="incident.remarks" class="mt-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
                 {{ incident.remarks }}
             </p>
+
+            <div v-if="incident.media_url" class="mt-3 rounded-xl border border-gray-200 bg-white p-2">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Incident Photo</p>
+                <a :href="incident.media_url" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-2">
+                    <img :src="incident.media_url" alt="Incident uploaded photo" class="h-64 w-full rounded-md object-contain">
+                </a>
+            </div>
         </div>
     </article>
 </template>

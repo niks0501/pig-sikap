@@ -49,6 +49,7 @@ class PresidentCycleHealthIncidentController extends Controller
                 'resolved_incident_id' => $incident->resolved_incident_id,
                 'pig_id' => $incident->pig_id,
                 'source_channel' => $incident->source_channel,
+                'media_path' => $incident->media_path,
             ]
         );
 

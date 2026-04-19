@@ -102,6 +102,10 @@
                         'suspected_cause' => $incident->suspected_cause,
                         'treatment_given' => $incident->treatment_given,
                         'remarks' => $incident->remarks,
+                        'media_path' => $incident->media_path,
+                        'media_url' => $incident->media_path
+                            ? asset('storage/'.$incident->media_path)
+                            : null,
                         'resolution_target' => $incident->resolution_target,
                         'resolved_incident_id' => $incident->resolved_incident_id,
                         'is_resolution_event' => $isResolutionEvent,

@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\PigRegistry\CycleHealthPlanGenerator;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\seed;
@@ -512,11 +514,14 @@ test('president can record deceased incident and cycle count is auto adjusted', 
         'current_count' => 10,
     ]);
 
+    Storage::fake('public');
+
     $response = actingAs($president)->post(route('health.cycles.incidents.store', $cycle), [
         'event_key' => fake()->uuid(),
         'incident_type' => 'deceased',
         'date_reported' => now()->toDateString(),
         'affected_count' => 2,
+        'media' => UploadedFile::fake()->image('timeline-deceased.jpg', 1400, 1000),
         'suspected_cause' => 'Respiratory issue',
         'treatment_given' => 'Observation only',
         'remarks' => 'Marked and removed from active count.',
@@ -534,6 +539,15 @@ test('president can record deceased incident and cycle count is auto adjusted', 
         'affected_count' => 2,
     ]);
 
+    $incident = CycleHealthIncident::query()
+        ->where('batch_id', $cycle->id)
+        ->where('incident_type', 'deceased')
+        ->latest('id')
+        ->firstOrFail();
+
+    expect((string) $incident->media_path)->toStartWith('uploads/');
+    expect(Storage::disk('public')->exists((string) $incident->media_path))->toBeTrue();
+
     assertDatabaseHas('pig_cycle_adjustments', [
         'batch_id' => $cycle->id,
         'reason' => 'mortality',
@@ -550,12 +564,15 @@ test('president can record incident from health module form route', function () 
     $president = healthPresident();
     $cycle = makeHealthCycle($president);
 
+    Storage::fake('public');
+
     $response = actingAs($president)->post(route('health.incidents.store'), [
         'cycle_id' => $cycle->id,
         'event_key' => fake()->uuid(),
         'incident_type' => 'sick',
         'date_reported' => now()->toDateString(),
         'affected_count' => 3,
+        'media' => UploadedFile::fake()->image('module-sick.jpg', 1200, 900),
         'suspected_cause' => 'Feed change stress',
         'treatment_given' => 'Vitamins and hydration',
         'remarks' => 'Group isolated and marked yellow.',
@@ -574,6 +591,15 @@ test('president can record incident from health module form route', function () 
         'module' => 'health_monitoring',
     ]);
 
+    $incident = CycleHealthIncident::query()
+        ->where('batch_id', $cycle->id)
+        ->where('incident_type', 'sick')
+        ->latest('id')
+        ->firstOrFail();
+
+    expect((string) $incident->media_path)->toStartWith('uploads/');
+    expect(Storage::disk('public')->exists((string) $incident->media_path))->toBeTrue();
+
     $audit = AuditTrail::query()
         ->where('action', 'health_incident_created_from_module')
         ->latest('id')
@@ -584,6 +610,7 @@ test('president can record incident from health module form route', function () 
     expect((string) ($audit?->context_json['incident_type'] ?? ''))->toBe('sick');
     expect((int) ($audit?->context_json['affected_count'] ?? 0))->toBe(3);
     expect((string) ($audit?->context_json['source_channel'] ?? ''))->toBe('health_module');
+    expect((string) ($audit?->context_json['media_path'] ?? ''))->toStartWith('uploads/');
 });
 
 test('non president cannot access or submit health module actions', function () {

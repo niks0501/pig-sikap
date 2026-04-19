@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
     cycles: {
@@ -47,13 +47,16 @@ const form = ref({
     affected_count: String(props.oldInput.affected_count ?? 1),
     pig_id: String(props.oldInput.pig_id ?? ''),
     resolution_target: String(props.oldInput.resolution_target ?? ''),
-    media_path: String(props.oldInput.media_path ?? ''),
     suspected_cause: String(props.oldInput.suspected_cause ?? ''),
     treatment_given: String(props.oldInput.treatment_given ?? ''),
     remarks: String(props.oldInput.remarks ?? ''),
 });
 
 const isSubmitting = ref(false);
+const mediaFileInput = ref(null);
+const mediaPreviewUrl = ref('');
+const mediaPreviewObjectUrl = ref('');
+const mediaFileName = ref('');
 
 const selectedCycle = computed(() => {
     const cycleId = Number(form.value.cycle_id || 0);
@@ -201,6 +204,48 @@ watch(
 
 const submitLabel = computed(() => (isSubmitting.value ? 'Saving Incident...' : 'Save Incident'));
 
+const revokeMediaPreview = () => {
+    if (mediaPreviewObjectUrl.value !== '') {
+        URL.revokeObjectURL(mediaPreviewObjectUrl.value);
+        mediaPreviewObjectUrl.value = '';
+    }
+};
+
+const clearSelectedMedia = () => {
+    revokeMediaPreview();
+    mediaPreviewUrl.value = '';
+    mediaFileName.value = '';
+
+    if (mediaFileInput.value && 'value' in mediaFileInput.value) {
+        mediaFileInput.value.value = '';
+    }
+};
+
+const handleMediaSelection = (event) => {
+    const input = event?.target;
+
+    if (!input || !input.files || input.files.length < 1) {
+        clearSelectedMedia();
+        return;
+    }
+
+    const selectedFile = input.files[0];
+
+    if (!selectedFile || typeof selectedFile.type !== 'string' || !selectedFile.type.startsWith('image/')) {
+        clearSelectedMedia();
+        return;
+    }
+
+    revokeMediaPreview();
+    mediaFileName.value = selectedFile.name;
+    mediaPreviewObjectUrl.value = URL.createObjectURL(selectedFile);
+    mediaPreviewUrl.value = mediaPreviewObjectUrl.value;
+};
+
+onBeforeUnmount(() => {
+    revokeMediaPreview();
+});
+
 const formatPurchaseDate = (value) => {
     if (!value) {
         return 'Unknown purchase date';
@@ -239,7 +284,7 @@ const submitForm = (event) => {
             </a>
         </div>
 
-        <form v-if="props.cycles.length > 0" :action="props.routes.store" method="POST" class="space-y-6" @submit="submitForm">
+        <form v-if="props.cycles.length > 0" :action="props.routes.store" method="POST" enctype="multipart/form-data" class="space-y-6" @submit="submitForm">
             <input type="hidden" name="_token" :value="props.csrfToken">
             <input type="hidden" name="event_key" :value="props.eventKey">
             <input type="hidden" name="source_channel" value="health_module">
@@ -343,10 +388,31 @@ const submitForm = (event) => {
                     <p v-if="fieldError('affected_count')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('affected_count') }}</p>
                 </label>
 
-                <label>
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Media Path (optional)</span>
-                    <input v-model="form.media_path" type="text" name="media_path" placeholder="storage/app/public/..." class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                    <p v-if="fieldError('media_path')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('media_path') }}</p>
+                <label class="sm:col-span-2">
+                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Incident Photo (optional)</span>
+                    <input
+                        ref="mediaFileInput"
+                        type="file"
+                        name="media"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 file:mr-4 file:rounded-lg file:border-0 file:bg-[#0c6d57]/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#0c6d57] hover:file:bg-[#0c6d57]/20 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                        @change="handleMediaSelection"
+                    >
+                    <p class="mt-1.5 text-xs text-gray-500">Accepted formats: JPG, PNG, WEBP. Max file size: 5MB.</p>
+                    <p v-if="fieldError('media')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('media') }}</p>
+                    <p v-else-if="fieldError('media_path')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('media_path') }}</p>
+
+                    <div v-if="mediaPreviewUrl" class="mt-3 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-semibold text-gray-700">Preview: {{ mediaFileName }}</p>
+                            <button type="button" class="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100" @click="clearSelectedMedia">
+                                Remove
+                            </button>
+                        </div>
+                        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-2">
+                            <img :src="mediaPreviewUrl" alt="Incident image preview" class="h-64 w-full rounded-lg object-contain">
+                        </div>
+                    </div>
                 </label>
 
                 <div v-if="isPigSpecificIncident" class="sm:col-span-2">
