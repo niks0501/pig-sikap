@@ -3,10 +3,12 @@
 namespace App\Http\Requests\PigRegistry;
 
 use App\Models\CycleHealthIncident;
+use App\Models\Pig;
 use App\Models\PigCycle;
 use App\Services\PigRegistry\CycleHealthStateProjector;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
 class StoreCycleHealthIncidentRequest extends FormRequest
@@ -37,6 +39,8 @@ class StoreCycleHealthIncidentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isDeceased = fn (): bool => (string) $this->input('incident_type') === CycleHealthIncident::INCIDENT_TYPE_DECEASED;
+
         return [
             'event_key' => ['required', 'uuid'],
             'pig_id' => ['nullable', 'integer', 'exists:pigs,id'],
@@ -44,10 +48,14 @@ class StoreCycleHealthIncidentRequest extends FormRequest
             'incident_type' => ['required', 'string', Rule::in(CycleHealthIncident::INCIDENT_TYPES)],
             'date_reported' => ['required', 'date'],
             'affected_count' => ['required', 'integer', 'min:1'],
-            'suspected_cause' => ['nullable', 'string', 'max:1000'],
+            'suspected_cause' => [Rule::requiredIf($isDeceased), 'nullable', 'string', 'max:1000'],
             'treatment_given' => ['nullable', 'string', 'max:1000'],
             'remarks' => ['nullable', 'string', 'max:2000'],
-            'media' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'media' => [
+                Rule::requiredIf($isDeceased),
+                'nullable',
+                File::types(['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi'])->max(25 * 1024),
+            ],
             'media_path' => ['nullable', 'string', 'max:2048'],
             'resolution_target' => ['nullable', 'string', Rule::in(CycleHealthIncident::RESOLUTION_TARGETS)],
             'resolved_incident_id' => ['nullable', 'integer', 'exists:cycle_health_incidents,id'],
@@ -84,6 +92,9 @@ class StoreCycleHealthIncidentRequest extends FormRequest
             $hasPigProfiles = (bool) $cycle->has_pig_profiles;
             $cyclePigCount = (int) $cycle->pigs()->count();
             $requiresPigSelection = $isPigSpecificIncident && $hasPigProfiles && $cyclePigCount > 0;
+            $selectedPig = $pigId > 0
+                ? $cycle->pigs()->whereKey($pigId)->first()
+                : null;
 
             if ($requiresPigSelection && $pigId < 1) {
                 $validator->errors()->add(
@@ -92,8 +103,19 @@ class StoreCycleHealthIncidentRequest extends FormRequest
                 );
             }
 
-            if ($pigId > 0 && ! $cycle->pigs()->whereKey($pigId)->exists()) {
+            if ($pigId > 0 && $selectedPig === null) {
                 $validator->errors()->add('pig_id', 'The selected pig does not belong to this cycle.');
+            }
+
+            if (
+                $incidentType === CycleHealthIncident::INCIDENT_TYPE_DECEASED
+                && $selectedPig !== null
+                && ! Pig::statusCountsTowardBatch((string) $selectedPig->status)
+            ) {
+                $validator->errors()->add(
+                    'pig_id',
+                    'The selected pig is already out of active count and cannot be recorded as deceased again.'
+                );
             }
 
             if ($isPigSpecificIncident && $pigId > 0 && $affectedCount !== 1) {
@@ -163,5 +185,16 @@ class StoreCycleHealthIncidentRequest extends FormRequest
                 }
             }
         });
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'suspected_cause.required' => 'Suspected cause is required for deceased incidents.',
+            'media.required' => 'Upload photo or video evidence for deceased incidents.',
+        ];
     }
 }

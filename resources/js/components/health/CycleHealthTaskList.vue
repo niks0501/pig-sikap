@@ -18,6 +18,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    cycleCurrentCount: {
+        type: Number,
+        default: null,
+    },
 });
 
 const task = computed(() => props.item?.task ?? {});
@@ -26,6 +30,16 @@ const timelineDateText = computed(() => formatDate(props.item?.timeline_date));
 
 const isTerminal = computed(() => Boolean(task.value.is_terminal));
 const isOralMedication = computed(() => Boolean(task.value.is_oral_medication));
+const taskTargetCount = computed(() => Math.max(0, Number(task.value.target_count || 0)));
+const hasCycleCurrentCount = computed(() => props.cycleCurrentCount !== null && props.cycleCurrentCount !== undefined);
+const effectiveTargetCount = computed(() => {
+    if (!hasCycleCurrentCount.value) {
+        return taskTargetCount.value;
+    }
+
+    return Math.max(0, Math.min(taskTargetCount.value, Number(props.cycleCurrentCount || 0)));
+});
+const displayCompletedCount = computed(() => Math.min(Math.max(0, Number(task.value.completed_count || 0)), effectiveTargetCount.value));
 
 const statusClass = computed(() => {
     switch (task.value.status) {
@@ -87,7 +101,7 @@ const formatDate = (value) => {
             </p>
 
             <p class="mt-1 text-sm text-gray-700">
-                Coverage {{ Number(task.completed_count || 0).toLocaleString() }} / {{ Number(task.target_count || 0).toLocaleString() }}
+                Coverage {{ displayCompletedCount.toLocaleString() }} / {{ effectiveTargetCount.toLocaleString() }}
             </p>
 
             <form v-if="!cycleArchived && !isTerminal" :action="task.update_url" method="POST" class="mt-3 space-y-3">
@@ -101,8 +115,8 @@ const formatDate = (value) => {
                             type="number"
                             name="completed_count"
                             min="0"
-                            :max="Number(task.target_count || 0)"
-                            :placeholder="`0 - ${Number(task.target_count || 0)}`"
+                            :max="effectiveTargetCount"
+                            :placeholder="`0 - ${effectiveTargetCount}`"
                             class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                         >
                     </label>

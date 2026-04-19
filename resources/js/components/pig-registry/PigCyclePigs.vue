@@ -6,7 +6,7 @@ import {
     TransitionChild,
     TransitionRoot,
 } from '@headlessui/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     cycle: {
@@ -45,6 +45,20 @@ const isArchived = () => props.cycle.stage === 'Completed' || ['Sold', 'Closed']
 const rowFormId = (pigId) => `pig-profile-row-form-${pigId}`;
 const isDeleteModalOpen = ref(false);
 const pigToDelete = ref(null);
+const selectableStatuses = computed(() => props.pigStatuses.filter((status) => status !== 'Deceased'));
+
+const mortalityCreateRoute = (pigId = null) => {
+    const params = new URLSearchParams({
+        cycle_id: String(props.cycle.id),
+        affected_count: '1',
+    });
+
+    if (pigId !== null) {
+        params.set('pig_id', String(pigId));
+    }
+
+    return `${props.routes.mortalityCreate}?${params.toString()}`;
+};
 
 const countsTowardCycle = (status) => !['Sold', 'Deceased'].includes(status);
 
@@ -86,9 +100,14 @@ const closeDeleteModal = () => {
                 <h2 class="text-2xl font-bold text-gray-900">Dedicated Profile Manager: {{ props.cycle.batch_code }}</h2>
                 <p class="mt-1 text-sm text-gray-500">Manage pig profiles separately from cycle details to keep workflows clean.</p>
             </div>
-            <a :href="props.routes.show" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                Back to Cycle Detail
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a v-if="!isArchived()" :href="mortalityCreateRoute()" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">
+                    Record Mortality
+                </a>
+                <a :href="props.routes.show" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                    Back to Cycle Detail
+                </a>
+            </div>
         </section>
 
         <div v-if="props.statusMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
@@ -130,7 +149,7 @@ const closeDeleteModal = () => {
                 <label>
                     <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</span>
                     <select name="status" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                        <option v-for="status in props.pigStatuses" :key="status" :value="status">{{ status }}</option>
+                        <option v-for="status in selectableStatuses" :key="status" :value="status">{{ status }}</option>
                     </select>
                 </label>
 
@@ -146,7 +165,7 @@ const closeDeleteModal = () => {
                 </div>
 
                 <p class="md:col-span-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
-                    Automation: setting status to Sold or Deceased will auto-adjust the cycle current count.
+                    Automation: setting status to Sold will auto-adjust the cycle current count. Use Record Mortality to mark pigs as Deceased.
                 </p>
             </form>
         </section>
@@ -185,7 +204,7 @@ const closeDeleteModal = () => {
                             <td class="px-3 py-2 align-top">
                                 <div class="flex flex-col items-start gap-2">
                                     <select :form="rowFormId(pig.id)" name="status" class="w-32 rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:border-[#0c6d57] focus:ring-1 focus:ring-[#0c6d57]/20 transition-all">
-                                        <option v-for="status in props.pigStatuses" :key="`${pig.id}-${status}`" :selected="pig.status === status" :value="status">{{ status }}</option>
+                                        <option v-for="status in selectableStatuses" :key="`${pig.id}-${status}`" :selected="pig.status === status" :value="status">{{ status }}</option>
                                     </select>
                                     <div class="flex flex-col gap-1">
                                         <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]" :class="statusBadgeClass(pig.status)">
@@ -207,6 +226,9 @@ const closeDeleteModal = () => {
                                     <input type="hidden" name="_method" value="PUT">
                                 </form>
                                 <div v-if="!isArchived()" class="flex w-full flex-col items-end gap-2">
+                                    <a :href="mortalityCreateRoute(pig.id)" class="inline-flex w-28 items-center justify-center rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 focus:ring-2 focus:ring-rose-600/20">
+                                        Report Deceased
+                                    </a>
                                     <button type="submit" :form="rowFormId(pig.id)" class="w-20 justify-center rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 focus:ring-2 focus:ring-emerald-600/20">
                                         Update
                                     </button>

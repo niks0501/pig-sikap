@@ -1,5 +1,10 @@
 <x-app-layout>
     @php
+        $formMode = (string) ($formMode ?? 'general');
+        $lockedIncidentType = is_string($lockedIncidentType ?? null) ? $lockedIncidentType : null;
+        $pageTitle = (string) ($pageTitle ?? 'Record Health Incident');
+        $pageDescription = (string) ($pageDescription ?? 'Log sick, isolated, and recovered events at cycle level.');
+        $backRoute = $formMode === 'mortality' ? route('health.mortality') : route('health.index');
         $eventKey = old('event_key', (string) \Illuminate\Support\Str::uuid());
         $formProps = [
             'cycles' => $cycles
@@ -31,18 +36,23 @@
             'incidentTypes' => array_values($incidentTypes),
             'pigSpecificIncidentTypes' => \App\Models\CycleHealthIncident::PIG_SPECIFIC_INCIDENT_TYPES,
             'selectedCycleId' => (int) $selectedCycleId,
+            'selectedPigId' => (int) $selectedPigId,
+            'prefilledAffectedCount' => (int) $prefilledAffectedCount,
+            'formMode' => $formMode,
+            'lockedIncidentType' => $lockedIncidentType,
             'routes' => [
                 'store' => route('health.incidents.store'),
                 'index' => route('health.index'),
+                'mortality' => route('health.mortality'),
             ],
             'csrfToken' => csrf_token(),
             'eventKey' => $eventKey,
             'oldInput' => [
                 'cycle_id' => (string) old('cycle_id', $selectedCycleId),
-                'incident_type' => (string) old('incident_type', ''),
+                'incident_type' => (string) old('incident_type', $lockedIncidentType ?? ''),
                 'date_reported' => (string) old('date_reported', now()->toDateString()),
-                'affected_count' => (string) old('affected_count', '1'),
-                'pig_id' => (string) old('pig_id', ''),
+                'affected_count' => (string) old('affected_count', max((int) $prefilledAffectedCount, 1)),
+                'pig_id' => (string) old('pig_id', $selectedPigId),
                 'resolution_target' => (string) old('resolution_target', ''),
                 'media_path' => (string) old('media_path', ''),
                 'suspected_cause' => (string) old('suspected_cause', ''),
@@ -57,12 +67,12 @@
 
     <x-slot name="header">
         <div class="flex items-center gap-4">
-            <a href="{{ route('health.index') }}" class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+            <a href="{{ $backRoute }}" class="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </a>
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Record Health Incident</h2>
-                <p class="mt-1 text-sm text-gray-500">Log sick, isolated, deceased, and recovered events at cycle level.</p>
+                <h2 class="text-2xl font-bold text-gray-900 leading-tight">{{ $pageTitle }}</h2>
+                <p class="mt-1 text-sm text-gray-500">{{ $pageDescription }}</p>
             </div>
         </div>
     </x-slot>

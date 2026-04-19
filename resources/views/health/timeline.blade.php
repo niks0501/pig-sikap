@@ -23,6 +23,9 @@
                 <a href="{{ route('health.create', ['cycle_id' => $cycle->id]) }}" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0a5a48]">
                     Record Incident
                 </a>
+                <a href="{{ route('health.mortality.create', ['cycle_id' => $cycle->id, 'affected_count' => 1]) }}" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700">
+                    Record Mortality
+                </a>
             </div>
         </div>
     </x-slot>
@@ -102,6 +105,14 @@
                         'suspected_cause' => $incident->suspected_cause,
                         'treatment_given' => $incident->treatment_given,
                         'remarks' => $incident->remarks,
+                        'pig' => $incident->pig
+                            ? [
+                                'id' => (int) $incident->pig->id,
+                                'pig_no' => (int) $incident->pig->pig_no,
+                                'status' => (string) $incident->pig->status,
+                            ]
+                            : null,
+                        'reported_by_name' => $incident->reportedBy?->name,
                         'media_path' => $incident->media_path,
                         'media_url' => $incident->media_path
                             ? asset('storage/'.$incident->media_path)
@@ -117,6 +128,7 @@
                 'healthIndex' => route('health.index'),
                 'cycleShow' => route('cycles.show', $cycle),
                 'recordIncident' => route('health.create', ['cycle_id' => $cycle->id]),
+                'recordMortality' => route('health.mortality.create', ['cycle_id' => $cycle->id, 'affected_count' => 1]),
             ],
             'csrfToken' => csrf_token(),
             'todayDate' => now()->toDateString(),

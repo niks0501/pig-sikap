@@ -78,8 +78,28 @@ test('president can view dynamic health pages', function () {
     actingAs($president)->get(route('health.index'))->assertOk();
     actingAs($president)->get(route('health.schedule'))->assertOk();
     actingAs($president)->get(route('health.create'))->assertOk();
+    actingAs($president)->get(route('health.mortality'))->assertOk();
+    actingAs($president)->get(route('health.mortality.create'))->assertOk();
     actingAs($president)->get(route('health.sick'))->assertOk();
     actingAs($president)->get(route('health.cycles.show', $cycle))->assertOk();
+});
+
+test('general incident form excludes deceased incident type option', function () {
+    $president = healthPresident();
+
+    actingAs($president)
+        ->get(route('health.create'))
+        ->assertOk()
+        ->assertViewHas('incidentTypes', fn (array $incidentTypes): bool => ! in_array('deceased', $incidentTypes, true));
+});
+
+test('mortality form locks incident type to deceased', function () {
+    $president = healthPresident();
+
+    actingAs($president)
+        ->get(route('health.mortality.create'))
+        ->assertOk()
+        ->assertViewHas('lockedIncidentType', fn (?string $incidentType): bool => $incidentType === 'deceased');
 });
 
 test('health index supports sick card filtering for incident related cycles', function () {
@@ -245,6 +265,32 @@ test('president can update cycle health task and action is logged for health mod
     expect((int) ($audit?->context_json['task_id'] ?? 0))->toBe($task->id);
     expect((string) ($audit?->context_json['requested_action'] ?? ''))->toBe('partial');
     expect((string) ($audit?->context_json['after_status'] ?? ''))->toBe('partially_completed');
+});
+
+test('completed count cannot exceed current cycle count', function () {
+    $president = healthPresident();
+    $cycle = makeHealthCycle($president, [
+        'initial_count' => 12,
+        'current_count' => 8,
+    ]);
+
+    app(CycleHealthPlanGenerator::class)->assignDefaultTemplateAndGenerateTasks($cycle);
+
+    /** @var CycleHealthTask $task */
+    $task = $cycle->healthTasks()->where('task_type', 'injectable')->firstOrFail();
+    $task->update([
+        'target_count' => 10,
+        'remaining_count' => 10,
+    ]);
+
+    actingAs($president)
+        ->from(route('health.cycles.show', $cycle))
+        ->patch(route('health.cycles.tasks.update', [$cycle, $task]), [
+            'action' => 'partial',
+            'completed_count' => 9,
+            'actual_date' => now()->toDateString(),
+        ])
+        ->assertSessionHasErrors(['completed_count']);
 });
 
 test('president can undo accidental complete all task action', function () {
@@ -555,9 +601,70 @@ test('president can record deceased incident and cycle count is auto adjusted', 
     ]);
 
     assertDatabaseHas('audit_trails', [
-        'action' => 'cycle_health_incident_recorded',
+        'action' => 'mortality_recorded',
         'module' => 'health_monitoring',
     ]);
+
+    $audit = AuditTrail::query()
+        ->where('action', 'mortality_recorded')
+        ->latest('id')
+        ->first();
+
+    expect($audit)->not->toBeNull();
+    expect((string) ($audit?->context_json['incident_category'] ?? ''))->toBe('mortality');
+    expect((string) ($audit?->context_json['incident_type'] ?? ''))->toBe('deceased');
+});
+
+test('deceased incidents require suspected cause and evidence', function () {
+    $president = healthPresident();
+    $cycle = makeHealthCycle($president);
+
+    actingAs($president)
+        ->from(route('health.cycles.show', $cycle))
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'deceased',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 1,
+            'remarks' => 'Missing required mortality evidence fields.',
+        ])
+        ->assertSessionHasErrors(['suspected_cause', 'media']);
+});
+
+test('pig-linked deceased incident synchronizes pig profile status to deceased', function () {
+    $president = healthPresident();
+    $cycle = makeHealthCycle($president, [
+        'initial_count' => 5,
+        'current_count' => 5,
+        'has_pig_profiles' => true,
+    ]);
+
+    $pig = $cycle->pigs()->create([
+        'pig_no' => 1,
+        'status' => 'Active',
+        'created_by' => $president->id,
+    ]);
+
+    Storage::fake('public');
+
+    actingAs($president)
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'deceased',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 1,
+            'pig_id' => $pig->id,
+            'suspected_cause' => 'Pig profile sync validation',
+            'media' => UploadedFile::fake()->image('sync-deceased.jpg', 1200, 900),
+            'remarks' => 'Pig-linked mortality incident.',
+        ])
+        ->assertRedirect(route('health.cycles.show', $cycle));
+
+    $cycle->refresh();
+    $pig->refresh();
+
+    expect($cycle->current_count)->toBe(4);
+    expect($pig->status)->toBe('Deceased');
 });
 
 test('president can record incident from health module form route', function () {
@@ -568,6 +675,7 @@ test('president can record incident from health module form route', function () 
 
     $response = actingAs($president)->post(route('health.incidents.store'), [
         'cycle_id' => $cycle->id,
+        'form_mode' => 'general',
         'event_key' => fake()->uuid(),
         'incident_type' => 'sick',
         'date_reported' => now()->toDateString(),
@@ -611,6 +719,27 @@ test('president can record incident from health module form route', function () 
     expect((int) ($audit?->context_json['affected_count'] ?? 0))->toBe(3);
     expect((string) ($audit?->context_json['source_channel'] ?? ''))->toBe('health_module');
     expect((string) ($audit?->context_json['media_path'] ?? ''))->toStartWith('uploads/');
+});
+
+test('general health form cannot submit deceased incidents', function () {
+    $president = healthPresident();
+    $cycle = makeHealthCycle($president);
+
+    Storage::fake('public');
+
+    actingAs($president)
+        ->from(route('health.create', ['cycle_id' => $cycle->id]))
+        ->post(route('health.incidents.store'), [
+            'cycle_id' => $cycle->id,
+            'form_mode' => 'general',
+            'event_key' => fake()->uuid(),
+            'incident_type' => 'deceased',
+            'date_reported' => now()->toDateString(),
+            'affected_count' => 1,
+            'suspected_cause' => 'Should be rejected in general flow',
+            'media' => UploadedFile::fake()->image('general-disallowed-deceased.jpg', 1200, 900),
+        ])
+        ->assertSessionHasErrors(['incident_type']);
 });
 
 test('non president cannot access or submit health module actions', function () {

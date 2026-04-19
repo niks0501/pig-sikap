@@ -96,6 +96,8 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
             Route::get('/', [PresidentHealthController::class, 'index'])->name('index');
             Route::get('/schedule', [PresidentHealthController::class, 'schedule'])->name('schedule');
             Route::get('/create', [PresidentHealthController::class, 'create'])->name('create');
+            Route::get('/mortality', [PresidentHealthController::class, 'mortality'])->name('mortality');
+            Route::get('/mortality/create', [PresidentHealthController::class, 'createMortality'])->name('mortality.create');
             Route::post('/incidents', [PresidentHealthController::class, 'storeIncident'])->name('incidents.store');
             Route::get('/sick', [PresidentHealthController::class, 'sick'])->name('sick');
             Route::get('/cycles/{cycle}', [PresidentHealthController::class, 'showCycle'])->name('cycles.show');

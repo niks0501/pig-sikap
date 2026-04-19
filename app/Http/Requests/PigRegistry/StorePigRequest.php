@@ -32,8 +32,18 @@ class StorePigRequest extends FormRequest
             'ear_mark_type' => ['nullable', 'string', 'max:50'],
             'ear_mark_value' => ['nullable', 'string', 'max:80'],
             'sex' => ['nullable', 'string', Rule::in(Pig::SEX_OPTIONS)],
-            'status' => ['required', 'string', Rule::in(Pig::STATUSES)],
+            'status' => ['required', 'string', Rule::in(Pig::STATUSES), Rule::notIn(['Deceased'])],
             'remarks' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'status.not_in' => 'Use Health Monitoring mortality recording to set a pig as Deceased.',
         ];
     }
 }

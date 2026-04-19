@@ -58,7 +58,7 @@ test('archived cycles block manual count adjustments', function () {
         ->post(route('cycles.adjustments.store', $cycle), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 1,
-            'reason' => 'mortality',
+            'reason' => 'sale deduction',
         ])
         ->assertRedirect(route('cycles.show', $cycle))
         ->assertSessionHasErrors(['cycle']);

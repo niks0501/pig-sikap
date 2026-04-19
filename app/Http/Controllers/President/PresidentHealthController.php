@@ -164,38 +164,76 @@ class PresidentHealthController extends Controller
 
     public function create(Request $request, CycleHealthStateProjector $cycleHealthStateProjector): View
     {
-        $cycles = PigCycle::query()
-            ->activeRecords()
-            ->withCount('pigs')
-            ->with([
-                'pigs' => fn ($query) => $query
-                    ->select(['id', 'batch_id', 'pig_no', 'status'])
-                    ->orderBy('pig_no'),
-                'healthIncidents' => fn ($query) => $query
-                    ->select(['id', 'batch_id', 'incident_type', 'affected_count', 'resolution_target', 'date_reported'])
-                    ->orderBy('date_reported')
-                    ->orderBy('id'),
-            ])
-            ->orderByDesc('updated_at')
-            ->get(['id', 'batch_code', 'date_of_purchase', 'current_count', 'has_pig_profiles']);
-
-        $cycles->each(function (PigCycle $cycle) use ($cycleHealthStateProjector): void {
-            $projected = $cycleHealthStateProjector->projectIncidents($cycle->healthIncidents, (int) $cycle->current_count);
-            $activeMetrics = $projected['active'] ?? [];
-
-            $cycle->setAttribute('active_health', [
-                'currently_sick' => (int) ($activeMetrics['currently_sick'] ?? 0),
-                'currently_isolated' => (int) ($activeMetrics['currently_isolated'] ?? 0),
-                'currently_affected' => (int) ($activeMetrics['currently_affected'] ?? 0),
-            ]);
-        });
-
-        $selectedCycleId = (int) $request->query('cycle_id', 0);
+        $viewData = $this->buildIncidentCreateViewData($request, $cycleHealthStateProjector);
+        $generalIncidentTypes = array_values(array_filter(
+            CycleHealthIncident::INCIDENT_TYPES,
+            fn (string $incidentType): bool => $incidentType !== CycleHealthIncident::INCIDENT_TYPE_DECEASED
+        ));
 
         return view('health.create', [
-            'cycles' => $cycles,
-            'selectedCycleId' => $selectedCycleId,
-            'incidentTypes' => CycleHealthIncident::INCIDENT_TYPES,
+            ...$viewData,
+            'incidentTypes' => $generalIncidentTypes,
+            'formMode' => 'general',
+            'lockedIncidentType' => null,
+            'pageTitle' => 'Record Health Incident',
+            'pageDescription' => 'Log sick, isolated, and recovered events at cycle level.',
+        ]);
+    }
+
+    public function createMortality(Request $request, CycleHealthStateProjector $cycleHealthStateProjector): View
+    {
+        $viewData = $this->buildIncidentCreateViewData($request, $cycleHealthStateProjector);
+
+        return view('health.create', [
+            ...$viewData,
+            'formMode' => 'mortality',
+            'lockedIncidentType' => CycleHealthIncident::INCIDENT_TYPE_DECEASED,
+            'pageTitle' => 'Record Mortality',
+            'pageDescription' => 'Document deceased incidents with required cause and evidence.',
+        ]);
+    }
+
+    public function mortality(Request $request): View
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        $query = CycleHealthIncident::query()
+            ->with([
+                'cycle:id,batch_code',
+                'pig:id,batch_id,pig_no',
+                'reportedBy:id,name',
+            ])
+            ->where('incident_type', CycleHealthIncident::INCIDENT_TYPE_DECEASED);
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search): void {
+                $builder
+                    ->where('suspected_cause', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%")
+                    ->orWhereHas('cycle', function ($cycleQuery) use ($search): void {
+                        $cycleQuery->where('batch_code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('reportedBy', function ($userQuery) use ($search): void {
+                        $userQuery->where('name', 'like', "%{$search}%");
+                    });
+
+                if (is_numeric($search)) {
+                    $builder->orWhereHas('pig', function ($pigQuery) use ($search): void {
+                        $pigQuery->where('pig_no', (int) $search);
+                    });
+                }
+            });
+        }
+
+        $incidents = $query
+            ->orderByDesc('date_reported')
+            ->orderByDesc('id')
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('health.mortality', [
+            'incidents' => $incidents,
+            'search' => $search,
         ]);
     }
 
@@ -247,10 +285,15 @@ class PresidentHealthController extends Controller
             $request->user()
         );
 
+        $normalizedIncidentType = CycleHealthIncident::normalizeIncidentType((string) $incident->incident_type);
+        $isMortalityIncident = $normalizedIncidentType === CycleHealthIncident::INCIDENT_TYPE_DECEASED;
+
         $this->recordAudit(
             $request,
-            'health_incident_created_from_module',
-            "Created {$incident->incident_type} incident for cycle {$cycle->batch_code} via Health module.",
+            $isMortalityIncident ? 'mortality_recorded' : 'health_incident_created_from_module',
+            $isMortalityIncident
+                ? "Recorded mortality incident for cycle {$cycle->batch_code} via Health module."
+                : "Created {$incident->incident_type} incident for cycle {$cycle->batch_code} via Health module.",
             'health_monitoring',
             [
                 'cycle_id' => $cycle->id,
@@ -258,6 +301,7 @@ class PresidentHealthController extends Controller
                 'incident_id' => $incident->id,
                 'event_key' => $incident->event_key,
                 'incident_type' => $incident->incident_type,
+                'incident_category' => $isMortalityIncident ? 'mortality' : 'health_incident',
                 'affected_count' => (int) $incident->affected_count,
                 'resolution_target' => $incident->resolution_target,
                 'resolved_incident_id' => $incident->resolved_incident_id,
@@ -277,7 +321,13 @@ class PresidentHealthController extends Controller
         $cycle->load([
             'healthTemplate:id,name,code',
             'healthTasks' => fn ($query) => $query->orderBy('planned_start_date')->orderBy('id'),
-            'healthIncidents' => fn ($query) => $query->orderBy('date_reported')->orderBy('id'),
+            'healthIncidents' => fn ($query) => $query
+                ->with([
+                    'pig:id,batch_id,pig_no,status',
+                    'reportedBy:id,name',
+                ])
+                ->orderBy('date_reported')
+                ->orderBy('id'),
         ]);
 
         $timelineItems = $cycle->healthTasks
@@ -332,5 +382,45 @@ class PresidentHealthController extends Controller
             'timelineItems' => $timelineItems,
             'oralMedicationTask' => $oralMedicationTask,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildIncidentCreateViewData(Request $request, CycleHealthStateProjector $cycleHealthStateProjector): array
+    {
+        $cycles = PigCycle::query()
+            ->activeRecords()
+            ->withCount('pigs')
+            ->with([
+                'pigs' => fn ($query) => $query
+                    ->select(['id', 'batch_id', 'pig_no', 'status'])
+                    ->orderBy('pig_no'),
+                'healthIncidents' => fn ($query) => $query
+                    ->select(['id', 'batch_id', 'incident_type', 'affected_count', 'resolution_target', 'date_reported'])
+                    ->orderBy('date_reported')
+                    ->orderBy('id'),
+            ])
+            ->orderByDesc('updated_at')
+            ->get(['id', 'batch_code', 'date_of_purchase', 'current_count', 'has_pig_profiles']);
+
+        $cycles->each(function (PigCycle $cycle) use ($cycleHealthStateProjector): void {
+            $projected = $cycleHealthStateProjector->projectIncidents($cycle->healthIncidents, (int) $cycle->current_count);
+            $activeMetrics = $projected['active'] ?? [];
+
+            $cycle->setAttribute('active_health', [
+                'currently_sick' => (int) ($activeMetrics['currently_sick'] ?? 0),
+                'currently_isolated' => (int) ($activeMetrics['currently_isolated'] ?? 0),
+                'currently_affected' => (int) ($activeMetrics['currently_affected'] ?? 0),
+            ]);
+        });
+
+        return [
+            'cycles' => $cycles,
+            'selectedCycleId' => (int) $request->query('cycle_id', 0),
+            'selectedPigId' => max((int) $request->query('pig_id', 0), 0),
+            'prefilledAffectedCount' => max((int) $request->query('affected_count', 0), 0),
+            'incidentTypes' => CycleHealthIncident::INCIDENT_TYPES,
+        ];
     }
 }

@@ -5,6 +5,8 @@ use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -54,12 +56,16 @@ test('deceased incidents create one operational adjustment through health channe
     $cycle = makeContractCycle($president);
     $eventKey = fake()->uuid();
 
+    Storage::fake('public');
+
     actingAs($president)
         ->post(route('health.cycles.incidents.store', $cycle), [
             'event_key' => $eventKey,
             'incident_type' => 'deceased',
             'date_reported' => now()->toDateString(),
             'affected_count' => 3,
+            'suspected_cause' => 'Contract mortality verification',
+            'media' => UploadedFile::fake()->image('contract-deceased.jpg', 1200, 900),
             'source_channel' => 'cycle_timeline',
             'remarks' => 'Contract check',
         ])
@@ -207,6 +213,8 @@ test('deceased incidents enforce unresolved cap only when target is provided', f
     $president = contractPresident();
     $cycle = makeContractCycle($president);
 
+    Storage::fake('public');
+
     $cycle->healthIncidents()->create([
         'event_key' => fake()->uuid(),
         'incident_type' => 'isolated',
@@ -223,6 +231,8 @@ test('deceased incidents enforce unresolved cap only when target is provided', f
             'resolution_target' => 'isolated',
             'date_reported' => now()->toDateString(),
             'affected_count' => 2,
+            'suspected_cause' => 'Unresolved cap validation scenario',
+            'media' => UploadedFile::fake()->image('contract-deceased-cap.jpg', 1000, 700),
             'source_channel' => 'cycle_timeline',
         ])
         ->assertSessionHasErrors(['affected_count']);

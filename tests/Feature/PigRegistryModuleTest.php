@@ -804,7 +804,7 @@ test('president can add pig profile and profile flag is enabled automatically', 
     ]);
 });
 
-test('adding pig profile with out-of-count status automatically decreases batch count', function () {
+test('adding sold pig profile with out-of-count status automatically decreases batch count', function () {
     $president = presidentUser();
     $batch = makeBatch($president, [
         'current_count' => 10,
@@ -814,8 +814,8 @@ test('adding pig profile with out-of-count status automatically decreases batch 
     actingAs($president)
         ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 1,
-            'status' => 'Deceased',
-            'remarks' => 'Died during observation.',
+            'status' => 'Sold',
+            'remarks' => 'Sold to neighboring farm.',
         ])
         ->assertRedirect(route('cycles.show', $batch));
 
@@ -830,7 +830,7 @@ test('adding pig profile with out-of-count status automatically decreases batch 
         'quantity_before' => 10,
         'quantity_change' => -1,
         'quantity_after' => 9,
-        'reason' => 'mortality',
+        'reason' => 'sale deduction',
     ]);
 
     assertDatabaseHas('audit_trails', [
@@ -838,6 +838,25 @@ test('adding pig profile with out-of-count status automatically decreases batch 
         'action' => 'cycle_count_adjusted',
         'module' => 'pig_registry',
     ]);
+});
+
+test('adding pig profile cannot set deceased status directly', function () {
+    $president = presidentUser();
+    $batch = makeBatch($president, ['current_count' => 10]);
+
+    actingAs($president)
+        ->post(route('cycles.profiles.store', $batch), [
+            'pig_no' => 1,
+            'status' => 'Deceased',
+            'remarks' => 'Should be rejected and routed to health mortality.',
+        ])
+        ->assertSessionHasErrors(['status']);
+
+    $batch->refresh();
+
+    expect($batch->current_count)->toBe(10);
+    assertDatabaseCount('pigs', 0);
+    assertDatabaseCount('pig_cycle_adjustments', 0);
 });
 
 test('adding isolated pig profile keeps active batch count unchanged', function () {
@@ -1086,6 +1105,33 @@ test('updating pig profile status adjusts batch count in both directions', funct
     ]);
 });
 
+test('updating pig profile cannot set deceased status directly', function () {
+    $president = presidentUser();
+    $batch = makeBatch($president, ['current_count' => 6]);
+
+    $pig = Pig::query()->create([
+        'batch_id' => $batch->id,
+        'pig_no' => 1,
+        'status' => 'Active',
+        'created_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->put(route('cycles.profiles.update', [$batch, $pig]), [
+            'pig_no' => 1,
+            'status' => 'Deceased',
+            'remarks' => 'Should be rejected and routed to health mortality.',
+        ])
+        ->assertSessionHasErrors(['status']);
+
+    $batch->refresh();
+    $pig->refresh();
+
+    expect($batch->current_count)->toBe(6);
+    expect($pig->status)->toBe('Active');
+    assertDatabaseCount('pig_cycle_adjustments', 0);
+});
+
 test('auto status adjustment rejects transitions that would produce negative batch count', function () {
     $president = presidentUser();
     $batch = makeBatch($president, ['current_count' => 0]);
@@ -1093,7 +1139,7 @@ test('auto status adjustment rejects transitions that would produce negative bat
     actingAs($president)
         ->post(route('cycles.profiles.store', $batch), [
             'pig_no' => 1,
-            'status' => 'Deceased',
+            'status' => 'Sold',
         ])
         ->assertSessionHasErrors(['quantity_change']);
 
@@ -1212,8 +1258,8 @@ test('decrease adjustment updates batch count and records audit trail', function
     $adjustmentResponse = actingAs($president)->post(route('cycles.adjustments.store', $batch), [
         'adjustment_type' => 'decrease',
         'quantity_change' => 2,
-        'reason' => 'mortality',
-        'remarks' => 'Two piglets died during monitoring.',
+        'reason' => 'sale deduction',
+        'remarks' => 'Sold two pigs to market.',
     ]);
 
     $adjustmentResponse->assertRedirect(route('cycles.show', $batch));
@@ -1228,7 +1274,7 @@ test('decrease adjustment updates batch count and records audit trail', function
         'quantity_before' => 10,
         'quantity_change' => -2,
         'quantity_after' => 8,
-        'reason' => 'mortality',
+        'reason' => 'sale deduction',
     ]);
 
     assertDatabaseHas('audit_trails', [
@@ -1281,9 +1327,25 @@ test('increase and decrease adjustments reject zero quantity change', function (
         ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 0,
-            'reason' => 'mortality',
+            'reason' => 'sale deduction',
         ])
         ->assertSessionHasErrors(['quantity_change']);
+});
+
+test('manual mortality reason is rejected for adjustments', function () {
+    $president = presidentUser();
+    $batch = makeBatch($president, ['current_count' => 10]);
+
+    actingAs($president)
+        ->post(route('cycles.adjustments.store', $batch), [
+            'adjustment_type' => 'decrease',
+            'quantity_change' => 1,
+            'reason' => 'mortality',
+        ])
+        ->assertSessionHasErrors(['reason']);
+
+    $batch->refresh();
+    expect($batch->current_count)->toBe(10);
 });
 
 test('correction adjustment requires a delta or resulting count', function () {
@@ -1307,7 +1369,7 @@ test('adjustment cannot result in negative current count', function () {
         ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 5,
-            'reason' => 'mortality',
+            'reason' => 'sale deduction',
         ])
         ->assertSessionHasErrors(['quantity_change']);
 
@@ -1327,7 +1389,7 @@ test('archived batches cannot be adjusted', function () {
         ->post(route('cycles.adjustments.store', $batch), [
             'adjustment_type' => 'decrease',
             'quantity_change' => 1,
-            'reason' => 'mortality',
+            'reason' => 'sale deduction',
         ])
         ->assertRedirect(route('cycles.show', $batch))
         ->assertSessionHasErrors(['cycle']);

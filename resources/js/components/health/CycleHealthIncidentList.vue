@@ -63,6 +63,12 @@ const resolutionTargetLabel = computed(() => {
     return `${target.charAt(0).toUpperCase()}${target.slice(1)}`;
 });
 
+const isVideoMedia = computed(() => {
+    const mediaUrl = String(incident.value.media_url ?? '').toLowerCase();
+
+    return mediaUrl.endsWith('.mp4') || mediaUrl.endsWith('.mov') || mediaUrl.endsWith('.avi');
+});
+
 const formatDate = (value) => {
     if (!value) {
         return '-';
@@ -102,16 +108,24 @@ const formatDate = (value) => {
 
             <p v-if="incident.suspected_cause" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Cause:</span> {{ incident.suspected_cause }}</p>
             <p v-if="incident.treatment_given" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Treatment:</span> {{ incident.treatment_given }}</p>
+            <p v-if="incident.pig?.pig_no" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Pig:</span> #{{ Number(incident.pig.pig_no).toLocaleString() }}</p>
+            <p v-if="incident.reported_by_name" class="mt-1 text-sm text-gray-700"><span class="font-semibold text-gray-900">Reported By:</span> {{ incident.reported_by_name }}</p>
 
             <p v-if="incident.remarks" class="mt-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
                 {{ incident.remarks }}
             </p>
 
             <div v-if="incident.media_url" class="mt-3 rounded-xl border border-gray-200 bg-white p-2">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Incident Photo</p>
-                <a :href="incident.media_url" target="_blank" rel="noopener noreferrer" class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-2">
-                    <img :src="incident.media_url" alt="Incident uploaded photo" class="h-64 w-full rounded-md object-contain">
-                </a>
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Uploaded Evidence</p>
+                <div class="block overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-2">
+                    <video v-if="isVideoMedia" controls class="h-64 w-full rounded-md bg-black object-contain">
+                        <source :src="incident.media_url">
+                        Your browser does not support this video.
+                    </video>
+                    <a v-else :href="incident.media_url" target="_blank" rel="noopener noreferrer" class="block">
+                        <img :src="incident.media_url" alt="Incident uploaded photo" class="h-64 w-full rounded-md object-contain">
+                    </a>
+                </div>
             </div>
         </div>
     </article>

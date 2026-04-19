@@ -10,9 +10,14 @@
                     <p class="mt-1 text-sm text-gray-500">Open incident records requiring monitoring and follow-up.</p>
                 </div>
             </div>
-            <a href="{{ route('health.create') }}" class="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-700">
-                Record New Incident
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('health.mortality') }}" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition-colors hover:bg-rose-100">
+                    Open Mortality Log
+                </a>
+                <a href="{{ route('health.create') }}" class="inline-flex items-center justify-center rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-700">
+                    Record New Incident
+                </a>
+            </div>
         </div>
     </x-slot>
 

@@ -6,6 +6,8 @@ use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\seed;
@@ -52,6 +54,7 @@ function makeInventoryCycle(User $actor, array $overrides = []): PigCycle
 test('deceased incident retries do not double-apply inventory deductions', function () {
     $president = inventoryPresident();
     $cycle = makeInventoryCycle($president);
+    Storage::fake('public');
 
     $eventKey = fake()->uuid();
 
@@ -60,15 +63,22 @@ test('deceased incident retries do not double-apply inventory deductions', funct
         'incident_type' => 'deceased',
         'date_reported' => now()->toDateString(),
         'affected_count' => 2,
+        'suspected_cause' => 'Contracted severe respiratory infection',
         'remarks' => 'Initial mortality event',
     ];
 
     actingAs($president)
-        ->post(route('health.cycles.incidents.store', $cycle), $payload)
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            ...$payload,
+            'media' => UploadedFile::fake()->image('inventory-deceased-1.jpg', 1200, 900),
+        ])
         ->assertRedirect(route('health.cycles.show', $cycle));
 
     actingAs($president)
-        ->post(route('health.cycles.incidents.store', $cycle), $payload)
+        ->post(route('health.cycles.incidents.store', $cycle), [
+            ...$payload,
+            'media' => UploadedFile::fake()->image('inventory-deceased-2.jpg', 1200, 900),
+        ])
         ->assertRedirect(route('health.cycles.show', $cycle));
 
     $cycle->refresh();
@@ -96,7 +106,7 @@ test('pig profile status effects are persisted through the adjustment ledger', f
     actingAs($president)
         ->post(route('cycles.profiles.store', $cycle), [
             'pig_no' => 1,
-            'status' => 'Deceased',
+            'status' => 'Sold',
         ])
         ->assertRedirect(route('cycles.show', $cycle));
 
@@ -111,7 +121,7 @@ test('pig profile status effects are persisted through the adjustment ledger', f
         'source_module' => 'pig_registry',
         'source_type' => 'pig_profile_create',
         'source_id' => $pig->id,
-        'reason' => 'mortality',
+        'reason' => 'sale deduction',
         'quantity_after' => 2,
     ]);
 });

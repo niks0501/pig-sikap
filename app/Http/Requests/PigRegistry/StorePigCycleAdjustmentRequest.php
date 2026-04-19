@@ -45,6 +45,10 @@ class StorePigCycleAdjustmentRequest extends FormRequest
             ) {
                 $validator->errors()->add('quantity_change', 'Provide a quantity delta or resulting count for corrections.');
             }
+
+            if ((string) $this->input('reason') === 'mortality') {
+                $validator->errors()->add('reason', 'Record mortality through Health incidents instead of manual adjustments.');
+            }
         });
     }
 }

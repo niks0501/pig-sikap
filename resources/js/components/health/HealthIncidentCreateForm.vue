@@ -18,6 +18,22 @@ const props = defineProps({
         type: Number,
         default: 0,
     },
+    selectedPigId: {
+        type: Number,
+        default: 0,
+    },
+    prefilledAffectedCount: {
+        type: Number,
+        default: 0,
+    },
+    formMode: {
+        type: String,
+        default: 'general',
+    },
+    lockedIncidentType: {
+        type: String,
+        default: '',
+    },
     routes: {
         type: Object,
         required: true,
@@ -40,12 +56,16 @@ const props = defineProps({
     },
 });
 
+const isMortalityMode = computed(() => props.formMode === 'mortality');
+const normalizedLockedIncidentType = computed(() => String(props.lockedIncidentType ?? '').trim());
+const isIncidentTypeLocked = computed(() => normalizedLockedIncidentType.value !== '');
+
 const form = ref({
     cycle_id: String(props.oldInput.cycle_id ?? props.selectedCycleId ?? ''),
-    incident_type: String(props.oldInput.incident_type ?? ''),
+    incident_type: String(props.oldInput.incident_type ?? normalizedLockedIncidentType.value),
     date_reported: String(props.oldInput.date_reported ?? ''),
-    affected_count: String(props.oldInput.affected_count ?? 1),
-    pig_id: String(props.oldInput.pig_id ?? ''),
+    affected_count: String(props.oldInput.affected_count ?? Math.max(Number(props.prefilledAffectedCount ?? 0), 1)),
+    pig_id: String(props.oldInput.pig_id ?? props.selectedPigId ?? ''),
     resolution_target: String(props.oldInput.resolution_target ?? ''),
     suspected_cause: String(props.oldInput.suspected_cause ?? ''),
     treatment_given: String(props.oldInput.treatment_given ?? ''),
@@ -57,6 +77,7 @@ const mediaFileInput = ref(null);
 const mediaPreviewUrl = ref('');
 const mediaPreviewObjectUrl = ref('');
 const mediaFileName = ref('');
+const mediaPreviewKind = ref('');
 
 const selectedCycle = computed(() => {
     const cycleId = Number(form.value.cycle_id || 0);
@@ -76,7 +97,16 @@ const selectedCyclePigs = computed(() => {
     return selectedCycle.value.pigs;
 });
 
+const pigOptions = computed(() => {
+    if (form.value.incident_type !== 'deceased') {
+        return selectedCyclePigs.value;
+    }
+
+    return selectedCyclePigs.value.filter((pig) => !['Deceased', 'Sold'].includes(String(pig.status ?? '')));
+});
+
 const isPigSpecificIncident = computed(() => props.pigSpecificIncidentTypes.includes(form.value.incident_type));
+const isDeceasedIncident = computed(() => form.value.incident_type === 'deceased');
 const isResolutionEvent = computed(() => ['deceased', 'recovered'].includes(form.value.incident_type));
 const requiresResolutionTarget = computed(() => form.value.incident_type === 'recovered');
 const allowsResolutionTarget = computed(() => isResolutionEvent.value);
@@ -91,6 +121,9 @@ const allowsTemporaryCycleLevelSubmission = computed(() => showPigSelector.value
 const hasPigSelection = computed(() => String(form.value.pig_id).trim() !== '');
 const forceSingleAffectedCount = computed(() => isPigSpecificIncident.value && hasPigSelection.value);
 const selectedResolutionTarget = computed(() => String(form.value.resolution_target ?? '').trim());
+const isMediaRequired = computed(() => isDeceasedIncident.value);
+const selectedMediaPresent = computed(() => mediaFileName.value.trim() !== '');
+const cancelRoute = computed(() => (isMortalityMode.value ? (props.routes.mortality || props.routes.index) : props.routes.index));
 
 const unresolvedCap = computed(() => {
     const sickCap = Number(selectedCycleActiveHealth.value.currently_sick ?? 0);
@@ -134,6 +167,10 @@ const clientSideBlocked = computed(() => {
         return true;
     }
 
+    if (isMediaRequired.value && !selectedMediaPresent.value) {
+        return true;
+    }
+
     return false;
 });
 
@@ -154,6 +191,10 @@ const clientSideBlockMessage = computed(() => {
         return 'Affected count exceeds unresolved sick and isolated cases.';
     }
 
+    if (isMediaRequired.value && !selectedMediaPresent.value) {
+        return 'Upload mortality evidence (photo or video) before submitting.';
+    }
+
     return '';
 });
 
@@ -163,7 +204,7 @@ const dynamicWarningMessage = computed(() => {
     }
 
     if (form.value.incident_type === 'deceased') {
-        return 'Deceased incidents immediately reduce cycle current count and cannot be undone automatically.';
+        return 'Deceased incidents immediately reduce cycle current count, sync pig status to Deceased, and require confirmed evidence.';
     }
 
     if (form.value.incident_type === 'isolated') {
@@ -188,9 +229,19 @@ watch(
 );
 
 watch(
+    () => normalizedLockedIncidentType.value,
+    (lockedType) => {
+        if (lockedType !== '') {
+            form.value.incident_type = lockedType;
+        }
+    },
+    { immediate: true }
+);
+
+watch(
     () => [form.value.cycle_id, form.value.incident_type],
     () => {
-        const pigExistsInSelectedCycle = selectedCyclePigs.value.some((pig) => String(pig.id) === form.value.pig_id);
+        const pigExistsInSelectedCycle = pigOptions.value.some((pig) => String(pig.id) === form.value.pig_id);
 
         if (!showPigSelector.value || !pigExistsInSelectedCycle) {
             form.value.pig_id = '';
@@ -201,8 +252,6 @@ watch(
         }
     }
 );
-
-const submitLabel = computed(() => (isSubmitting.value ? 'Saving Incident...' : 'Save Incident'));
 
 const revokeMediaPreview = () => {
     if (mediaPreviewObjectUrl.value !== '') {
@@ -215,6 +264,7 @@ const clearSelectedMedia = () => {
     revokeMediaPreview();
     mediaPreviewUrl.value = '';
     mediaFileName.value = '';
+    mediaPreviewKind.value = '';
 
     if (mediaFileInput.value && 'value' in mediaFileInput.value) {
         mediaFileInput.value.value = '';
@@ -231,15 +281,25 @@ const handleMediaSelection = (event) => {
 
     const selectedFile = input.files[0];
 
-    if (!selectedFile || typeof selectedFile.type !== 'string' || !selectedFile.type.startsWith('image/')) {
+    if (!selectedFile) {
         clearSelectedMedia();
         return;
     }
 
     revokeMediaPreview();
     mediaFileName.value = selectedFile.name;
+
+    const mimeType = String(selectedFile.type ?? '');
+
+    if (!mimeType.startsWith('image/') && !mimeType.startsWith('video/')) {
+        mediaPreviewKind.value = '';
+        mediaPreviewUrl.value = '';
+        return;
+    }
+
     mediaPreviewObjectUrl.value = URL.createObjectURL(selectedFile);
     mediaPreviewUrl.value = mediaPreviewObjectUrl.value;
+    mediaPreviewKind.value = mimeType.startsWith('video/') ? 'video' : 'image';
 };
 
 onBeforeUnmount(() => {
@@ -264,6 +324,14 @@ const fieldError = (field) => {
     return typeof value === 'string' ? value : '';
 };
 
+const submitLabel = computed(() => {
+    if (isSubmitting.value) {
+        return isMortalityMode.value ? 'Saving Mortality Record...' : 'Saving Incident...';
+    }
+
+    return isMortalityMode.value ? 'Save Mortality Record' : 'Save Incident';
+});
+
 const submitForm = (event) => {
     if (clientSideBlocked.value || isSubmitting.value) {
         event.preventDefault();
@@ -279,8 +347,8 @@ const submitForm = (event) => {
         <div v-if="props.cycles.length === 0" class="space-y-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
             <p class="text-sm font-semibold text-gray-800">No active cycles are available for incident recording.</p>
             <p class="text-sm text-gray-600">Create or reactivate a cycle first, then return to this form.</p>
-            <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100">
-                Back to Health Dashboard
+            <a :href="cancelRoute" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100">
+                Back
             </a>
         </div>
 
@@ -288,6 +356,8 @@ const submitForm = (event) => {
             <input type="hidden" name="_token" :value="props.csrfToken">
             <input type="hidden" name="event_key" :value="props.eventKey">
             <input type="hidden" name="source_channel" value="health_module">
+            <input type="hidden" name="form_mode" :value="props.formMode || 'general'">
+            <input v-if="isIncidentTypeLocked" type="hidden" name="incident_type" :value="form.incident_type">
 
             <div class="sr-only" aria-live="polite">
                 {{ dynamicWarningMessage }}
@@ -312,7 +382,7 @@ const submitForm = (event) => {
                     <p v-if="fieldError('cycle_id')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('cycle_id') }}</p>
                 </label>
 
-                <label>
+                <label v-if="!isIncidentTypeLocked">
                     <span class="mb-1.5 block text-sm font-bold text-gray-700">Incident Type *</span>
                     <select v-model="form.incident_type" name="incident_type" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
                         <option value="" disabled>Select type...</option>
@@ -322,6 +392,11 @@ const submitForm = (event) => {
                     </select>
                     <p v-if="fieldError('incident_type')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('incident_type') }}</p>
                 </label>
+
+                <div v-else class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                    <span class="mb-1 block text-sm font-bold text-rose-900">Incident Type</span>
+                    <p class="text-sm font-semibold text-rose-800">Deceased (locked for mortality workflow)</p>
+                </div>
 
                 <label>
                     <span class="mb-1.5 block text-sm font-bold text-gray-700">Date Reported *</span>
@@ -361,7 +436,7 @@ const submitForm = (event) => {
                     </span>
                     <select v-model="form.pig_id" name="pig_id" :required="requiresPigSelection" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
                         <option value="" :disabled="requiresPigSelection">{{ requiresPigSelection ? 'Select pig profile...' : 'No specific pig selected' }}</option>
-                        <option v-for="pig in selectedCyclePigs" :key="pig.id" :value="String(pig.id)">
+                        <option v-for="pig in pigOptions" :key="pig.id" :value="String(pig.id)">
                             Pig #{{ pig.pig_no }} • {{ pig.status }}
                         </option>
                     </select>
@@ -389,16 +464,21 @@ const submitForm = (event) => {
                 </label>
 
                 <label class="sm:col-span-2">
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Incident Photo (optional)</span>
+                    <span class="mb-1.5 block text-sm font-bold text-gray-700">
+                        Incident Evidence
+                        <template v-if="isMediaRequired">*</template>
+                        <template v-else>(optional)</template>
+                    </span>
                     <input
                         ref="mediaFileInput"
                         type="file"
                         name="media"
-                        accept="image/jpeg,image/png,image/webp"
+                        :required="isMediaRequired"
+                        accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi,image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/avi"
                         class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 file:mr-4 file:rounded-lg file:border-0 file:bg-[#0c6d57]/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#0c6d57] hover:file:bg-[#0c6d57]/20 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
                         @change="handleMediaSelection"
                     >
-                    <p class="mt-1.5 text-xs text-gray-500">Accepted formats: JPG, PNG, WEBP. Max file size: 5MB.</p>
+                    <p class="mt-1.5 text-xs text-gray-500">Accepted formats: JPG, PNG, WEBP, MP4, MOV, AVI. Max file size: 25MB.</p>
                     <p v-if="fieldError('media')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('media') }}</p>
                     <p v-else-if="fieldError('media_path')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('media_path') }}</p>
 
@@ -410,7 +490,11 @@ const submitForm = (event) => {
                             </button>
                         </div>
                         <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-2">
-                            <img :src="mediaPreviewUrl" alt="Incident image preview" class="h-64 w-full rounded-lg object-contain">
+                            <img v-if="mediaPreviewKind === 'image'" :src="mediaPreviewUrl" alt="Incident media preview" class="h-64 w-full rounded-lg object-contain">
+                            <video v-else controls class="h-64 w-full rounded-lg bg-black object-contain">
+                                <source :src="mediaPreviewUrl">
+                                Your browser does not support this video preview.
+                            </video>
                         </div>
                     </div>
                 </label>
@@ -428,7 +512,10 @@ const submitForm = (event) => {
                 </div>
 
                 <label class="sm:col-span-2">
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Suspected Cause</span>
+                    <span class="mb-1.5 block text-sm font-bold text-gray-700">
+                        Suspected Cause
+                        <template v-if="isDeceasedIncident">*</template>
+                    </span>
                     <textarea v-model="form.suspected_cause" name="suspected_cause" rows="2" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
                     <p v-if="fieldError('suspected_cause')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('suspected_cause') }}</p>
                 </label>
@@ -450,7 +537,7 @@ const submitForm = (event) => {
                 <button type="submit" :disabled="isSubmitting || clientSideBlocked" class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
                     {{ submitLabel }}
                 </button>
-                <a :href="props.routes.index" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
+                <a :href="cancelRoute" class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto">
                     Cancel
                 </a>
             </div>

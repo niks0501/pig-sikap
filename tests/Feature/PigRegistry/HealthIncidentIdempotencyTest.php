@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Services\PigRegistry\CycleSummaryService;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\seed;
@@ -54,22 +56,32 @@ test('module route retries with same event key do not duplicate incident or oper
     $cycle = makeIdempotencyCycle($president);
     $eventKey = fake()->uuid();
 
+    Storage::fake('public');
+
     $payload = [
         'cycle_id' => $cycle->id,
+        'form_mode' => 'mortality',
         'event_key' => $eventKey,
         'incident_type' => 'deceased',
         'date_reported' => now()->toDateString(),
         'affected_count' => 1,
+        'suspected_cause' => 'Idempotency test mortality cause',
         'source_channel' => 'health_module',
         'remarks' => 'Retried form submission simulation',
     ];
 
     actingAs($president)
-        ->post(route('health.incidents.store'), $payload)
+        ->post(route('health.incidents.store'), [
+            ...$payload,
+            'media' => UploadedFile::fake()->image('idempotent-deceased-1.jpg', 1200, 900),
+        ])
         ->assertRedirect(route('health.cycles.show', $cycle));
 
     actingAs($president)
-        ->post(route('health.incidents.store'), $payload)
+        ->post(route('health.incidents.store'), [
+            ...$payload,
+            'media' => UploadedFile::fake()->image('idempotent-deceased-2.jpg', 1200, 900),
+        ])
         ->assertRedirect(route('health.cycles.show', $cycle));
 
     $cycle->refresh();
@@ -83,6 +95,11 @@ test('module route retries with same event key do not duplicate incident or oper
         'event_key' => $eventKey,
         'incident_type' => 'deceased',
         'source_channel' => 'health_module',
+    ]);
+
+    assertDatabaseHas('audit_trails', [
+        'action' => 'mortality_recorded',
+        'module' => 'health_monitoring',
     ]);
 });
 

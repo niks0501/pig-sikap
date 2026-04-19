@@ -9,8 +9,14 @@
                 <a href="{{ route('health.schedule') }}" class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
                     View Schedule
                 </a>
+                <a href="{{ route('health.mortality') }}" class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition-colors hover:bg-rose-100">
+                    Mortality Log
+                </a>
                 <a href="{{ route('health.create') }}" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48]">
                     Record Incident
+                </a>
+                <a href="{{ route('health.mortality.create') }}" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700">
+                    Record Mortality
                 </a>
             </div>
         </div>
@@ -106,6 +112,9 @@
             @endif
             <a href="{{ route('health.sick') }}" class="inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 transition-colors hover:bg-orange-100">
                 Open Full Sick Log
+            </a>
+            <a href="{{ route('health.mortality') }}" class="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100">
+                Open Mortality Log
             </a>
         </section>
 

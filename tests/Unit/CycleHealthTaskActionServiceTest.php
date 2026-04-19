@@ -111,6 +111,27 @@ test('optional task can be skipped', function () {
     expect($task->status)->toBe('skipped');
 });
 
+test('complete all action caps completed count at current cycle count', function () {
+    $cycle = makeCycleForHealthActionTests([
+        'initial_count' => 10,
+        'current_count' => 8,
+    ]);
+    $actor = User::query()->findOrFail($cycle->created_by);
+    $task = makeTaskForActionTests($cycle, [
+        'target_count' => 10,
+        'remaining_count' => 10,
+    ]);
+
+    app(UpdateCycleHealthTaskService::class)->handle($task, [
+        'action' => 'complete_all',
+        'actual_date' => now()->toDateString(),
+    ], $actor);
+
+    $task->refresh();
+
+    expect($task->completed_count)->toBe(8);
+});
+
 test('cycle health task status labels use corporate style capitalization', function () {
     expect(CycleHealthTask::formatStatusLabel('pending'))->toBe('Pending');
     expect(CycleHealthTask::formatStatusLabel('in_progress'))->toBe('In Progress');

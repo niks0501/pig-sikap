@@ -94,3 +94,41 @@ test('system admin can view activity log context for module changes', function (
     $response->assertJsonPath('data.0.context_json.resolution_target', 'sick');
     $response->assertJsonPath('data.0.reference', 'Cycle HC-101 • Incident #501');
 });
+
+test('system admin can view mortality actions in activity logs', function () {
+    $systemAdminRole = Role::where('slug', 'system_admin')->firstOrFail();
+
+    $admin = User::factory()->create([
+        'role_id' => $systemAdminRole->id,
+        'is_active' => true,
+        'must_change_password' => false,
+        'email_verified_at' => now(),
+    ]);
+
+    AuditTrail::query()->create([
+        'user_id' => $admin->id,
+        'action' => 'mortality_recorded',
+        'module' => 'health_monitoring',
+        'description' => 'Recorded mortality incident for cycle HC-202 affecting 2 pig(s).',
+        'context_json' => [
+            'cycle_id' => 202,
+            'cycle_batch_code' => 'HC-202',
+            'incident_id' => 601,
+            'incident_type' => 'deceased',
+            'incident_category' => 'mortality',
+            'affected_count' => 2,
+        ],
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Pest',
+    ]);
+
+    $response = actingAs($admin)->getJson(route('admin.activity-logs.index', [
+        'action' => 'mortality_recorded',
+    ]));
+
+    $response->assertOk();
+    $response->assertJsonPath('data.0.action', 'mortality_recorded');
+    $response->assertJsonPath('data.0.context_json.incident_type', 'deceased');
+    $response->assertJsonPath('data.0.context_json.incident_category', 'mortality');
+    $response->assertJsonPath('data.0.reference', 'Cycle HC-202 • Incident #601');
+});

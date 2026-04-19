@@ -3,6 +3,7 @@
 use App\Models\PigCycle;
 use App\Models\PigCycleAdjustment;
 use App\Models\CycleHealthTask;
+use App\Models\Pig;
 use App\Models\User;
 use App\Services\PigRegistry\CycleHealthPlanGenerator;
 use App\Services\PigRegistry\CycleHealthSummaryService;
@@ -124,4 +125,36 @@ test('recording deceased incident via orchestrator auto deducts cycle current co
     expect($adjustment)->not->toBeNull();
     expect((string) $adjustment?->reason)->toBe('mortality');
     expect((int) $adjustment?->quantity_after)->toBe(9);
+});
+
+test('recording pig-linked deceased incident synchronizes pig profile status', function () {
+    $cycle = makeCycleForHealthTests([
+        'current_count' => 6,
+        'initial_count' => 6,
+        'has_pig_profiles' => true,
+    ]);
+
+    $actor = User::query()->findOrFail($cycle->created_by);
+
+    $pig = Pig::query()->create([
+        'batch_id' => $cycle->id,
+        'pig_no' => 1,
+        'status' => 'Active',
+        'created_by' => $actor->id,
+    ]);
+
+    app(RecordHealthIncidentWithOperationalImpactService::class)->handle($cycle, [
+        'event_key' => fake()->uuid(),
+        'incident_type' => 'deceased',
+        'date_reported' => now()->toDateString(),
+        'affected_count' => 1,
+        'pig_id' => $pig->id,
+        'remarks' => 'Status sync test',
+    ], $actor);
+
+    $cycle->refresh();
+    $pig->refresh();
+
+    expect($cycle->current_count)->toBe(5);
+    expect($pig->status)->toBe('Deceased');
 });

@@ -8,6 +8,7 @@
                 'show' => route('cycles.show', $cycle),
                 'store' => route('cycles.profiles.store', $cycle),
                 'profilesBase' => route('cycles.profiles.index', $cycle),
+                'mortalityCreate' => route('health.mortality.create'),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

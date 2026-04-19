@@ -18,6 +18,7 @@
                 'statusStore' => route('cycles.status.store', $cycle),
                 'healthIndex' => route('health.index'),
                 'healthCycleTimeline' => route('health.cycles.show', $cycle),
+                'healthMortalityCreate' => route('health.mortality.create', ['cycle_id' => $cycle->id, 'affected_count' => 1]),
             ],
             'csrfToken' => csrf_token(),
             'statusMessage' => session('status'),

@@ -164,9 +164,14 @@ const formatDate = (value) => {
                 <h3 class="text-lg font-bold text-gray-900">Cycle Timeline</h3>
                 <p class="mt-1 text-sm text-gray-500">A single chronological view of scheduled tasks, treatment actions, and incidents.</p>
             </div>
-            <a v-if="!isArchived" :href="props.routes.recordIncident" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/10">
-                Record Incident
-            </a>
+            <div v-if="!isArchived" class="flex flex-wrap gap-2">
+                <a :href="props.routes.recordIncident" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-xs font-bold text-[#0c6d57] hover:bg-[#0c6d57]/10">
+                    Record Incident
+                </a>
+                <a v-if="props.routes.recordMortality" :href="props.routes.recordMortality" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700">
+                    Record Mortality
+                </a>
+            </div>
             <span v-else class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600">
                 Archived cycle: incident recording disabled
             </span>
@@ -192,6 +197,7 @@ const formatDate = (value) => {
                     :cycle-archived="isArchived"
                     :csrf-token="props.csrfToken"
                     :today-date="props.todayDate"
+                    :cycle-current-count="Number(props.cycle.current_count || 0)"
                 />
                 <CycleHealthIncidentList v-else :item="item" />
             </template>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\President;
 use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PigRegistry\StoreCycleHealthIncidentRequest;
+use App\Models\CycleHealthIncident;
 use App\Models\PigCycle;
 use App\Services\PigRegistry\RecordHealthIncidentWithOperationalImpactService;
 use Illuminate\Http\RedirectResponse;
@@ -33,10 +34,15 @@ class PresidentCycleHealthIncidentController extends Controller
             $request->user()
         );
 
+        $normalizedIncidentType = CycleHealthIncident::normalizeIncidentType((string) $incident->incident_type);
+        $isMortalityIncident = $normalizedIncidentType === CycleHealthIncident::INCIDENT_TYPE_DECEASED;
+
         $this->recordAudit(
             $request,
-            'cycle_health_incident_recorded',
-            "Recorded {$incident->incident_type} incident for cycle {$cycle->batch_code} affecting {$incident->affected_count} pig(s).",
+            $isMortalityIncident ? 'mortality_recorded' : 'cycle_health_incident_recorded',
+            $isMortalityIncident
+                ? "Recorded mortality incident for cycle {$cycle->batch_code} affecting {$incident->affected_count} pig(s)."
+                : "Recorded {$incident->incident_type} incident for cycle {$cycle->batch_code} affecting {$incident->affected_count} pig(s).",
             'health_monitoring',
             [
                 'cycle_id' => $cycle->id,
@@ -44,6 +50,7 @@ class PresidentCycleHealthIncidentController extends Controller
                 'incident_id' => $incident->id,
                 'event_key' => $incident->event_key,
                 'incident_type' => $incident->incident_type,
+                'incident_category' => $isMortalityIncident ? 'mortality' : 'health_incident',
                 'affected_count' => (int) $incident->affected_count,
                 'resolution_target' => $incident->resolution_target,
                 'resolved_incident_id' => $incident->resolved_incident_id,

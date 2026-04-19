@@ -93,6 +93,8 @@ const statusHistory = computed(() => {
     return items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 
+const manualAdjustmentReasons = computed(() => props.adjustmentReasons.filter((reason) => reason !== 'mortality'));
+
 const formatDate = (value) => {
     if (!value) {
         return '-';
@@ -168,6 +170,9 @@ const closeStatusDialog = () => {
                     <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-60" @click="openAdjustmentDialog">
                         Adjust Count
                     </button>
+                    <a v-if="!isArchived" :href="props.routes.healthMortalityCreate" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">
+                        Record Mortality
+                    </a>
                     <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2" @click="openStatusDialog">
                         Update Stage / Status
                     </button>
@@ -238,6 +243,9 @@ const closeStatusDialog = () => {
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <a :href="props.routes.healthCycleTimeline || props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
                         Open Health Timeline
+                    </a>
+                    <a v-if="!isArchived" :href="props.routes.healthMortalityCreate" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">
+                        Record Mortality
                     </a>
                     <a :href="props.routes.healthIndex" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-4 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5">
                         Open Health Dashboard
@@ -363,7 +371,10 @@ const closeStatusDialog = () => {
                     <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                         <h3 class="text-base font-bold text-gray-900">Count Adjustments</h3>
                         <p class="mt-2 text-sm text-gray-600">
-                            Use this when transfers, corrections, death, or sales require a current count adjustment.
+                            Use this when transfers, corrections, or sales require a current count adjustment.
+                        </p>
+                        <p class="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">
+                            Mortality adjustments are handled through Health Monitoring incidents.
                         </p>
                         <p v-if="isArchived" class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
                             Cycle is archived and final. Count adjustments are disabled.
@@ -472,7 +483,7 @@ const closeStatusDialog = () => {
                                     <label class="block">
                                         <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Reason</span>
                                         <select name="reason" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
-                                            <option v-for="reason in props.adjustmentReasons" :key="reason" :value="reason">{{ reason }}</option>
+                                            <option v-for="reason in manualAdjustmentReasons" :key="reason" :value="reason">{{ reason }}</option>
                                         </select>
                                     </label>
 

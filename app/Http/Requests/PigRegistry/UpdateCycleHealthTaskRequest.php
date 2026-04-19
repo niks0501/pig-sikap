@@ -51,7 +51,11 @@ class UpdateCycleHealthTaskRequest extends FormRequest
                 $validator->errors()->add('action', 'Only optional tasks may be skipped or marked not applicable.');
             }
 
-            if ($this->filled('completed_count') && (int) $this->input('completed_count') > (int) $task->target_count) {
+            $cycleCurrentCount = (int) ($task->cycle()->value('current_count') ?? 0);
+
+            if ($this->filled('completed_count') && (int) $this->input('completed_count') > $cycleCurrentCount) {
+                $validator->errors()->add('completed_count', 'Completed count cannot be greater than current cycle count.');
+            } elseif ($this->filled('completed_count') && (int) $this->input('completed_count') > (int) $task->target_count) {
                 $validator->errors()->add('completed_count', 'Completed count cannot be greater than target count.');
             }
 
