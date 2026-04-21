@@ -54,6 +54,9 @@ const props = defineProps({
 const isArchived = computed(() => props.cycle.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle.status));
 const isAdjustmentDialogOpen = ref(false);
 const isStatusDialogOpen = ref(false);
+const isArchiveDialogOpen = ref(false);
+const isSubmittingAdjustment = ref(false);
+const isSubmittingStatus = ref(false);
 const automation = computed(() => props.automation ?? {});
 
 const countdown = computed(() => automation.value.countdown ?? {});
@@ -140,6 +143,79 @@ const closeAdjustmentDialog = () => {
 const closeStatusDialog = () => {
     isStatusDialogOpen.value = false;
 };
+
+const openArchiveDialog = () => {
+    if (!isArchived.value) {
+        isArchiveDialogOpen.value = true;
+    }
+};
+
+const closeArchiveDialog = () => {
+    isArchiveDialogOpen.value = false;
+};
+
+const confirmArchive = async () => {
+    // Submit the archive form programmatically
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = props.routes.archive;
+
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = props.csrfToken;
+    form.appendChild(csrfInput);
+
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'PATCH';
+    form.appendChild(methodInput);
+
+    document.body.appendChild(form);
+    form.submit();
+};
+
+const handleAdjustmentSubmit = async (event) => {
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // Store original button content
+    const originalContent = submitBtn.innerHTML;
+
+    // Show loading state
+    isSubmittingAdjustment.value = true;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Saving...
+    `;
+
+    // Allow form to continue submission
+    return true;
+};
+
+const handleStatusSubmit = async (event) => {
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // Show loading state
+    isSubmittingStatus.value = true;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Saving...
+    `;
+
+    // Allow form to continue submission
+    return true;
+};
 </script>
 
 <template>
@@ -158,31 +234,32 @@ const closeStatusDialog = () => {
                 </div>
 
                 <div class="grid gap-2 sm:grid-cols-2 xl:w-auto">
-                    <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                        Back to Cycles
+                    <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50 min-h-[48px]" :class="{'px-3 py-2 text-sm': false}">
+                        <span class="hidden sm:inline">Back to Cycles</span>
+                        <span class="sm:hidden">Back</span>
                     </a>
-                    <a :href="props.routes.profilesIndex" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
-                        Open Profile Manager
+                    <a :href="props.routes.profilesIndex" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50 min-h-[48px]">
+                        <span class="hidden sm:inline">Profile Manager</span>
+                        <span class="sm:hidden">Profiles</span>
                     </a>
-                    <a v-if="!isArchived" :href="props.routes.edit" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10">
-                        Edit Cycle
+                    <a v-if="!isArchived" :href="props.routes.edit" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-4 py-3 text-base font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10 min-h-[48px]">
+                        <span class="hidden sm:inline">Edit Cycle</span>
+                        <span class="sm:hidden">Edit</span>
                     </a>
-                    <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-3 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-60" @click="openAdjustmentDialog">
-                        Adjust Count
+                    <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-4 py-3 text-base font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-60 min-h-[48px]" @click="openAdjustmentDialog">
+                        <span class="hidden sm:inline">Adjust Count</span>
+                        <span class="sm:hidden">Adjust</span>
                     </button>
-                    <a v-if="!isArchived" :href="props.routes.healthMortalityCreate" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">
-                        Record Mortality
+                    <a v-if="!isArchived" :href="props.routes.healthMortalityCreate" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-3 text-base font-semibold text-white transition hover:bg-rose-700 min-h-[48px]">
+                        <span class="hidden sm:inline">Record Mortality</span>
+                        <span class="sm:hidden">Mortality</span>
                     </a>
-                    <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2" @click="openStatusDialog">
+                    <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-3 text-base font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2 min-h-[48px]" @click="openStatusDialog">
                         Update Stage / Status
                     </button>
-                    <form v-if="!isArchived" :action="props.routes.archive" method="POST" class="sm:col-span-2" onsubmit="return confirm('Archive this cycle? Operational editing will be restricted.');">
-                        <input type="hidden" name="_token" :value="props.csrfToken">
-                        <input type="hidden" name="_method" value="PATCH">
-                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900">
-                            Archive / Close
-                        </button>
-                    </form>
+                    <button v-if="!isArchived" type="button" class="inline-flex w-full items-center justify-center rounded-xl bg-gray-800 px-4 py-3 text-base font-semibold text-white transition hover:bg-gray-900 sm:col-span-2 min-h-[48px]" @click="openArchiveDialog">
+                        Archive / Close
+                    </button>
                 </div>
             </div>
         </section>
@@ -191,26 +268,34 @@ const closeStatusDialog = () => {
             {{ props.statusMessage }}
         </div>
 
-        <div v-if="props.errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
-            {{ props.errorMessage }}
+        <div v-if="props.errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
+            <div class="flex items-start gap-3">
+                <svg class="h-5 w-5 flex-shrink-0 text-rose-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="flex-1">
+                    <p class="font-semibold text-rose-800">Error</p>
+                    <p class="mt-1 text-sm text-rose-700">{{ props.errorMessage }}</p>
+                </div>
+            </div>
         </div>
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Expected Sale Date</p>
-                <p class="mt-2 text-base font-bold text-gray-900">{{ formatDate(countdown.expected_ready_for_sale_date) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Expected Sale Date</p>
+                <p class="mt-2 text-base font-semibold text-gray-900">{{ formatDate(countdown.expected_ready_for_sale_date) }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Harvest Month</p>
-                <p class="mt-2 text-base font-bold text-gray-900">{{ countdown.expected_harvest_month || '-' }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Harvest Month</p>
+                <p class="mt-2 text-base font-semibold text-gray-900">{{ countdown.expected_harvest_month || '-' }}</p>
             </article>
             <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Days Since Acquisition</p>
-                <p class="mt-2 text-lg font-bold text-blue-900">{{ countdown.days_since_acquisition ?? '-' }}</p>
+                <p class="mt-2 text-lg font-semibold text-blue-900">{{ countdown.days_since_acquisition ?? '-' }}</p>
             </article>
             <article class="rounded-xl border p-4 shadow-sm" :class="countdown.is_overdue_for_sale_review ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em]" :class="countdown.is_overdue_for_sale_review ? 'text-rose-700' : 'text-emerald-700'">Days Until Ready for Sale</p>
-                <p class="mt-2 text-lg font-bold" :class="countdown.is_overdue_for_sale_review ? 'text-rose-900' : 'text-emerald-900'">{{ countdown.days_until_ready_for_sale ?? '-' }}</p>
+                <p class="mt-2 text-lg font-semibold" :class="countdown.is_overdue_for_sale_review ? 'text-rose-900' : 'text-emerald-900'">{{ countdown.days_until_ready_for_sale ?? '-' }}</p>
             </article>
         </section>
 
@@ -256,45 +341,45 @@ const closeStatusDialog = () => {
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Current Count</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(props.cycle.current_count || 0).toLocaleString() }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Current Count</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(props.cycle.current_count || 0).toLocaleString() }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Initial Count</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(props.cycle.initial_count || 0).toLocaleString() }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Initial Count</p>
+                <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(props.cycle.initial_count || 0).toLocaleString() }}</p>
             </article>
             <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Current Stage</p>
-                <p class="mt-2 text-lg font-bold text-blue-900">{{ props.cycle.stage || '-' }}</p>
+                <p class="mt-2 text-lg font-semibold text-blue-900">{{ props.cycle.stage || '-' }}</p>
             </article>
             <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Current Status</p>
-                <p class="mt-2 text-lg font-bold text-emerald-900">{{ props.cycle.status || '-' }}</p>
+                <p class="mt-2 text-lg font-semibold text-emerald-900">{{ props.cycle.status || '-' }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Last Reviewed</p>
-                <p class="mt-2 text-sm font-bold text-gray-900">{{ formatDateTime(props.cycle.last_reviewed_at) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Last Reviewed</p>
+                <p class="mt-2 text-sm font-semibold text-gray-900">{{ formatDateTime(props.cycle.last_reviewed_at) }}</p>
             </article>
         </section>
 
         <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Total Expenses</p>
-                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_expense) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Total Expenses</p>
+                <p class="mt-2 text-base font-semibold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_expense) }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Total Sales</p>
-                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_sales) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Total Sales</p>
+                <p class="mt-2 text-base font-semibold text-gray-900">{{ formatCurrency(expenseSummary.total_cycle_sales) }}</p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Net Profit / Loss</p>
-                <p class="mt-2 text-base font-bold" :class="Number(profitabilitySummary.net_profit_or_loss || 0) < 0 ? 'text-rose-700' : 'text-emerald-700'">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Net Profit / Loss</p>
+                <p class="mt-2 text-base font-semibold" :class="Number(profitabilitySummary.net_profit_or_loss || 0) < 0 ? 'text-rose-700' : 'text-emerald-700'">
                     {{ formatCurrency(profitabilitySummary.net_profit_or_loss) }}
                 </p>
             </article>
             <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Caretaker Share (50%)</p>
-                <p class="mt-2 text-base font-bold text-gray-900">{{ formatCurrency(profitabilitySummary.caretaker_share) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Caretaker Share (50%)</p>
+                <p class="mt-2 text-base font-semibold text-gray-900">{{ formatCurrency(profitabilitySummary.caretaker_share) }}</p>
             </article>
         </section>
 
@@ -408,9 +493,13 @@ const closeStatusDialog = () => {
                             <p class="mt-1 text-xs text-gray-600">Reason: {{ adjustment.reason }}</p>
                             <p class="mt-1 text-xs text-gray-500">{{ adjustment.created_by?.name || adjustment.created_by_name || adjustment.created_by || 'System' }} - {{ formatDateTime(adjustment.created_at) }}</p>
                         </div>
-                        <p v-if="adjustmentHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
-                            No count adjustments yet.
-                        </p>
+                        <div v-if="adjustmentHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center">
+                            <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-500">No count adjustments yet.</p>
+                            <p class="text-xs text-gray-400 mt-1">Use "Adjust Count" to record changes.</p>
+                        </div>
                     </div>
                 </article>
 
@@ -423,9 +512,13 @@ const closeStatusDialog = () => {
                             <p v-if="history.remarks" class="mt-1 text-xs text-gray-600">{{ history.remarks }}</p>
                             <p class="mt-1 text-xs text-gray-500">{{ history.changed_by?.name || history.changed_by || 'System' }} - {{ formatDateTime(history.created_at) }}</p>
                         </div>
-                        <p v-if="statusHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
-                            No status updates yet.
-                        </p>
+                        <div v-if="statusHistory.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center">
+                            <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-500">No status updates yet.</p>
+                            <p class="text-xs text-gray-400 mt-1">Update status to track cycle progress.</p>
+                        </div>
                     </div>
                 </article>
             </aside>
@@ -464,32 +557,32 @@ const closeStatusDialog = () => {
                                     <input type="hidden" name="_token" :value="props.csrfToken">
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Type</span>
-                                        <select name="adjustment_type" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Type</span>
+                                        <select name="adjustment_type" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                             <option v-for="type in props.adjustmentTypes" :key="type" :value="type">{{ type }}</option>
                                         </select>
                                     </label>
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Quantity Change</span>
-                                        <input type="number" name="quantity_change" required placeholder="Use + or - for correction" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Quantity Change</span>
+                                        <input type="number" name="quantity_change" required placeholder="Use + or - for correction" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                     </label>
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Resulting Count (optional)</span>
-                                        <input type="number" min="0" name="quantity_after" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Resulting Count (optional)</span>
+                                        <input type="number" min="0" name="quantity_after" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                     </label>
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Reason</span>
-                                        <select name="reason" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Reason</span>
+                                        <select name="reason" required class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                             <option v-for="reason in manualAdjustmentReasons" :key="reason" :value="reason">{{ reason }}</option>
                                         </select>
                                     </label>
 
                                     <label class="block sm:col-span-2">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</span>
-                                        <textarea name="remarks" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Remarks</span>
+                                        <textarea name="remarks" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1"></textarea>
                                     </label>
 
                                     <div class="sm:col-span-2 mt-1 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -541,24 +634,24 @@ const closeStatusDialog = () => {
                                     <input type="hidden" name="_token" :value="props.csrfToken">
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">New Stage</span>
-                                        <select name="new_stage" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">New Stage</span>
+                                        <select name="new_stage" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                             <option value="">Keep {{ props.cycle.stage }}</option>
                                             <option v-for="stage in props.stages" :key="stage" :value="stage">{{ stage }}</option>
                                         </select>
                                     </label>
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">New Status</span>
-                                        <select name="new_status" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">New Status</span>
+                                        <select name="new_status" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                             <option value="">Keep {{ props.cycle.status }}</option>
                                             <option v-for="status in props.statuses" :key="status" :value="status">{{ status }}</option>
                                         </select>
                                     </label>
 
                                     <label class="block">
-                                        <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Remarks</span>
-                                        <textarea name="remarks" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"></textarea>
+                                        <span class="mb-1 block text-sm font-medium text-gray-700">Remarks</span>
+                                        <textarea name="remarks" rows="3" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1"></textarea>
                                     </label>
 
                                     <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -570,6 +663,62 @@ const closeStatusDialog = () => {
                                         </button>
                                     </div>
                                 </form>
+                            </DialogPanel>
+                        </TransitionChild>
+                    </div>
+                </div>
+            </Dialog>
+        </TransitionRoot>
+
+        <TransitionRoot as="template" :show="isArchiveDialogOpen">
+            <Dialog as="div" class="relative z-50" @close="closeArchiveDialog">
+                <TransitionChild
+                    as="template"
+                    enter="ease-out duration-300"
+                    enter-from="opacity-0"
+                    enter-to="opacity-100"
+                    leave="ease-in duration-200"
+                    leave-from="opacity-100"
+                    leave-to="opacity-0"
+                >
+                    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                </TransitionChild>
+
+                <div class="fixed inset-0 overflow-y-auto">
+                    <div class="flex min-h-full items-center justify-center p-4">
+                        <TransitionChild
+                            as="template"
+                            enter="ease-out duration-300"
+                            enter-from="opacity-0 scale-95"
+                            enter-to="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leave-from="opacity-100 scale-100"
+                            leave-to="opacity-0 scale-95"
+                        >
+                            <DialogPanel class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                                <DialogTitle class="text-lg font-bold text-gray-900">Archive this cycle?</DialogTitle>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    This action will move <strong>{{ props.cycle.batch_code }}</strong> to the archive.
+                                    Operational editing will be restricted, but you can still view the cycle details.
+                                </p>
+
+                                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <p class="text-sm text-amber-800">Once archived, you won't be able to adjust counts or update status.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                    <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="closeArchiveDialog">
+                                        Cancel
+                                    </button>
+                                    <button type="button" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900" @click="confirmArchive">
+                                        Archive Cycle
+                                    </button>
+                                </div>
                             </DialogPanel>
                         </TransitionChild>
                     </div>

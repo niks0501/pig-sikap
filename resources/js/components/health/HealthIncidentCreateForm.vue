@@ -1,4 +1,11 @@
 <script setup>
+import {
+    Dialog,
+    DialogPanel,
+    DialogTitle,
+    TransitionChild,
+    TransitionRoot,
+} from '@headlessui/vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -73,6 +80,7 @@ const form = ref({
 });
 
 const isSubmitting = ref(false);
+const isConfirmDialogOpen = ref(false);
 const mediaFileInput = ref(null);
 const mediaPreviewUrl = ref('');
 const mediaPreviewObjectUrl = ref('');
@@ -332,13 +340,47 @@ const submitLabel = computed(() => {
     return isMortalityMode.value ? 'Save Mortality Record' : 'Save Incident';
 });
 
+const showConfirmDialog = computed(() => {
+    // Show confirmation for mortality or deceased incidents
+    return isMortalityMode.value || form.value.incident_type === 'deceased';
+});
+
+const confirmMessage = computed(() => {
+    if (isMortalityMode.value || form.value.incident_type === 'deceased') {
+        return `This will record a mortality incident for ${form.value.affected_count || 1} pig(s). The current count will be reduced immediately. This action cannot be undone. Are you sure you want to proceed?`;
+    }
+    return 'Are you sure you want to submit this health incident?';
+});
+
 const submitForm = (event) => {
     if (clientSideBlocked.value || isSubmitting.value) {
         event.preventDefault();
         return;
     }
 
+    // Show confirmation dialog for significant incidents
+    if (showConfirmDialog.value) {
+        event.preventDefault();
+        isConfirmDialogOpen.value = true;
+        return;
+    }
+
     isSubmitting.value = true;
+};
+
+const confirmSubmit = () => {
+    isConfirmDialogOpen.value = false;
+    isSubmitting.value = true;
+
+    // Find and submit the form
+    const formEl = document.querySelector('form[action*="health/incidents"], form[action*="health-module"]');
+    if (formEl) {
+        formEl.submit();
+    }
+};
+
+const cancelConfirm = () => {
+    isConfirmDialogOpen.value = false;
 };
 </script>
 
@@ -373,7 +415,7 @@ const submitForm = (event) => {
             <div class="grid gap-5 sm:grid-cols-2">
                 <label class="sm:col-span-2">
                     <span class="mb-1.5 block text-sm font-bold text-gray-700">Cycle *</span>
-                    <select v-model="form.cycle_id" name="cycle_id" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                    <select v-model="form.cycle_id" name="cycle_id" required class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                         <option value="" disabled>Select cycle...</option>
                         <option v-for="cycle in props.cycles" :key="cycle.id" :value="String(cycle.id)">
                             {{ cycle.batch_code }} • Current {{ Number(cycle.current_count || 0).toLocaleString() }} pigs • Purchased {{ formatPurchaseDate(cycle.date_of_purchase) }}
@@ -542,6 +584,61 @@ const submitForm = (event) => {
                 </a>
             </div>
         </form>
+
+        <TransitionRoot as="template" :show="isConfirmDialogOpen">
+            <Dialog as="div" class="relative z-50" @close="cancelConfirm">
+                <TransitionChild
+                    as="template"
+                    enter="ease-out duration-300"
+                    enter-from="opacity-0"
+                    enter-to="opacity-100"
+                    leave="ease-in duration-200"
+                    leave-from="opacity-100"
+                    leave-to="opacity-0"
+                >
+                    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" />
+                </TransitionChild>
+
+                <div class="fixed inset-0 overflow-y-auto">
+                    <div class="flex min-h-full items-center justify-center p-4">
+                        <TransitionChild
+                            as="template"
+                            enter="ease-out duration-300"
+                            enter-from="opacity-0 scale-95"
+                            enter-to="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leave-from="opacity-100 scale-100"
+                            leave-to="opacity-0 scale-95"
+                        >
+                            <DialogPanel class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+                                <DialogTitle class="text-lg font-bold text-gray-900">Confirm Submission</DialogTitle>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    {{ confirmMessage }}
+                                </p>
+
+                                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <p class="text-sm text-amber-800">This action directly impacts cycle statistics and cannot be reversed.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                    <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="cancelConfirm">
+                                        Cancel
+                                    </button>
+                                    <button type="button" class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-700" @click="confirmSubmit">
+                                        Confirm & Save
+                                    </button>
+                                </div>
+                            </DialogPanel>
+                        </TransitionChild>
+                    </div>
+                </div>
+            </Dialog>
+        </TransitionRoot>
     </section>
 </template>
 

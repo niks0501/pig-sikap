@@ -24,6 +24,7 @@
 /md_files
 /docs
 /plans
+opencode.json
 *.md
 .playwright-cli
 .serena

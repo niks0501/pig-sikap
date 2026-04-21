@@ -5,7 +5,7 @@ import {
     ListboxOption,
     ListboxOptions,
 } from '@headlessui/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
     initialData: {
@@ -122,6 +122,7 @@ let debounceTimer = null;
 
 const fetchCycles = async (page = 1) => {
     loading.value = true;
+    flashError.value = '';
 
     try {
         const response = await window.axios.get(props.routes.index, {
@@ -148,8 +149,10 @@ const fetchCycles = async (page = 1) => {
         meta.last_page = payload.meta?.last_page ?? 1;
         meta.total = payload.meta?.total ?? 0;
         meta.per_page = payload.meta?.per_page ?? 12;
+
+        isInitialLoad.value = false;
     } catch (error) {
-        flashError.value = 'Unable to refresh cycle records right now.';
+        handleError(error);
     } finally {
         loading.value = false;
     }
@@ -248,6 +251,36 @@ const formatDateTime = (value) => {
 };
 
 const countLabel = (current, initial) => `${Number(current || 0).toLocaleString()} / ${Number(initial || 0).toLocaleString()}`;
+
+// Loading states for enhanced UX
+const isInitialLoad = ref(true);
+const isSubmitting = ref(false);
+
+// Skeleton rows for loading state
+const skeletonRows = Array.from({ length: 5 }, (_, i) => i);
+
+// Clear error and retry functionality
+const clearError = () => {
+    flashError.value = '';
+    fetchCycles(1);
+};
+
+const handleError = (error) => {
+    if (error.response?.data?.message) {
+        flashError.value = error.response.data.message;
+    } else if (error.request) {
+        flashError.value = 'Unable to connect. Please check your internet connection and try again.';
+    } else {
+        flashError.value = 'Something went wrong. Please try refreshing the page.';
+    }
+};
+
+// Check if we have actual data on mount
+onMounted(() => {
+    if (props.initialData?.data && props.initialData.data.length > 0) {
+        isInitialLoad.value = false;
+    }
+});
 </script>
 
 <template>
@@ -274,8 +307,19 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
             {{ flashStatus }}
         </div>
 
-        <div v-if="flashError" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
-            {{ flashError }}
+        <div v-if="flashError" class="rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
+            <div class="flex items-start gap-3">
+                <svg class="h-5 w-5 flex-shrink-0 text-rose-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="flex-1">
+                    <p class="font-semibold text-rose-800">Unable to load records</p>
+                    <p class="mt-1 text-sm text-rose-700">{{ flashError }}</p>
+                    <button type="button" @click="clearError" class="mt-2 text-sm font-medium text-rose-600 underline hover:text-rose-700">
+                        Try again
+                    </button>
+                </div>
+            </div>
         </div>
 
         <section class="space-y-3">
@@ -300,55 +344,55 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 
             <div v-if="summaryView === 'operations'" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Active Cycles</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.active_cycles || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Active Cycles</p>
+                    <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(summary.active_cycles || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Piglets</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Piglets</p>
+                    <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(summary.total_piglets || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Fatteners</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Fatteners</p>
+                    <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(summary.total_fatteners || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Currently Sick / Isolated</p>
-                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_currently_affected || summary.total_sick || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-amber-900">{{ Number(summary.total_currently_affected || summary.total_sick || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Deceased Pigs</p>
-                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-rose-900">{{ Number(summary.total_deceased || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Ready For Sale Cycles</p>
-                    <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.ready_for_sale_cycles || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-blue-900">{{ Number(summary.ready_for_sale_cycles || 0).toLocaleString() }}</p>
                 </article>
             </div>
 
             <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <article class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Due Today</p>
-                    <p class="mt-2 text-2xl font-bold text-amber-900">{{ Number(summary.total_health_due_today || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-amber-900">{{ Number(summary.total_health_due_today || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Overdue Tasks</p>
-                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_overdue || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-rose-900">{{ Number(summary.total_health_overdue || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Active Oral Periods</p>
-                    <p class="mt-2 text-2xl font-bold text-blue-900">{{ Number(summary.total_health_active_oral_periods || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-blue-900">{{ Number(summary.total_health_active_oral_periods || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Incident Reports</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900">{{ Number(summary.total_health_incidents || 0).toLocaleString() }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Incident Reports</p>
+                    <p class="mt-2 text-2xl font-semibold text-gray-900">{{ Number(summary.total_health_incidents || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Mortality Reports</p>
-                    <p class="mt-2 text-2xl font-bold text-rose-900">{{ Number(summary.total_health_deceased_reported || summary.total_health_mortality || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-rose-900">{{ Number(summary.total_health_deceased_reported || summary.total_health_mortality || 0).toLocaleString() }}</p>
                 </article>
                 <article class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Recovered Reports</p>
-                    <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(summary.total_health_recovered_reported || 0).toLocaleString() }}</p>
+                    <p class="mt-2 text-2xl font-semibold text-emerald-900">{{ Number(summary.total_health_recovered_reported || 0).toLocaleString() }}</p>
                 </article>
             </div>
         </section>
@@ -366,20 +410,20 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
 
             <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <label class="xl:col-span-2">
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Search</span>
+                    <span class="mb-1 block text-sm font-medium text-gray-700">Search</span>
                     <input
                         v-model="filters.search"
                         type="text"
                         placeholder="Cycle code, caretaker"
-                        class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                        class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1"
                     >
                 </label>
 
-                <div>
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Scope</span>
+<div>
+                    <span class="mb-1 block text-sm font-medium text-gray-700">Scope</span>
                     <Listbox v-model="selectedScope">
                         <div class="relative">
-                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                 {{ selectedScope.label }}
                             </ListboxButton>
                             <ListboxOptions class="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg focus:outline-none">
@@ -394,10 +438,10 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </div>
 
                 <div>
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Stage</span>
+                    <span class="mb-1 block text-sm font-medium text-gray-700">Stage</span>
                     <Listbox v-model="selectedStage">
                         <div class="relative">
-                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                 {{ selectedStage.label }}
                             </ListboxButton>
                             <ListboxOptions class="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg focus:outline-none">
@@ -412,10 +456,10 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </div>
 
                 <div>
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Status</span>
+                    <span class="mb-1 block text-sm font-medium text-gray-700">Status</span>
                     <Listbox v-model="selectedStatus">
                         <div class="relative">
-                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                            <ListboxButton class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-left text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                                 {{ selectedStatus.label }}
                             </ListboxButton>
                             <ListboxOptions class="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg focus:outline-none">
@@ -430,8 +474,8 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 </div>
 
                 <label>
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Caretaker</span>
-                    <select v-model="filters.caretaker" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20">
+                    <span class="mb-1 block text-sm font-medium text-gray-700">Caretaker</span>
+                    <select v-model="filters.caretaker" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:ring-offset-1">
                         <option value="">All caretakers</option>
                         <option v-for="caretaker in props.caretakers" :key="caretaker.id" :value="String(caretaker.id)">
                             {{ caretaker.name }}
@@ -444,7 +488,11 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                 <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60" :disabled="activeFilterCount === 0" @click="resetFilters">
                     Reset Filters
                 </button>
-                <span class="inline-flex items-center rounded-xl bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
+                <span class="inline-flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs font-medium text-gray-600">
+                    <svg v-if="loading" class="h-3 w-3 animate-spin text-[#0c6d57]" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
                     {{ loading ? 'Refreshing records...' : `Showing ${Number(meta.total || 0).toLocaleString()} cycle records` }}
                 </span>
             </div>
@@ -457,18 +505,38 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Cycle</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Date of Purchase</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Count</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Stage / Status</th>
-                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Caretaker</th>
-                                    <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-[0.15em] text-gray-500">Action</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Cycle</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Date of Purchase</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Count</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Stage / Status</th>
+                                    <th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Caretaker</th>
+                                    <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-[0.15em] text-gray-600">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                <tr v-if="loading && cycles.length === 0">
-                                    <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">
-                                        Loading cycle entries...
+                                <!-- Skeleton loading state -->
+                                <tr v-if="loading && isInitialLoad" class="animate-pulse">
+                                    <td class="px-3 py-4 align-top">
+                                        <div class="h-4 w-20 rounded bg-gray-200"></div>
+                                        <div class="mt-2 h-3 w-12 rounded bg-gray-200"></div>
+                                    </td>
+                                    <td class="px-3 py-4 align-top">
+                                        <div class="h-4 w-24 rounded bg-gray-200"></div>
+                                    </td>
+                                    <td class="px-3 py-4 align-top">
+                                        <div class="h-4 w-16 rounded bg-gray-200"></div>
+                                    </td>
+                                    <td class="px-3 py-4 align-top">
+                                        <div class="flex gap-2">
+                                            <div class="h-5 w-16 rounded-full bg-gray-200"></div>
+                                            <div class="mt-2 h-5 w-20 rounded-full bg-gray-200"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-4 align-top">
+                                        <div class="h-4 w-24 rounded bg-gray-200"></div>
+                                    </td>
+                                    <td class="px-3 py-4 text-right align-top">
+                                        <div class="h-6 w-12 rounded bg-gray-200 inline-block"></div>
                                     </td>
                                 </tr>
                                 <tr v-for="cycle in cycles" :key="cycle.batch_code" class="hover:bg-gray-50">
@@ -492,11 +560,22 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                                     </td>
                                 </tr>
                                 <tr v-if="!loading && cycles.length === 0">
-                                    <td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-gray-500">
-                                        <p>No cycle records found for your selected filters.</p>
-                                        <button type="button" class="mt-3 inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
-                                            Clear Filters
-                                        </button>
+                                    <td colspan="6" class="px-4 py-12 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <svg class="h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                            <p class="mt-4 text-base font-semibold text-gray-700">No cycle records found</p>
+                                            <p class="mt-1 text-sm text-gray-500">Try adjusting your filters or create your first cycle to get started.</p>
+                                            <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                                                <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+                                                    Clear Filters
+                                                </button>
+                                                <a :href="props.routes.create" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                                                    Create Your First Cycle
+                                                </a>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -532,12 +611,16 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                             </dl>
                         </article>
 
-                        <p v-if="!loading && cycles.length === 0" class="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm font-medium text-gray-500">
-                            No cycle records found for your selected filters.
-                            <button type="button" class="mt-3 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
+                        <div v-if="!loading && cycles.length === 0" class="rounded-xl border border-gray-200 bg-white p-6 text-center">
+                            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <p class="mt-3 text-sm font-semibold text-gray-700">No cycles found</p>
+                            <p class="mt-1 text-xs text-gray-500">Adjust your filters or add a new cycle.</p>
+                            <button type="button" class="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50" @click="resetFilters">
                                 Clear Filters
                             </button>
-                        </p>
+                        </div>
                     </div>
 
                     <div v-if="hasPagination" class="flex items-center justify-between border-t border-gray-200 px-3 py-2">
@@ -570,9 +653,13 @@ const countLabel = (current, initial) => `${Number(current || 0).toLocaleString(
                         </p>
                     </article>
 
-                    <p v-if="recentUpdates.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center text-sm text-gray-500">
-                        No updates recorded yet.
-                    </p>
+                    <div v-if="recentUpdates.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-center">
+                        <svg class="mx-auto h-8 w-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-500">No updates recorded yet.</p>
+                        <p class="text-xs text-gray-400 mt-1">Recent status changes will appear here.</p>
+                    </div>
                 </div>
             </section>
         </div>
