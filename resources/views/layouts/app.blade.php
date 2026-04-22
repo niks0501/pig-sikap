@@ -18,15 +18,30 @@
         $userId = auth()->id() ?? 'guest';
     @endphp
     <body class="font-sans antialiased text-gray-900 bg-gray-50 h-screen flex overflow-hidden"
-        x-data="{
-            sidebarOpen: (function() {
-                let key = 'sidebarOpen_{{ $userId }}';
-                let stored = localStorage.getItem(key);
-                return stored === null ? false : stored === 'true';
-            })()
+        x-data="{ 
+            sidebarOpen: false,
+            isMobile: window.innerWidth < 768
         }"
-        x-init="$watch('sidebarOpen', value => localStorage.setItem('sidebarOpen_{{ $userId }}', value))"
+        x-init="
+            sidebarOpen = localStorage.getItem('sidebarOpen_{{ $userId }}') === 'true';
+            window.addEventListener('resize', () => { isMobile = window.innerWidth < 768 });
+            $watch('sidebarOpen', value => localStorage.setItem('sidebarOpen_{{ $userId }}', value));
+        "
     >
+        <!-- Mobile Overlay -->
+        <div 
+            x-show="sidebarOpen && isMobile"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="sidebarOpen = false"
+            class="fixed inset-0 bg-black/50 z-40 md:hidden"
+            x-cloak
+        ></div>
+
         <!-- Sidebar -->
         @include('layouts.sidebar')
 

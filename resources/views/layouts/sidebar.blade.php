@@ -1,5 +1,22 @@
 <!-- Sidebar layout navigation -->
-<aside class="hidden md:flex flex-col bg-white border-r border-gray-100 h-screen shrink-0 relative overflow-hidden transition-all duration-300" :class="sidebarOpen ? 'w-64' : 'w-18'">
+<aside 
+    class="flex flex-col bg-white border-r border-gray-100 h-screen shrink-0 relative overflow-hidden transition-all duration-300"
+    :class="[
+        isMobile 
+            ? 'fixed inset-y-0 left-0 z-50 w-64 shadow-xl' 
+            : (sidebarOpen ? 'w-64' : 'w-18')
+    ]"
+    :style="isMobile ? (sidebarOpen ? 'display:flex' : 'display:none') : ''"
+    x-show="isMobile ? sidebarOpen : true"
+    x-cloak
+    x-data="{ isMobile: window.innerWidth < 768 }"
+    x-init="window.addEventListener('resize', () => isMobile = window.innerWidth < 768)"
+>
+    <!-- Mobile Close Button -->
+    <button @click="$parent.sidebarOpen = false" x-show="isMobile" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 md:hidden">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+
     <!-- Logo Section -->
     <div class="flex items-center h-16 border-b border-gray-50 transition-all duration-300" :class="sidebarOpen ? 'px-6 gap-3' : 'justify-center px-2'">
         <div class="bg-emerald-50 p-1.5 rounded-xl text-[#0c6d57] shrink-0">
