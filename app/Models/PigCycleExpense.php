@@ -27,6 +27,7 @@ class PigCycleExpense extends Model
         'amount',
         'expense_date',
         'notes',
+        'receipt_path',
         'created_by',
     ];
 
@@ -46,6 +47,34 @@ class PigCycleExpense extends Model
     public function getTable(): string
     {
         return 'pig_cycle_expenses';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function categoryLabels(): array
+    {
+        return [
+            'acquisition' => 'Acquisition',
+            'feed' => 'Feed',
+            'medicine' => 'Medicine',
+            'transport' => 'Transport',
+            'emergency' => 'Emergency',
+        ];
+    }
+
+    public function categoryLabel(): string
+    {
+        return self::categoryLabels()[$this->category] ?? ucfirst($this->category);
+    }
+
+    public function receiptUrl(): ?string
+    {
+        if (! is_string($this->receipt_path) || $this->receipt_path === '') {
+            return null;
+        }
+
+        return asset('storage/'.$this->receipt_path);
     }
 
     public function cycle(): BelongsTo

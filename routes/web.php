@@ -12,6 +12,7 @@ use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
 use App\Http\Controllers\President\PresidentCycleHealthTaskController;
 use App\Http\Controllers\President\PresidentHealthController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
+use App\Http\Controllers\President\PresidentExpenseController;
 use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -115,12 +116,15 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
     });
 
     // Expense Management Module
-    Route::prefix('expenses')->name('expenses.')->group(function () {
-        Route::get('/', function () { return view('expenses.index'); })->name('index');
-        Route::get('/summary', function () { return view('expenses.summary'); })->name('summary');
-        Route::get('/create', function () { return view('expenses.create'); })->name('create');
-        Route::get('/{expense}', function ($id) { return view('expenses.show', ['id' => $id]); })->name('show');
-        Route::get('/{expense}/edit', function ($id) { return view('expenses.edit', ['id' => $id]); })->name('edit');
+    Route::middleware(['role:president,treasurer,secretary'])->prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [PresidentExpenseController::class, 'index'])->name('index');
+        Route::get('/summary', [PresidentExpenseController::class, 'summary'])->name('summary');
+        Route::get('/create', [PresidentExpenseController::class, 'create'])->name('create');
+        Route::post('/', [PresidentExpenseController::class, 'store'])->name('store');
+        Route::get('/{expense}', [PresidentExpenseController::class, 'show'])->name('show');
+        Route::get('/{expense}/edit', [PresidentExpenseController::class, 'edit'])->name('edit');
+        Route::put('/{expense}', [PresidentExpenseController::class, 'update'])->name('update');
+        Route::delete('/{expense}', [PresidentExpenseController::class, 'destroy'])->name('destroy');
     });
 
     // Profitability & Profit-Sharing Module

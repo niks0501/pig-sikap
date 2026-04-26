@@ -79,6 +79,9 @@ const formatDate = (value) => {
         </div>
     </section>
 
+    <!-- Spacer -->
+    <div class="h-4"></div>
+
     <section class="grid gap-4 sm:grid-cols-2">
         <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Post-Purchase Health Plan</p>
@@ -101,6 +104,9 @@ const formatDate = (value) => {
         </article>
     </section>
 
+    <!-- Spacer -->
+    <div class="h-4"></div>
+
     <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Due Today</p>
@@ -119,6 +125,9 @@ const formatDate = (value) => {
             <p class="mt-2 text-2xl font-bold text-emerald-900">{{ Number(counts.completed_recently || 0).toLocaleString() }}</p>
         </article>
     </section>
+
+    <!-- Spacer -->
+    <div class="h-4"></div>
 
     <section class="grid gap-4 lg:grid-cols-2">
         <article class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
@@ -157,6 +166,9 @@ const formatDate = (value) => {
             </div>
         </article>
     </section>
+
+    <!-- Spacer -->
+    <div class="h-4"></div>
 
     <section class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
