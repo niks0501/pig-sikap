@@ -4,15 +4,20 @@ namespace App\Http\Controllers\President;
 
 use App\Http\Controllers\Concerns\RecordsAuditTrail;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PigRegistry\BulkDeletePigCycleExpenseRequest;
+use App\Http\Requests\PigRegistry\DuplicatePigCycleExpenseRequest;
 use App\Http\Requests\PigRegistry\StorePigCycleExpenseRequest;
 use App\Http\Requests\PigRegistry\UpdatePigCycleExpenseRequest;
 use App\Models\PigCycle;
 use App\Models\PigCycleExpense;
+use App\Services\PigRegistry\BulkDeleteExpenseService;
 use App\Services\PigRegistry\DeletePigCycleExpenseService;
+use App\Services\PigRegistry\DuplicateExpenseService;
 use App\Services\PigRegistry\ExpenseSummaryService;
 use App\Services\PigRegistry\RecordPigCycleExpenseService;
 use App\Services\PigRegistry\UpdatePigCycleExpenseService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -30,6 +35,8 @@ class PresidentExpenseController extends Controller
             'category' => trim((string) $request->query('category', '')),
             'cycle_id' => trim((string) $request->query('cycle_id', '')),
             'month' => trim((string) $request->query('month', '')),
+            'date_from' => trim((string) $request->query('date_from', '')),
+            'date_to' => trim((string) $request->query('date_to', '')),
         ];
 
         $query = PigCycleExpense::query()->with([
@@ -141,6 +148,7 @@ class PresidentExpenseController extends Controller
         $expense->load([
             'cycle:id,batch_code,status,stage',
             'createdBy:id,name',
+            'updatedBy:id,name',
         ]);
 
         return view('expenses.show', [
@@ -179,7 +187,7 @@ class PresidentExpenseController extends Controller
         PigCycleExpense $expense,
         UpdatePigCycleExpenseService $updatePigCycleExpenseService
     ): RedirectResponse {
-        $updatedExpense = $updatePigCycleExpenseService->handle($expense, $request->validated());
+        $updatedExpense = $updatePigCycleExpenseService->handle($expense, $request->validated(), $request->user());
 
         $this->recordAudit(
             $request,
@@ -237,6 +245,82 @@ class PresidentExpenseController extends Controller
             ->with('status', 'Expense record deleted successfully.');
     }
 
+    public function duplicate(
+        DuplicatePigCycleExpenseRequest $request,
+        PigCycleExpense $expense,
+        DuplicateExpenseService $duplicateExpenseService
+    ): RedirectResponse|JsonResponse {
+        $newExpense = $duplicateExpenseService->handle(
+            $expense,
+            $request->validated(),
+            $request->user()
+        );
+
+        $this->recordAudit(
+            $request,
+            'expense_duplicated',
+            "Duplicated expense entry #{$expense->id} to #{$newExpense->id}.",
+            'expense_management',
+            [
+                'original_expense_id' => $expense->id,
+                'new_expense_id' => $newExpense->id,
+                'cycle_id' => $newExpense->batch_id,
+                'category' => $newExpense->category,
+                'amount' => (float) $newExpense->amount,
+            ]
+        );
+
+        $redirectUrl = route('expenses.show', $newExpense);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Expense record duplicated successfully.',
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        return redirect($redirectUrl)->with('status', 'Expense record duplicated successfully.');
+    }
+
+    public function bulkDelete(
+        BulkDeletePigCycleExpenseRequest $request,
+        BulkDeleteExpenseService $bulkDeleteExpenseService
+    ): RedirectResponse|JsonResponse {
+        $ids = $request->validated('ids');
+
+        $expenses = PigCycleExpense::query()
+            ->whereIn('id', $ids)
+            ->get();
+
+        try {
+            $deletedCount = $bulkDeleteExpenseService->handle($expenses);
+        } catch (ValidationException $exception) {
+            return back()->withErrors($exception->errors());
+        }
+
+        $this->recordAudit(
+            $request,
+            'expense_bulk_deleted',
+            "Bulk deleted {$deletedCount} expense record(s).",
+            'expense_management',
+            [
+                'deleted_count' => $deletedCount,
+                'expense_ids' => $ids,
+            ]
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => "{$deletedCount} expense record(s) deleted successfully.",
+                'redirect_url' => route('expenses.index'),
+            ]);
+        }
+
+        return redirect()
+            ->route('expenses.index')
+            ->with('status', "{$deletedCount} expense record(s) deleted successfully.");
+    }
+
     /**
      * @param  array<string, string>  $filters
      */
@@ -275,6 +359,14 @@ class PresidentExpenseController extends Controller
             } catch (\Throwable) {
                 // Ignore invalid month filter values.
             }
+        }
+
+        if ($filters['date_from'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_from']) === 1) {
+            $query->whereDate('expense_date', '>=', $filters['date_from']);
+        }
+
+        if ($filters['date_to'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_to']) === 1) {
+            $query->whereDate('expense_date', '<=', $filters['date_to']);
         }
     }
 

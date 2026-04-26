@@ -24,24 +24,38 @@ import PigCyclePigs from './components/pig-registry/PigCyclePigs.vue';
 import PigCycleShow from './components/pig-registry/PigCycleShow.vue';
 import PigBreederRegistry from './components/pig-registry/PigBreederRegistry.vue';
 import PigRegistryIndex from './components/pig-registry/PigRegistryIndex.vue';
+import ExpenseList from './components/expenses/ExpenseList.vue';
+import ExpenseForm from './components/expenses/ExpenseForm.vue';
+import ExpenseDetail from './components/expenses/ExpenseDetail.vue';
+import ExpenseFilters from './components/expenses/ExpenseFilters.vue';
+import ExpenseSummaryCards from './components/expenses/ExpenseSummaryCards.vue';
+import ExpenseTableRow from './components/expenses/ExpenseTableRow.vue';
+import ReceiptUpload from './components/expenses/ReceiptUpload.vue';
 
 const componentRegistry = {
-    'audit-trail-list': AuditTrailList,
-    'admin-dashboard': AdminDashboard,
-    'admin-user-management': AdminUserManagement,
-    'admin-role-management': AdminRoleManagement,
-    'admin-activity-logs': AdminActivityLogs,
-    'admin-profile': AdminProfile,
-    'force-password-change': ForcePasswordChangeForm,
-    'cycle-health-panel': CycleHealthPanel,
-    'health-incident-create-form': HealthIncidentCreateForm,
-    'pig-registry-index': PigRegistryIndex,
-    'pig-cycle-create': PigCycleCreate,
-    'pig-cycle-edit': PigCycleEdit,
-    'pig-cycle-show': PigCycleShow,
-    'pig-cycle-archived': PigCycleArchived,
-    'pig-cycle-pigs': PigCyclePigs,
-    'pig-breeder-registry': PigBreederRegistry,
+  'audit-trail-list': AuditTrailList,
+  'admin-dashboard': AdminDashboard,
+  'admin-user-management': AdminUserManagement,
+  'admin-role-management': AdminRoleManagement,
+  'admin-activity-logs': AdminActivityLogs,
+  'admin-profile': AdminProfile,
+  'force-password-change': ForcePasswordChangeForm,
+  'cycle-health-panel': CycleHealthPanel,
+  'health-incident-create-form': HealthIncidentCreateForm,
+  'pig-registry-index': PigRegistryIndex,
+  'pig-cycle-create': PigCycleCreate,
+  'pig-cycle-edit': PigCycleEdit,
+  'pig-cycle-show': PigCycleShow,
+  'pig-cycle-archived': PigCycleArchived,
+  'pig-cycle-pigs': PigCyclePigs,
+  'pig-breeder-registry': PigBreederRegistry,
+  'expense-list': ExpenseList,
+  'expense-form': ExpenseForm,
+  'expense-detail': ExpenseDetail,
+  'expense-filters': ExpenseFilters,
+  'expense-summary-cards': ExpenseSummaryCards,
+  'expense-table-row': ExpenseTableRow,
+  'receipt-upload': ReceiptUpload,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

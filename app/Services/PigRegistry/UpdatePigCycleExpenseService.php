@@ -4,6 +4,7 @@ namespace App\Services\PigRegistry;
 
 use App\Models\PigCycle;
 use App\Models\PigCycleExpense;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -13,15 +14,15 @@ use Throwable;
 class UpdatePigCycleExpenseService
 {
     /**
-     * @param  array<string, mixed>  $payload
+     * @param array<string, mixed> $payload
      */
-    public function handle(PigCycleExpense $expense, array $payload): PigCycleExpense
+    public function handle(PigCycleExpense $expense, array $payload, User $actor): PigCycleExpense
     {
         $newReceiptPath = null;
         $oldReceiptPathToDelete = null;
 
         try {
-            $updatedExpense = DB::transaction(function () use ($expense, $payload, &$newReceiptPath, &$oldReceiptPathToDelete): PigCycleExpense {
+            $updatedExpense = DB::transaction(function () use ($expense, $payload, $actor, &$newReceiptPath, &$oldReceiptPathToDelete): PigCycleExpense {
                 $lockedExpense = PigCycleExpense::query()
                     ->whereKey($expense->id)
                     ->lockForUpdate()
@@ -57,9 +58,10 @@ class UpdatePigCycleExpenseService
                     'expense_date' => (string) $payload['expense_date'],
                     'notes' => (string) $payload['notes'],
                     'receipt_path' => $receiptPath,
+                    'updated_by' => $actor->id,
                 ]);
 
-                return $lockedExpense->fresh(['cycle:id,batch_code,status,stage', 'createdBy:id,name']);
+                return $lockedExpense->fresh(['cycle:id,batch_code,status,stage', 'createdBy:id,name', 'updatedBy:id,name']);
             });
 
             if (is_string($oldReceiptPathToDelete) && $oldReceiptPathToDelete !== '') {

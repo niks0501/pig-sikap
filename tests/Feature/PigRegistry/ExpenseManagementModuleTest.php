@@ -170,6 +170,7 @@ test('authorized users can update expense and only president can delete', functi
         'id' => $expense->id,
         'category' => 'transport',
         'notes' => 'Updated transport details',
+        'updated_by' => $secretary->id,
     ]);
 
     actingAs($treasurer)
@@ -182,6 +183,7 @@ test('authorized users can update expense and only president can delete', functi
 
     assertDatabaseMissing('pig_cycle_expenses', [
         'id' => $expense->id,
+        'deleted_at' => null,
     ]);
 
     assertDatabaseHas('audit_trails', [
@@ -189,6 +191,102 @@ test('authorized users can update expense and only president can delete', functi
         'module' => 'expense_management',
         'user_id' => $president->id,
     ]);
+});
+
+test('authorized users can duplicate expenses with a valid non-future date', function () {
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    $expense = PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 900,
+        'expense_date' => now()->subDay()->toDateString(),
+        'notes' => 'Recurring feed purchase',
+        'created_by' => $treasurer->id,
+    ]);
+
+    actingAs($treasurer)
+        ->postJson(route('expenses.duplicate', $expense), [
+            'expense_date' => now()->toDateString(),
+        ])
+        ->assertOk()
+        ->assertJsonStructure(['message', 'redirect_url']);
+
+    $duplicatedExpense = PigCycleExpense::query()
+        ->where('id', '!=', $expense->id)
+        ->firstOrFail();
+
+    expect($duplicatedExpense->expense_date?->toDateString())->toBe(now()->toDateString());
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'id' => $duplicatedExpense->id,
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 900,
+        'notes' => 'Recurring feed purchase',
+        'created_by' => $treasurer->id,
+        'updated_by' => $treasurer->id,
+    ]);
+
+    actingAs($treasurer)
+        ->postJson(route('expenses.duplicate', $expense), [
+            'expense_date' => now()->addDay()->toDateString(),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['expense_date']);
+});
+
+test('bulk delete is president only and soft deletes selected expenses', function () {
+    $president = expenseUser('president');
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($president);
+
+    $expenses = collect([
+        PigCycleExpense::query()->create([
+            'batch_id' => $cycle->id,
+            'category' => 'feed',
+            'amount' => 400,
+            'expense_date' => now()->toDateString(),
+            'notes' => 'Bulk feed expense',
+            'created_by' => $president->id,
+        ]),
+        PigCycleExpense::query()->create([
+            'batch_id' => $cycle->id,
+            'category' => 'transport',
+            'amount' => 150,
+            'expense_date' => now()->toDateString(),
+            'notes' => 'Bulk transport expense',
+            'created_by' => $president->id,
+        ]),
+    ]);
+
+    actingAs($treasurer)
+        ->postJson(route('expenses.bulk-delete'), [
+            'ids' => $expenses->pluck('id')->all(),
+        ])
+        ->assertForbidden();
+
+    foreach ($expenses as $expense) {
+        assertDatabaseHas('pig_cycle_expenses', [
+            'id' => $expense->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    actingAs($president)
+        ->postJson(route('expenses.bulk-delete'), [
+            'ids' => $expenses->pluck('id')->all(),
+        ])
+        ->assertOk()
+        ->assertJsonPath('message', '2 expense record(s) deleted successfully.');
+
+    foreach ($expenses as $expense) {
+        assertDatabaseMissing('pig_cycle_expenses', [
+            'id' => $expense->id,
+            'deleted_at' => null,
+        ]);
+    }
 });
 
 test('summary page shows computed totals for selected scope', function () {

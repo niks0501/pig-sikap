@@ -125,6 +125,8 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         Route::get('/{expense}/edit', [PresidentExpenseController::class, 'edit'])->name('edit');
         Route::put('/{expense}', [PresidentExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [PresidentExpenseController::class, 'destroy'])->name('destroy');
+        Route::post('/{expense}/duplicate', [PresidentExpenseController::class, 'duplicate'])->name('duplicate');
+        Route::post('/bulk-delete', [PresidentExpenseController::class, 'bulkDelete'])->name('bulk-delete');
     });
 
     // Profitability & Profit-Sharing Module
