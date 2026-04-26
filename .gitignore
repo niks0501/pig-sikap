@@ -24,6 +24,7 @@
 /md_files
 /docs
 /plans
+.playwright-mcp
 opencode.json
 *.md
 .playwright-cli

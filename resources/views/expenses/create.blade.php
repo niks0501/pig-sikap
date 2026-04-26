@@ -23,13 +23,19 @@
             'categories' => array_keys($categoryOptions),
             'selectedCycleId' => (int) $selectedCycleId,
             'formMode' => 'create',
+            'preferences' => $preferences,
+            'recentTemplates' => $recentTemplates,
             'routes' => [
                 'store' => route('expenses.store'),
                 'index' => route('expenses.index'),
+                'preferences' => route('expenses.preferences'),
+                'preferencesUpdate' => route('expenses.preferences.update'),
+                'recentTemplates' => route('expenses.recent-templates'),
             ],
             'csrfToken' => csrf_token(),
             'oldInput' => old(),
             'errors' => $errors->toArray(),
+            'flashStatus' => session('status'),
         ]) }}"
     ></div>
 </div>

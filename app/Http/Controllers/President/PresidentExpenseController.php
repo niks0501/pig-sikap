@@ -7,13 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PigRegistry\BulkDeletePigCycleExpenseRequest;
 use App\Http\Requests\PigRegistry\DuplicatePigCycleExpenseRequest;
 use App\Http\Requests\PigRegistry\StorePigCycleExpenseRequest;
+use App\Http\Requests\PigRegistry\UpdateExpensePreferenceRequest;
 use App\Http\Requests\PigRegistry\UpdatePigCycleExpenseRequest;
 use App\Models\PigCycle;
 use App\Models\PigCycleExpense;
 use App\Services\PigRegistry\BulkDeleteExpenseService;
 use App\Services\PigRegistry\DeletePigCycleExpenseService;
 use App\Services\PigRegistry\DuplicateExpenseService;
+use App\Services\PigRegistry\ExpensePreferenceService;
 use App\Services\PigRegistry\ExpenseSummaryService;
+use App\Services\PigRegistry\RecentExpenseTemplateService;
 use App\Services\PigRegistry\RecordPigCycleExpenseService;
 use App\Services\PigRegistry\UpdatePigCycleExpenseService;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,6 +56,9 @@ class PresidentExpenseController extends Controller
             ->withQueryString();
 
         $summary = $expenseSummaryService->buildFromQuery(clone $query);
+        $summary['month_over_month'] = $expenseSummaryService->buildMonthComparison(
+            $filters['cycle_id'] !== '' && ctype_digit($filters['cycle_id']) ? (int) $filters['cycle_id'] : null
+        );
 
         return view('expenses.index', [
             'expenses' => $expenses,
@@ -91,6 +97,9 @@ class PresidentExpenseController extends Controller
         }
 
         $summary = $expenseSummaryService->buildFromQuery(clone $query);
+        $summary['month_over_month'] = $expenseSummaryService->buildMonthComparison(
+            $cycleId !== '' && ctype_digit($cycleId) ? (int) $cycleId : null
+        );
 
         $recentExpenses = (clone $query)
             ->latest('expense_date')
@@ -108,22 +117,34 @@ class PresidentExpenseController extends Controller
         ]);
     }
 
-    public function create(Request $request): View
-    {
+    public function create(
+        Request $request,
+        ExpensePreferenceService $expensePreferenceService,
+        RecentExpenseTemplateService $recentExpenseTemplateService
+    ): View {
         $selectedCycle = trim((string) $request->query('cycle_id', ''));
+        $preferences = $expensePreferenceService->defaultsFor($request->user());
+
+        if ($selectedCycle === '' && ($preferences['last_cycle_id'] ?? 0) > 0) {
+            $selectedCycle = (string) $preferences['last_cycle_id'];
+        }
 
         return view('expenses.create', [
             'categoryOptions' => $this->categoryOptions(),
             'cycles' => PigCycle::query()->activeRecords()->orderByDesc('updated_at')->get(['id', 'batch_code', 'status', 'stage']),
             'selectedCycleId' => $selectedCycle,
+            'preferences' => $preferences,
+            'recentTemplates' => $recentExpenseTemplateService->forUser($request->user()),
         ]);
     }
 
     public function store(
         StorePigCycleExpenseRequest $request,
-        RecordPigCycleExpenseService $recordPigCycleExpenseService
-    ): RedirectResponse {
+        RecordPigCycleExpenseService $recordPigCycleExpenseService,
+        ExpensePreferenceService $expensePreferenceService
+    ): RedirectResponse|JsonResponse {
         $expense = $recordPigCycleExpenseService->handle($request->validated(), $request->user());
+        $preferences = $expensePreferenceService->rememberExpense($request->user(), $expense);
 
         $this->recordAudit(
             $request,
@@ -137,6 +158,31 @@ class PresidentExpenseController extends Controller
                 'amount' => (float) $expense->amount,
             ]
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Expense record saved successfully.',
+                'expense' => [
+                    'id' => $expense->id,
+                    'batch_id' => $expense->batch_id,
+                    'category' => $expense->category,
+                    'amount' => (float) $expense->amount,
+                    'expense_date' => $expense->expense_date?->toDateString(),
+                    'notes' => $expense->notes,
+                    'receipt_url' => $expense->receiptUrl(),
+                    'cycle' => $expense->cycle,
+                    'created_by_name' => $expense->createdBy?->name,
+                ],
+                'preferences' => $preferences,
+                'redirect_url' => route('expenses.show', $expense),
+            ], 201);
+        }
+
+        if ($request->boolean('add_another')) {
+            return redirect()
+                ->route('expenses.create', ['cycle_id' => $expense->batch_id])
+                ->with('status', 'Expense record saved. You can add another entry.');
+        }
 
         return redirect()
             ->route('expenses.show', $expense)
@@ -319,6 +365,31 @@ class PresidentExpenseController extends Controller
         return redirect()
             ->route('expenses.index')
             ->with('status', "{$deletedCount} expense record(s) deleted successfully.");
+    }
+
+    public function preferences(Request $request, ExpensePreferenceService $expensePreferenceService): JsonResponse
+    {
+        return response()->json([
+            'preferences' => $expensePreferenceService->defaultsFor($request->user()),
+        ]);
+    }
+
+    public function updatePreferences(
+        UpdateExpensePreferenceRequest $request,
+        ExpensePreferenceService $expensePreferenceService
+    ): JsonResponse {
+        return response()->json([
+            'preferences' => $expensePreferenceService->update($request->user(), $request->validated()),
+        ]);
+    }
+
+    public function recentTemplates(
+        Request $request,
+        RecentExpenseTemplateService $recentExpenseTemplateService
+    ): JsonResponse {
+        return response()->json([
+            'templates' => $recentExpenseTemplateService->forUser($request->user()),
+        ]);
     }
 
     /**

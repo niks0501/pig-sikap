@@ -120,13 +120,16 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         Route::get('/', [PresidentExpenseController::class, 'index'])->name('index');
         Route::get('/summary', [PresidentExpenseController::class, 'summary'])->name('summary');
         Route::get('/create', [PresidentExpenseController::class, 'create'])->name('create');
+        Route::get('/preferences', [PresidentExpenseController::class, 'preferences'])->name('preferences');
+        Route::put('/preferences', [PresidentExpenseController::class, 'updatePreferences'])->name('preferences.update');
+        Route::get('/recent-templates', [PresidentExpenseController::class, 'recentTemplates'])->name('recent-templates');
+        Route::post('/bulk-delete', [PresidentExpenseController::class, 'bulkDelete'])->name('bulk-delete');
         Route::post('/', [PresidentExpenseController::class, 'store'])->name('store');
         Route::get('/{expense}', [PresidentExpenseController::class, 'show'])->name('show');
         Route::get('/{expense}/edit', [PresidentExpenseController::class, 'edit'])->name('edit');
         Route::put('/{expense}', [PresidentExpenseController::class, 'update'])->name('update');
         Route::delete('/{expense}', [PresidentExpenseController::class, 'destroy'])->name('destroy');
         Route::post('/{expense}/duplicate', [PresidentExpenseController::class, 'duplicate'])->name('duplicate');
-        Route::post('/bulk-delete', [PresidentExpenseController::class, 'bulkDelete'])->name('bulk-delete');
     });
 
     // Profitability & Profit-Sharing Module
@@ -134,7 +137,7 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         Route::get('/', function () { return view('profitability.index'); })->name('index');
         Route::get('/cycle/{id}', function ($id) { return view('profitability.show', ['id' => $id]); })->name('show');
     });
-    
+
     Route::get('/profit-sharing/{id}', function ($id) { return view('profitability.sharing', ['id' => $id]); })->name('profit-sharing');
 
     // Meeting Resolutions and Withdrawal Documentation Module

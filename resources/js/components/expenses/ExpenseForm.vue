@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue';
+import ToastNotification from '../common/ToastNotification.vue';
 import ReceiptUpload from './ReceiptUpload.vue';
 
 const props = defineProps({
@@ -23,6 +24,18 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    preferences: {
+        type: Object,
+        default: () => ({
+            last_category: '',
+            last_cycle_id: 0,
+            preset_amounts: [100, 500, 1000, 2000],
+        }),
+    },
+    recentTemplates: {
+        type: Array,
+        default: () => [],
+    },
     routes: {
         type: Object,
         required: true,
@@ -39,16 +52,37 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    flashStatus: {
+        type: String,
+        default: '',
+    },
 });
 
 const emit = defineEmits(['form-submitted']);
 
 const isSubmitting = ref(false);
-const selectedReceipt = ref(null);
 const removeReceipt = ref(false);
+const submitIntent = ref('save');
+const cycleSearch = ref('');
+const receiptVisible = ref(props.formMode === 'edit' && Boolean(props.expense?.receipt_url));
+const receiptKey = ref(0);
+const templates = ref([...props.recentTemplates]);
+const localErrors = reactive({});
+const lastSavedUrl = ref('');
+const toast = reactive({
+    show: Boolean(props.flashStatus),
+    type: 'success',
+    title: props.flashStatus ? 'Saved' : '',
+    message: props.flashStatus || '',
+    actionLabel: '',
+});
+
+const today = computed(() => new Date().toISOString().split('T')[0]);
+const isEditMode = computed(() => props.formMode === 'edit');
+const isCreateMode = computed(() => props.formMode === 'create');
 
 const initialSelectedCycleId = computed(() => {
-    const selectedId = Number(props.selectedCycleId || 0);
+    const selectedId = Number(props.selectedCycleId || props.preferences.last_cycle_id || 0);
 
     return Number.isInteger(selectedId) && selectedId > 0 ? String(selectedId) : '';
 });
@@ -67,14 +101,34 @@ const initialBatchId = computed(() => {
 
 const form = reactive({
     batch_id: initialBatchId.value,
-    category: String(props.oldInput.category ?? props.expense?.category ?? ''),
+    category: String(props.oldInput.category ?? props.expense?.category ?? props.preferences.last_category ?? ''),
     amount: String(props.oldInput.amount ?? props.expense?.amount ?? ''),
-    expense_date: String(props.oldInput.expense_date ?? props.expense?.expense_date ?? ''),
+    expense_date: String(props.oldInput.expense_date ?? props.expense?.expense_date ?? today.value),
     notes: String(props.oldInput.notes ?? props.expense?.notes ?? ''),
 });
 
-const isEditMode = computed(() => props.formMode === 'edit');
-const isCreateMode = computed(() => props.formMode === 'create');
+const filteredCycles = computed(() => {
+    const search = cycleSearch.value.trim().toLowerCase();
+
+    if (search === '') {
+        return props.cycles;
+    }
+
+    return props.cycles.filter((cycle) => {
+        return String(cycle.batch_code || '').toLowerCase().includes(search);
+    });
+});
+
+const presetAmounts = computed(() => {
+    const amounts = Array.isArray(props.preferences.preset_amounts)
+        ? props.preferences.preset_amounts
+        : [100, 500, 1000, 2000];
+
+    return amounts
+        .map((amount) => Number(amount))
+        .filter((amount) => Number.isFinite(amount) && amount > 0)
+        .slice(0, 6);
+});
 
 const selectedCycle = computed(() => {
     const cycleId = Number(form.batch_id || 0);
@@ -86,44 +140,18 @@ const selectedCycle = computed(() => {
     return props.cycles.find((cycle) => Number(cycle.id) === cycleId) ?? null;
 });
 
-const selectedCycleArchived = computed(() => {
-    return selectedCycle.value?.isArchived ?? false;
-});
+const selectedCycleArchived = computed(() => selectedCycle.value?.isArchived ?? false);
+
+const validations = computed(() => ({
+    batch_id: Number(form.batch_id || 0) > 0 && !selectedCycleArchived.value,
+    category: form.category !== '',
+    amount: Number(form.amount) > 0,
+    expense_date: form.expense_date !== '' && form.expense_date <= today.value,
+    notes: form.notes.trim().length > 0,
+}));
 
 const clientSideBlocked = computed(() => {
-    const cycleId = Number(form.batch_id || 0);
-
-    if (!Number.isInteger(cycleId) || cycleId < 1) {
-        return true;
-    }
-
-    if (form.category === '') {
-        return true;
-    }
-
-    const amount = parseFloat(form.amount);
-
-    if (isNaN(amount) || amount <= 0) {
-        return true;
-    }
-
-    if (form.expense_date === '') {
-        return true;
-    }
-
-    if (form.expense_date > today.value) {
-        return true;
-    }
-
-    if (form.notes.trim() === '') {
-        return true;
-    }
-
-    if (selectedCycleArchived.value) {
-        return true;
-    }
-
-    return false;
+    return !Object.values(validations.value).every(Boolean);
 });
 
 const clientSideBlockMessage = computed(() => {
@@ -131,31 +159,25 @@ const clientSideBlockMessage = computed(() => {
         return 'Cannot save expense: selected cycle is archived.';
     }
 
-    const cycleId = Number(form.batch_id || 0);
-
-    if (!Number.isInteger(cycleId) || cycleId < 1) {
+    if (!validations.value.batch_id) {
         return 'Select a cycle before submitting.';
     }
 
-    if (form.category === '') {
+    if (!validations.value.category) {
         return 'Select a category before submitting.';
     }
 
-    const amount = parseFloat(form.amount);
-
-    if (isNaN(amount) || amount <= 0) {
+    if (!validations.value.amount) {
         return 'Enter a valid amount greater than zero.';
     }
 
-    if (form.expense_date === '') {
-        return 'Select an expense date before submitting.';
+    if (!validations.value.expense_date) {
+        return form.expense_date > today.value
+            ? 'Expense date cannot be in the future.'
+            : 'Select an expense date before submitting.';
     }
 
-    if (form.expense_date > today.value) {
-        return 'Expense date cannot be in the future.';
-    }
-
-    if (form.notes.trim() === '') {
+    if (!validations.value.notes) {
         return 'Enter notes before submitting.';
     }
 
@@ -163,7 +185,8 @@ const clientSideBlockMessage = computed(() => {
 });
 
 const fieldError = (field) => {
-    const value = props.errors?.[field];
+    const localValue = localErrors?.[field];
+    const value = localValue ?? props.errors?.[field];
 
     if (Array.isArray(value)) {
         return value[0] || '';
@@ -172,14 +195,34 @@ const fieldError = (field) => {
     return typeof value === 'string' ? value : '';
 };
 
-const handleReceiptSelected = (file) => {
-    selectedReceipt.value = file;
+const fieldReady = (field) => {
+    return validations.value[field] && !fieldError(field);
+};
+
+const clearLocalErrors = () => {
+    Object.keys(localErrors).forEach((key) => {
+        delete localErrors[key];
+    });
+};
+
+const handleReceiptSelected = () => {
     removeReceipt.value = false;
 };
 
 const handleReceiptRemoved = (removeExisting = false) => {
-    selectedReceipt.value = null;
     removeReceipt.value = Boolean(removeExisting);
+};
+
+const formatAmount = (amount) => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        maximumFractionDigits: Number(amount) % 1 === 0 ? 0 : 2,
+    }).format(Number(amount || 0));
+};
+
+const formatCategoryLabel = (category) => {
+    return category?.charAt(0).toUpperCase() + category?.slice(1) || '';
 };
 
 const submitLabel = computed(() => {
@@ -190,15 +233,6 @@ const submitLabel = computed(() => {
     return isEditMode.value ? 'Update Expense' : 'Save Expense';
 });
 
-const submitForm = (event) => {
-    if (clientSideBlocked.value || isSubmitting.value) {
-        event.preventDefault();
-        return;
-    }
-
-    isSubmitting.value = true;
-};
-
 const cancelRoute = computed(() => {
     if (isEditMode.value && props.expense?.id) {
         return props.routes.show?.replace('_ID_', props.expense.id) || props.routes.index;
@@ -207,17 +241,141 @@ const cancelRoute = computed(() => {
     return props.routes.index;
 });
 
-const today = computed(() => {
-    return new Date().toISOString().split('T')[0];
-});
+const applyPresetAmount = (amount) => {
+    form.amount = String(amount);
+};
 
-const formatCategoryLabel = (category) => {
-    return category.charAt(0).toUpperCase() + category.slice(1);
+const applyTemplate = (template) => {
+    form.batch_id = String(template.batch_id || form.batch_id || '');
+    form.category = String(template.category || '');
+    form.amount = String(template.amount || '');
+    form.notes = String(template.notes || '');
+    form.expense_date = today.value;
+};
+
+const resetForAnother = (preferences = {}) => {
+    form.batch_id = String(preferences.last_cycle_id || form.batch_id || '');
+    form.category = String(preferences.last_category || form.category || '');
+    form.amount = '';
+    form.expense_date = today.value;
+    form.notes = '';
+    removeReceipt.value = false;
+    receiptVisible.value = false;
+    receiptKey.value += 1;
+};
+
+const showToast = (type, title, message, actionLabel = '') => {
+    toast.type = type;
+    toast.title = title;
+    toast.message = message;
+    toast.actionLabel = actionLabel;
+    toast.show = true;
+};
+
+const refreshTemplates = async () => {
+    if (!props.routes.recentTemplates) {
+        return;
+    }
+
+    try {
+        const response = await fetch(props.routes.recentTemplates, {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            templates.value = Array.isArray(data.templates) ? data.templates : templates.value;
+        }
+    } catch (error) {
+        // The form still works without templates when the connection is weak.
+    }
+};
+
+const submitForm = async (event) => {
+    submitIntent.value = event.submitter?.dataset?.intent || 'save';
+
+    if (clientSideBlocked.value || isSubmitting.value) {
+        event.preventDefault();
+        return;
+    }
+
+    if (isEditMode.value) {
+        isSubmitting.value = true;
+        return;
+    }
+
+    event.preventDefault();
+    isSubmitting.value = true;
+    clearLocalErrors();
+
+    try {
+        const formData = new FormData(event.currentTarget);
+        formData.append('add_another', submitIntent.value === 'another' ? '1' : '0');
+
+        const response = await fetch(props.routes.store, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData,
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 422) {
+            Object.assign(localErrors, data.errors || {});
+            showToast('error', 'Please check the form', data.message || 'Some fields need correction.');
+            return;
+        }
+
+        if (!response.ok) {
+            showToast('error', 'Save failed', data.message || 'Please try again.');
+            return;
+        }
+
+        emit('form-submitted', data.expense);
+        lastSavedUrl.value = data.redirect_url || props.routes.index;
+
+        if (submitIntent.value === 'another') {
+            resetForAnother(data.preferences || {});
+            showToast('success', 'Saved', 'Expense saved. Ready for the next entry.');
+            await refreshTemplates();
+            return;
+        }
+
+        showToast('success', 'Saved', 'Expense saved successfully.', 'View record');
+        window.setTimeout(() => {
+            window.location.href = lastSavedUrl.value;
+        }, 900);
+    } catch (error) {
+        showToast('error', 'Connection problem', 'The expense was not saved. Please try again.');
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const handleToastAction = () => {
+    if (lastSavedUrl.value) {
+        window.location.href = lastSavedUrl.value;
+    }
 };
 </script>
 
 <template>
-    <section class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+    <section class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-8">
+        <ToastNotification
+            :show="toast.show"
+            :type="toast.type"
+            :title="toast.title"
+            :message="toast.message"
+            :action-label="toast.actionLabel"
+            @close="toast.show = false"
+            @action="handleToastAction"
+        />
+
         <div v-if="props.cycles.length === 0" class="space-y-3 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
             <p class="text-sm font-semibold text-gray-800">No active cycles are available for expense recording.</p>
             <p class="text-sm text-gray-600">Create or reactivate a cycle first, then return to this form.</p>
@@ -238,13 +396,46 @@ const formatCategoryLabel = (category) => {
             <input v-if="isEditMode" type="hidden" name="_method" value="PUT">
             <input v-if="removeReceipt" type="hidden" name="remove_receipt" value="1">
 
-            <p v-if="clientSideBlockMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">
+            <p v-if="clientSideBlockMessage" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
                 {{ clientSideBlockMessage }}
             </p>
 
+            <div v-if="isCreateMode && templates.length > 0" class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-gray-900">Recent templates</p>
+                    <button type="button" class="text-xs font-bold text-[#0c6d57] hover:text-[#0a5a48]" @click="refreshTemplates">
+                        Refresh
+                    </button>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <button
+                        v-for="template in templates"
+                        :key="template.id"
+                        type="button"
+                        class="rounded-xl border border-gray-200 bg-white p-3 text-left transition hover:border-[#0c6d57]/50 hover:bg-[#0c6d57]/5"
+                        @click="applyTemplate(template)"
+                    >
+                        <span class="block text-xs font-bold uppercase text-[#0c6d57]">{{ template.category_label }}</span>
+                        <span class="mt-1 block truncate text-sm font-semibold text-gray-900">{{ template.notes }}</span>
+                        <span class="mt-1 block text-xs text-gray-500">{{ formatAmount(template.amount) }} | {{ template.cycle_code || 'Recent cycle' }}</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="grid gap-5 sm:grid-cols-2">
                 <label class="sm:col-span-2">
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Cycle *</span>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Cycle *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Choose the pig cycle where this expense belongs." aria-label="Cycle help">?</button>
+                        <span v-if="fieldReady('batch_id')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
+                    <input
+                        v-if="props.cycles.length > 7"
+                        v-model="cycleSearch"
+                        type="search"
+                        class="mb-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                        placeholder="Search cycle code..."
+                    >
                     <select
                         v-model="form.batch_id"
                         name="batch_id"
@@ -258,7 +449,7 @@ const formatCategoryLabel = (category) => {
                     >
                         <option value="" disabled>Select cycle...</option>
                         <option
-                            v-for="cycle in props.cycles"
+                            v-for="cycle in filteredCycles"
                             :key="cycle.id"
                             :value="String(cycle.id)"
                         >
@@ -271,7 +462,11 @@ const formatCategoryLabel = (category) => {
                 </label>
 
                 <label>
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Category *</span>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Category *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Use the paper logbook category that best matches the expense." aria-label="Category help">?</button>
+                        <span v-if="fieldReady('category')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
                     <select
                         v-model="form.category"
                         name="category"
@@ -298,7 +493,11 @@ const formatCategoryLabel = (category) => {
                 </label>
 
                 <label>
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Amount *</span>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Amount *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Enter the peso amount from the receipt or paper record." aria-label="Amount help">?</button>
+                        <span v-if="fieldReady('amount')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">Php</span>
                         <input
@@ -318,13 +517,28 @@ const formatCategoryLabel = (category) => {
                             placeholder="0.00"
                         >
                     </div>
+                    <div v-if="presetAmounts.length > 0" class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            v-for="amount in presetAmounts"
+                            :key="amount"
+                            type="button"
+                            class="rounded-lg border border-[#0c6d57]/20 bg-[#0c6d57]/5 px-3 py-1.5 text-xs font-bold text-[#0c6d57] transition hover:bg-[#0c6d57]/10"
+                            @click="applyPresetAmount(amount)"
+                        >
+                            {{ formatAmount(amount) }}
+                        </button>
+                    </div>
                     <p v-if="fieldError('amount')" class="mt-1.5 text-xs font-semibold text-rose-700">
                         {{ fieldError('amount') }}
                     </p>
                 </label>
 
                 <label>
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Expense Date *</span>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Expense Date *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Today is filled in automatically for new records." aria-label="Date help">?</button>
+                        <span v-if="fieldReady('expense_date')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
                     <input
                         v-model="form.expense_date"
                         type="date"
@@ -343,17 +557,12 @@ const formatCategoryLabel = (category) => {
                     </p>
                 </label>
 
-                <div class="sm:col-span-2">
-                    <ReceiptUpload
-                        :current-receipt-url="props.expense?.receipt_url || ''"
-                        :error-message="fieldError('receipt')"
-                        @receipt-selected="handleReceiptSelected"
-                        @receipt-removed="handleReceiptRemoved"
-                    />
-                </div>
-
                 <label class="sm:col-span-2">
-                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Notes *</span>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Notes *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Write the same short description you would put in the paper logbook." aria-label="Notes help">?</button>
+                        <span v-if="fieldReady('notes')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
                     <textarea
                         v-model="form.notes"
                         name="notes"
@@ -375,15 +584,45 @@ const formatCategoryLabel = (category) => {
                         <p class="ml-auto text-xs text-gray-500">{{ form.notes.length }}/1000</p>
                     </div>
                 </label>
+
+                <div class="sm:col-span-2">
+                    <button
+                        type="button"
+                        class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50 sm:w-auto"
+                        @click="receiptVisible = !receiptVisible"
+                    >
+                        {{ receiptVisible ? 'Hide Receipt' : (props.expense?.receipt_url ? 'Manage Receipt' : 'Attach Receipt') }}
+                    </button>
+
+                    <div v-if="receiptVisible" class="mt-3">
+                        <ReceiptUpload
+                            :key="receiptKey"
+                            :current-receipt-url="props.expense?.receipt_url || ''"
+                            :error-message="fieldError('receipt')"
+                            @receipt-selected="handleReceiptSelected"
+                            @receipt-removed="handleReceiptRemoved"
+                        />
+                    </div>
+                </div>
             </div>
 
             <div class="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row-reverse">
                 <button
                     type="submit"
+                    data-intent="save"
                     :disabled="isSubmitting || clientSideBlocked"
                     class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                 >
                     {{ submitLabel }}
+                </button>
+                <button
+                    v-if="isCreateMode"
+                    type="submit"
+                    data-intent="another"
+                    :disabled="isSubmitting || clientSideBlocked"
+                    class="inline-flex w-full items-center justify-center rounded-xl border border-[#0c6d57] bg-white px-6 py-3 text-sm font-bold text-[#0c6d57] transition-colors hover:bg-[#0c6d57]/5 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                >
+                    Save & Add Another
                 </button>
                 <a
                     :href="cancelRoute"

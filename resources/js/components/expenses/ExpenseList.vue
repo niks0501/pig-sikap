@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import {
     Dialog,
     DialogPanel,
@@ -7,6 +7,7 @@ import {
     TransitionChild,
     TransitionRoot,
 } from '@headlessui/vue';
+import ToastNotification from '../common/ToastNotification.vue';
 import ExpenseFilters from './ExpenseFilters.vue';
 import ExpenseTableRow from './ExpenseTableRow.vue';
 
@@ -72,6 +73,12 @@ const sortDirection = ref('desc');
 const bulkActionLoading = ref(false);
 const showBulkConfirm = ref(false);
 const bulkActionType = ref('');
+const toast = reactive({
+    show: false,
+    type: 'success',
+    title: '',
+    message: '',
+});
 
 const hasExpenses = computed(() => props.expenses && props.expenses.length > 0);
 
@@ -83,6 +90,27 @@ const isAllSelected = computed(() => {
 const selectedCount = computed(() => selectedIds.value.size);
 
 const canBulkDeleteSelected = computed(() => props.canBulkDelete && selectedCount.value > 0);
+
+const visibleTotal = computed(() => {
+    return sortedExpenses.value.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+});
+
+const selectedTotal = computed(() => {
+    return props.expenses
+        .filter((expense) => selectedIds.value.has(expense.id))
+        .reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+});
+
+const createRoute = computed(() => {
+    if (props.filters?.cycle_id) {
+        const url = new URL(props.routes.create, window.location.origin);
+        url.searchParams.set('cycle_id', props.filters.cycle_id);
+
+        return url.pathname + url.search;
+    }
+
+    return props.routes.create;
+});
 
 const sortedExpenses = computed(() => {
     if (!hasExpenses.value) return [];
@@ -164,6 +192,33 @@ const formatCategoryLabel = (category) => {
     return category?.charAt(0).toUpperCase() + category?.slice(1) || '';
 };
 
+const categoryMeta = (category) => {
+    const meta = {
+        acquisition: {
+            classes: 'border-sky-200 bg-sky-50 text-sky-700',
+            icon: 'M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z',
+        },
+        feed: {
+            classes: 'border-emerald-200 bg-emerald-50 text-[#0c6d57]',
+            icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+        },
+        medicine: {
+            classes: 'border-violet-200 bg-violet-50 text-violet-700',
+            icon: 'M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5C21.846 17.846 20.954 20 19.172 20H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',
+        },
+        transport: {
+            classes: 'border-amber-200 bg-amber-50 text-amber-700',
+            icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
+        },
+        emergency: {
+            classes: 'border-rose-200 bg-rose-50 text-rose-700',
+            icon: 'M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z',
+        },
+    };
+
+    return meta[category] || meta.feed;
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
@@ -175,6 +230,13 @@ const formatAmount = (amount) => {
         style: 'currency',
         currency: 'PHP',
     }).format(parseFloat(amount || 0));
+};
+
+const showToast = (type, title, message) => {
+    toast.type = type;
+    toast.title = title;
+    toast.message = message;
+    toast.show = true;
 };
 
 const clearSelection = () => {
@@ -214,10 +276,10 @@ const confirmBulkAction = async () => {
             window.location.href = data.redirect_url || props.routes.index;
         } else {
             const data = await response.json().catch(() => ({}));
-            alert(data.message || 'Bulk delete failed. Please try again.');
+            showToast('error', 'Bulk delete failed', data.message || 'Please try again.');
         }
     } catch (error) {
-        alert('An error occurred. Please try again.');
+        showToast('error', 'Connection problem', 'Please try again.');
     } finally {
         bulkActionLoading.value = false;
         clearSelection();
@@ -232,6 +294,14 @@ const cancelBulkAction = () => {
 
 <template>
     <div class="space-y-4">
+        <ToastNotification
+            :show="toast.show"
+            :type="toast.type"
+            :title="toast.title"
+            :message="toast.message"
+            @close="toast.show = false"
+        />
+
         <ExpenseFilters
             :initial-filters="props.filters"
             :categories="props.categories"
@@ -239,10 +309,27 @@ const cancelBulkAction = () => {
             :base-url="props.routes.index"
         />
 
+        <div class="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-bold text-gray-900">
+                    Showing {{ sortedExpenses.length }} expense(s) totaling {{ formatAmount(visibleTotal) }}
+                </p>
+                <p class="mt-0.5 text-xs text-gray-500">
+                    {{ props.pagination.total }} record(s) match the current filters
+                </p>
+            </div>
+            <a
+                :href="createRoute"
+                class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#0a5a48]"
+            >
+                Add Expense
+            </a>
+        </div>
+
         <div v-if="canBulkDeleteSelected" class="flex items-center justify-between rounded-xl border border-[#0c6d57] bg-[#0c6d57]/5 px-4 py-3">
             <div class="flex items-center gap-3">
                 <svg class="h-5 w-5 text-[#0c6d57]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
                 <span class="text-sm font-semibold text-[#0c6d57]">{{ selectedCount }} expense(s) selected</span>
             </div>
@@ -272,7 +359,7 @@ const cancelBulkAction = () => {
             <h3 class="mt-2 text-sm font-semibold text-gray-900">No expense records found</h3>
             <p class="mt-1 text-sm text-gray-500">Try changing filters or add a new expense entry.</p>
             <a
-                :href="props.routes.create"
+                :href="createRoute"
                 class="mt-4 inline-flex items-center justify-center rounded-lg bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0a5a48]"
             >
                 Add First Expense
@@ -375,11 +462,26 @@ class="px-6 py-4 text-right cursor-pointer select-none"
                             >
                         </td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ formatDate(expense.expense_date) }}</td>
-<td class="px-6 py-4 text-sm text-gray-700">{{ formatCategoryLabel(expense.category) }}</td>
-<td class="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{{ expense.notes }}</td>
+<td class="px-6 py-4 text-sm text-gray-700">
+    <span :class="['inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold', categoryMeta(expense.category).classes]">
+        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="categoryMeta(expense.category).icon" />
+        </svg>
+        {{ formatCategoryLabel(expense.category) }}
+    </span>
+</td>
+<td class="px-6 py-4 text-sm text-gray-700 max-w-xs">
+    <p class="truncate">{{ expense.notes }}</p>
+    <span v-if="expense.receipt_url" class="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-[#0c6d57]">
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Receipt attached
+    </span>
+</td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ expense.cycle?.batch_code || 'Unknown' }}</td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ expense.created_by_name || 'System' }}</td>
-<td class="px-6 py-4 text-sm font-semibold text-gray-900 text-right">{{ formatAmount(expense.amount) }}</td>
+<td class="px-6 py-4 text-lg font-black text-gray-900 text-right">{{ formatAmount(expense.amount) }}</td>
 <td class="px-6 py-4 text-right text-sm">
                             <a :href="props.routes.show?.replace('_ID_', expense.id)" class="text-[#0c6d57] font-semibold hover:text-[#0a5a48]">
                                 Details
@@ -439,7 +541,7 @@ class="px-6 py-4 text-right cursor-pointer select-none"
                             <DialogPanel class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
                                 <DialogTitle class="text-lg font-bold text-gray-900">Confirm Bulk Delete</DialogTitle>
                                 <p class="mt-2 text-sm text-gray-500">
-                                    Are you sure you want to delete {{ selectedCount }} expense record(s)? This action cannot be undone.
+                                    You selected {{ selectedCount }} expense record(s) totaling {{ formatAmount(selectedTotal) }}.
                                 </p>
 
                                 <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
@@ -473,5 +575,15 @@ class="px-6 py-4 text-right cursor-pointer select-none"
                 </div>
             </Dialog>
         </TransitionRoot>
+
+        <a
+            :href="createRoute"
+            class="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0c6d57] text-white shadow-lg transition hover:bg-[#0a5a48] sm:hidden"
+            aria-label="Add expense"
+        >
+            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </a>
     </div>
 </template>

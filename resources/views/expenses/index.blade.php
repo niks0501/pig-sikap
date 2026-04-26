@@ -30,7 +30,25 @@
     <div
         data-vue-component="expense-list"
         data-props="{{ json_encode([
-            'expenses' => $expenses->items(),
+            'expenses' => collect($expenses->items())->map(function($expense) {
+                return [
+                    'id' => $expense->id,
+                    'batch_id' => $expense->batch_id,
+                    'category' => $expense->category,
+                    'amount' => (float) $expense->amount,
+                    'expense_date' => $expense->expense_date?->toDateString(),
+                    'notes' => $expense->notes,
+                    'receipt_url' => $expense->receiptUrl(),
+                    'cycle' => $expense->cycle ? [
+                        'id' => $expense->cycle->id,
+                        'batch_code' => $expense->cycle->batch_code,
+                        'status' => $expense->cycle->status,
+                        'stage' => $expense->cycle->stage,
+                        'isArchived' => $expense->cycle->isArchived(),
+                    ] : null,
+                    'created_by_name' => $expense->createdBy?->name,
+                ];
+            })->values(),
             'summary' => $summary,
             'filters' => $filters,
             'categories' => array_keys($categoryOptions),

@@ -30,10 +30,14 @@
                 'update' => route('expenses.update', ['expense' => '_ID_']),
                 'index' => route('expenses.index'),
                 'show' => route('expenses.show', ['expense' => '_ID_']),
+                'preferences' => route('expenses.preferences'),
+                'preferencesUpdate' => route('expenses.preferences.update'),
+                'recentTemplates' => route('expenses.recent-templates'),
             ],
             'csrfToken' => csrf_token(),
             'oldInput' => old(),
             'errors' => $errors->toArray(),
+            'flashStatus' => session('status'),
         ]) }}"
     ></div>
 </div>

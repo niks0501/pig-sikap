@@ -8,6 +8,7 @@ use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -317,4 +318,139 @@ test('summary page shows computed totals for selected scope', function () {
         ->assertSee('Php 1,250.00')
         ->assertSee('Feed')
         ->assertSee('Transport');
+});
+
+test('json store remembers user expense defaults', function () {
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    $response = actingAs($treasurer)->postJson(route('expenses.store'), expensePayload($cycle, [
+        'category' => 'medicine',
+        'amount' => '725.00',
+        'expense_date' => now()->toDateString(),
+    ]));
+
+    $expense = PigCycleExpense::query()->latest('id')->firstOrFail();
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('expense.id', $expense->id)
+        ->assertJsonPath('preferences.last_category', 'medicine')
+        ->assertJsonPath('preferences.last_cycle_id', $cycle->id);
+
+    assertDatabaseHas('user_expense_preferences', [
+        'user_id' => $treasurer->id,
+        'preference_key' => 'last_category',
+        'preference_value' => 'medicine',
+    ]);
+
+    assertDatabaseHas('user_expense_preferences', [
+        'user_id' => $treasurer->id,
+        'preference_key' => 'last_cycle_id',
+        'preference_value' => (string) $cycle->id,
+    ]);
+});
+
+test('authorized users can fetch and update expense preferences', function () {
+    $secretary = expenseUser('secretary');
+    $cycle = expenseCycle($secretary);
+
+    actingAs($secretary)
+        ->putJson(route('expenses.preferences.update'), [
+            'last_category' => 'transport',
+            'last_cycle_id' => $cycle->id,
+            'preset_amounts' => [250, 750, 1500],
+        ])
+        ->assertOk()
+        ->assertJsonPath('preferences.last_category', 'transport')
+        ->assertJsonPath('preferences.last_cycle_id', $cycle->id)
+        ->assertJsonPath('preferences.preset_amounts.1', 750);
+
+    actingAs($secretary)
+        ->getJson(route('expenses.preferences'))
+        ->assertOk()
+        ->assertJsonPath('preferences.last_category', 'transport')
+        ->assertJsonPath('preferences.preset_amounts.2', 1500);
+});
+
+test('recent templates return last five unique expenses for the user', function () {
+    $treasurer = expenseUser('treasurer');
+    $otherUser = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 500,
+        'expense_date' => now()->subDays(2)->toDateString(),
+        'notes' => 'Starter feed',
+        'created_by' => $treasurer->id,
+    ]);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 500,
+        'expense_date' => now()->toDateString(),
+        'notes' => 'Starter feed',
+        'created_by' => $treasurer->id,
+    ]);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'transport',
+        'amount' => 300,
+        'expense_date' => now()->subDay()->toDateString(),
+        'notes' => 'Motor fare',
+        'created_by' => $treasurer->id,
+    ]);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'medicine',
+        'amount' => 900,
+        'expense_date' => now()->toDateString(),
+        'notes' => 'Other user medicine',
+        'created_by' => $otherUser->id,
+    ]);
+
+    actingAs($treasurer)
+        ->getJson(route('expenses.recent-templates'))
+        ->assertOk()
+        ->assertJsonCount(2, 'templates')
+        ->assertJsonPath('templates.0.notes', 'Starter feed')
+        ->assertJsonPath('templates.1.notes', 'Motor fare');
+});
+
+test('summary view includes month over month comparison data', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 1000,
+        'expense_date' => now()->subMonthNoOverflow()->toDateString(),
+        'notes' => 'Last month feed',
+        'created_by' => $president->id,
+    ]);
+
+    PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 1250,
+        'expense_date' => now()->toDateString(),
+        'notes' => 'This month feed',
+        'created_by' => $president->id,
+    ]);
+
+    actingAs($president)
+        ->get(route('expenses.summary', ['cycle_id' => $cycle->id]))
+        ->assertOk()
+        ->assertViewHas('summary', function (array $summary): bool {
+            return ($summary['month_over_month']['this_month_total'] ?? null) === 1250.0
+                && ($summary['month_over_month']['last_month_total'] ?? null) === 1000.0
+                && ($summary['month_over_month']['trend'] ?? null) === 'up'
+                && count($summary['top_categories'] ?? []) === 1;
+        });
 });

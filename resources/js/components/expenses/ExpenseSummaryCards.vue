@@ -74,10 +74,49 @@ const feedShareFormatted = computed(() => {
         maximumFractionDigits: 2,
     }).format(parseFloat(props.summary.feed_share_percent || 0));
 });
+
+const monthComparison = computed(() => props.summary.month_over_month || null);
+const monthTrendClasses = computed(() => {
+    const trend = monthComparison.value?.trend;
+
+    if (trend === 'up') {
+        return 'border-rose-200 bg-rose-50 text-rose-700';
+    }
+
+    if (trend === 'down') {
+        return 'border-emerald-200 bg-emerald-50 text-[#0c6d57]';
+    }
+
+    return 'border-gray-200 bg-gray-50 text-gray-700';
+});
+
+const monthTrendLabel = computed(() => {
+    const comparison = monthComparison.value;
+
+    if (!comparison) {
+        return 'No monthly comparison yet';
+    }
+
+    const percent = Math.abs(Number(comparison.percent_change || 0)).toFixed(2);
+
+    if (comparison.trend === 'up') {
+        return `Up ${percent}% from last month`;
+    }
+
+    if (comparison.trend === 'down') {
+        return `Down ${percent}% from last month`;
+    }
+
+    return 'Same as last month';
+});
+
+const topCategories = computed(() => {
+    return Array.isArray(props.summary.top_categories) ? props.summary.top_categories : [];
+});
 </script>
 
 <template>
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
 <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
 <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Filtered Total</p>
 <p class="mt-1 text-2xl font-bold text-gray-900">{{ totalFormatted }}</p>
@@ -93,7 +132,35 @@ const feedShareFormatted = computed(() => {
 <p class="mt-1 text-2xl font-bold text-gray-900">{{ feedShareFormatted }}%</p>
 </div>
 
-<div v-if="showChart" class="sm:col-span-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+<div v-if="monthComparison" class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+<p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">This vs Last Month</p>
+<p class="mt-1 text-xl font-black text-gray-900">{{ formatAmount(monthComparison.this_month_total) }}</p>
+<p class="mt-1 text-xs text-gray-500">Last month: {{ formatAmount(monthComparison.last_month_total) }}</p>
+<span :class="['mt-3 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold', monthTrendClasses]">
+<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+<path v-if="monthComparison.trend === 'up'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+<path v-else-if="monthComparison.trend === 'down'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+<path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14" />
+</svg>
+{{ monthTrendLabel }}
+</span>
+</div>
+
+<div v-if="topCategories.length > 0" class="sm:col-span-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+<p class="text-xs font-semibold tracking-wide text-gray-500 uppercase mb-4">Top Expense Areas</p>
+<div class="grid gap-3 sm:grid-cols-3">
+<div
+v-for="category in topCategories"
+:key="category.category"
+class="rounded-xl border border-gray-100 bg-gray-50 p-3"
+>
+<p class="text-sm font-bold text-gray-900">{{ category.label }}</p>
+<p class="mt-1 text-xl font-black text-[#0c6d57]">{{ formatAmount(category.amount) }}</p>
+</div>
+</div>
+</div>
+
+<div v-if="showChart" class="sm:col-span-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
 <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase mb-4">Expense Breakdown by Category</p>
 
             <div class="space-y-4">
