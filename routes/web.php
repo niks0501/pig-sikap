@@ -12,7 +12,9 @@ use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
 use App\Http\Controllers\President\PresidentCycleHealthTaskController;
 use App\Http\Controllers\President\PresidentHealthController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
+use App\Http\Controllers\President\PresidentPigBuyerController;
 use App\Http\Controllers\President\PresidentExpenseController;
+use App\Http\Controllers\President\PresidentPigCycleSaleController;
 use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -109,10 +111,18 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
     });
 
     // Sales Transaction Module
-    Route::prefix('sales')->name('sales.')->group(function () {
-        Route::get('/', function () { return view('sales.index'); })->name('index');
-        Route::get('/create', function () { return view('sales.create'); })->name('create');
-        Route::get('/{id}', function ($id) { return view('sales.show', ['id' => $id]); })->name('show');
+    Route::middleware(['role:president,treasurer,secretary'])->prefix('sales')->name('sales.')->group(function () {
+        Route::get('/', [PresidentPigCycleSaleController::class, 'index'])->name('index');
+        Route::get('/create', [PresidentPigCycleSaleController::class, 'create'])->name('create');
+        Route::post('/', [PresidentPigCycleSaleController::class, 'store'])->name('store');
+        Route::get('/{sale}', [PresidentPigCycleSaleController::class, 'show'])->name('show');
+        Route::put('/{sale}', [PresidentPigCycleSaleController::class, 'update'])->name('update');
+    });
+
+    Route::middleware(['role:president,treasurer,secretary'])->prefix('buyers')->name('buyers.')->group(function () {
+        Route::get('/', [PresidentPigBuyerController::class, 'index'])->name('index');
+        Route::post('/', [PresidentPigBuyerController::class, 'store'])->name('store');
+        Route::put('/{buyer}', [PresidentPigBuyerController::class, 'update'])->name('update');
     });
 
     // Expense Management Module

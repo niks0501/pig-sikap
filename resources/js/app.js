@@ -32,6 +32,9 @@ import ExpenseFilters from './components/expenses/ExpenseFilters.vue';
 import ExpenseSummaryCards from './components/expenses/ExpenseSummaryCards.vue';
 import ExpenseTableRow from './components/expenses/ExpenseTableRow.vue';
 import ReceiptUpload from './components/expenses/ReceiptUpload.vue';
+import SalesForm from './components/sales/SalesForm.vue';
+import SalesIndex from './components/sales/SalesIndex.vue';
+import SalesShow from './components/sales/SalesShow.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -58,6 +61,9 @@ const componentRegistry = {
   'expense-summary-cards': ExpenseSummaryCards,
   'expense-table-row': ExpenseTableRow,
   'receipt-upload': ReceiptUpload,
+    'sales-form': SalesForm,
+    'sales-index': SalesIndex,
+    'sales-show': SalesShow,
 };
 
 document.addEventListener('DOMContentLoaded', () => {
