@@ -5,25 +5,81 @@
             <!-- Left Side (Sidebar toggle + Search) -->
             <div class="flex items-center gap-2 md:gap-4 flex-1">
                 <!-- Sidebar Toggle -->
-                <button @click="sidebarOpen = !sidebarOpen" class="bg-emerald-50 p-2 rounded-xl text-[#0c6d57] hover:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0c6d57] focus:ring-offset-1">
+                <button @click="sidebarOpen = !sidebarOpen" class="bg-emerald-50 p-2 rounded-xl text-[#0c6d57] hover:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0c6d57] focus:ring-offset-1" aria-label="Toggle sidebar">
                     <svg class="w-5 h-5 transition-transform duration-300" :class="sidebarOpen ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
                     </svg>
                 </button>
+
+                <!-- Breadcrumb Navigation -->
+                <nav class="hidden md:flex items-center gap-2 text-sm" aria-label="Breadcrumb">
+                    <ol class="flex items-center gap-2">
+                        <li>
+                            <a href="{{ route('dashboard') }}" class="text-gray-500 hover:text-gray-700 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                </svg>
+                            </a>
+                        </li>
+                        @if(request()->routeIs('dashboard'))
+                            <li class="text-gray-900 font-medium">Dashboard</li>
+                        @elseif(request()->routeIs('cycles.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Cycles</li>
+                        @elseif(request()->routeIs('health.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Health & Treatments</li>
+                        @elseif(request()->routeIs('sales.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Sales</li>
+                        @elseif(request()->routeIs('expenses.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Expenses</li>
+                        @elseif(request()->routeIs('profitability.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Profitability</li>
+                        @elseif(request()->routeIs('reports.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Reports</li>
+                        @elseif(request()->routeIs('resolutions.*') || request()->routeIs('minutes.*') || request()->routeIs('withdrawals.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Docs & Approvals</li>
+                        @elseif(request()->routeIs('audit-trails.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Audit Trails</li>
+                        @else
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">{{ ucfirst(request()->segment(1)) }}</li>
+                        @endif
+                    </ol>
+                </nav>
 
                 <!-- Search Bar -->
                 <div class="relative w-full max-w-sm hidden sm:block">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <input type="text" class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#0c6d57] focus:border-[#0c6d57] sm:text-sm transition-colors" placeholder="Search records, batches...">
+                    <input type="text" class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#0c6d57] focus:border-[#0c6d57] sm:text-sm transition-colors" placeholder="Search records, batches..." aria-label="Search">
                 </div>
             </div>
 
             <!-- Right Side (Settings & Profile Dropdown) -->
             <div class="flex items-center gap-2">
+                <!-- Quick Actions Button -->
+                <button
+                    type="button"
+                    class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none"
+                    title="Quick Actions (Ctrl+K)"
+                    aria-label="Open quick actions"
+                    @click="quickActionsOpen = true"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </button>
+
                 <!-- Settings Button -->
-                <button class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none hidden sm:block">
+                <button class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none hidden sm:block" title="Settings">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </button>
 

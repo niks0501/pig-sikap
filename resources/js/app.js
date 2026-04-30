@@ -16,8 +16,20 @@ import AdminRoleManagement from './components/admin/AdminRoleManagement.vue';
 import AdminUserManagement from './components/admin/AdminUserManagement.vue';
 import ForcePasswordChangeForm from './components/auth/ForcePasswordChangeForm.vue';
 import ToastNotification from './components/common/ToastNotification.vue';
+import ConfirmDialog from './components/common/ConfirmDialog.vue';
+import LoadingStates from './components/common/LoadingStates.vue';
+import EmptyStates from './components/common/EmptyStates.vue';
+import ProgressStepper from './components/common/ProgressStepper.vue';
+import QuickActions from './components/common/QuickActions.vue';
+import DateRangePicker from './components/common/DateRangePicker.vue';
+import CurrencyInput from './components/common/CurrencyInput.vue';
+import StatusBadge from './components/common/StatusBadge.vue';
+import ActionMenu from './components/common/ActionMenu.vue';
+import SearchBar from './components/common/SearchBar.vue';
 import CycleHealthPanel from './components/health/CycleHealthPanel.vue';
 import HealthIncidentCreateForm from './components/health/HealthIncidentCreateForm.vue';
+import HealthDashboard from './components/health/HealthDashboard.vue';
+import TreatmentCalendar from './components/health/TreatmentCalendar.vue';
 import PigCycleArchived from './components/pig-registry/PigCycleArchived.vue';
 import PigCycleCreate from './components/pig-registry/PigCycleCreate.vue';
 import PigCycleEdit from './components/pig-registry/PigCycleEdit.vue';
@@ -25,6 +37,8 @@ import PigCyclePigs from './components/pig-registry/PigCyclePigs.vue';
 import PigCycleShow from './components/pig-registry/PigCycleShow.vue';
 import PigBreederRegistry from './components/pig-registry/PigBreederRegistry.vue';
 import PigRegistryIndex from './components/pig-registry/PigRegistryIndex.vue';
+import CycleCard from './components/pig-registry/CycleCard.vue';
+import CycleLifecycleTimeline from './components/pig-registry/CycleLifecycleTimeline.vue';
 import ExpenseList from './components/expenses/ExpenseList.vue';
 import ExpenseForm from './components/expenses/ExpenseForm.vue';
 import ExpenseDetail from './components/expenses/ExpenseDetail.vue';
@@ -45,8 +59,20 @@ const componentRegistry = {
   'admin-profile': AdminProfile,
   'force-password-change': ForcePasswordChangeForm,
   'toast-notification': ToastNotification,
+  'confirm-dialog': ConfirmDialog,
+  'loading-states': LoadingStates,
+  'empty-states': EmptyStates,
+  'progress-stepper': ProgressStepper,
+  'quick-actions': QuickActions,
+  'date-range-picker': DateRangePicker,
+  'currency-input': CurrencyInput,
+  'status-badge': StatusBadge,
+  'action-menu': ActionMenu,
+  'search-bar': SearchBar,
   'cycle-health-panel': CycleHealthPanel,
   'health-incident-create-form': HealthIncidentCreateForm,
+  'health-dashboard': HealthDashboard,
+  'treatment-calendar': TreatmentCalendar,
   'pig-registry-index': PigRegistryIndex,
   'pig-cycle-create': PigCycleCreate,
   'pig-cycle-edit': PigCycleEdit,
@@ -54,6 +80,8 @@ const componentRegistry = {
   'pig-cycle-archived': PigCycleArchived,
   'pig-cycle-pigs': PigCyclePigs,
   'pig-breeder-registry': PigBreederRegistry,
+  'cycle-card': CycleCard,
+  'cycle-lifecycle-timeline': CycleLifecycleTimeline,
   'expense-list': ExpenseList,
   'expense-form': ExpenseForm,
   'expense-detail': ExpenseDetail,

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+[x-cloak] {
+	display: none !important;
+}
+
 @theme {
 	--color-primary: #0DB07B;
 	--color-primary-dark: #0a8f64;

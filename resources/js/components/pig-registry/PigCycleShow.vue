@@ -7,6 +7,7 @@ import {
     TransitionRoot,
 } from '@headlessui/vue';
 import { computed, ref } from 'vue';
+import CycleLifecycleTimeline from './CycleLifecycleTimeline.vue';
 
 const props = defineProps({
     cycle: {
@@ -316,6 +317,8 @@ const handleStatusSubmit = async (event) => {
                 </li>
             </ul>
         </section>
+
+        <CycleLifecycleTimeline :cycle="props.cycle" :stages="props.stages" />
 
         <section class="rounded-xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4 shadow-sm sm:p-6">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
