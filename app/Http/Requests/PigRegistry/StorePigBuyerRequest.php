@@ -24,6 +24,7 @@ class StorePigBuyerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],

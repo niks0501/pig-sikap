@@ -23,13 +23,14 @@ class PresidentPigBuyerController extends Controller
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
                 $builder->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%')
                     ->orWhere('contact_number', 'like', '%'.$search.'%');
             });
         }
 
         $buyers = $query
             ->limit(50)
-            ->get(['id', 'name', 'contact_number', 'address', 'notes']);
+            ->get(['id', 'name', 'email', 'contact_number', 'address', 'notes']);
 
         return response()->json([
             'buyers' => $buyers->values(),
@@ -40,6 +41,7 @@ class PresidentPigBuyerController extends Controller
     {
         $buyer = PigBuyer::query()->create([
             'name' => $request->input('name'),
+            'email' => $request->input('email'),
             'contact_number' => $request->input('contact_number'),
             'address' => $request->input('address'),
             'notes' => $request->input('notes'),
@@ -67,6 +69,7 @@ class PresidentPigBuyerController extends Controller
     {
         $buyer->update([
             'name' => $request->input('name'),
+            'email' => $request->input('email'),
             'contact_number' => $request->input('contact_number'),
             'address' => $request->input('address'),
             'notes' => $request->input('notes'),

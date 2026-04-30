@@ -5,7 +5,7 @@ use App\Models\PigCycleExpense;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,12 +15,15 @@ use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\seed;
 use function Pest\Laravel\withoutVite;
 
-uses(RefreshDatabase::class);
-
 beforeEach(function () {
     withoutVite();
     seed(RoleSeeder::class);
     Storage::fake('public');
+    $this->travelTo(Carbon::create(2026, 4, 30, 12, 0, 0));
+});
+
+afterEach(function () {
+    $this->travelBack();
 });
 
 function expenseUser(string $roleSlug, array $overrides = []): User
@@ -294,22 +297,34 @@ test('summary page shows computed totals for selected scope', function () {
     $president = expenseUser('president');
     $cycle = expenseCycle($president, ['batch_code' => 'EXP-SUM-001']);
 
-    PigCycleExpense::query()->create([
+    actingAs($president)->post(route('expenses.store'), [
         'batch_id' => $cycle->id,
         'category' => 'feed',
-        'amount' => 1000,
+        'amount' => '1000.00',
         'expense_date' => now()->toDateString(),
         'notes' => 'Feed total',
-        'created_by' => $president->id,
-    ]);
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    PigCycleExpense::query()->create([
+    actingAs($president)->post(route('expenses.store'), [
         'batch_id' => $cycle->id,
         'category' => 'transport',
-        'amount' => 250,
+        'amount' => '250.00',
         'expense_date' => now()->toDateString(),
         'notes' => 'Transport total',
-        'created_by' => $president->id,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '1000.00',
+        'notes' => 'Feed total',
+    ]);
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'batch_id' => $cycle->id,
+        'category' => 'transport',
+        'amount' => '250.00',
+        'notes' => 'Transport total',
     ]);
 
     actingAs($president)
@@ -426,22 +441,34 @@ test('summary view includes month over month comparison data', function () {
     $president = expenseUser('president');
     $cycle = expenseCycle($president);
 
-    PigCycleExpense::query()->create([
+    actingAs($president)->post(route('expenses.store'), [
         'batch_id' => $cycle->id,
         'category' => 'feed',
-        'amount' => 1000,
+        'amount' => '1000.00',
         'expense_date' => now()->subMonthNoOverflow()->toDateString(),
         'notes' => 'Last month feed',
-        'created_by' => $president->id,
-    ]);
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
-    PigCycleExpense::query()->create([
+    actingAs($president)->post(route('expenses.store'), [
         'batch_id' => $cycle->id,
         'category' => 'feed',
-        'amount' => 1250,
+        'amount' => '1250.00',
         'expense_date' => now()->toDateString(),
         'notes' => 'This month feed',
-        'created_by' => $president->id,
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '1000.00',
+        'notes' => 'Last month feed',
+    ]);
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '1250.00',
+        'notes' => 'This month feed',
     ]);
 
     actingAs($president)

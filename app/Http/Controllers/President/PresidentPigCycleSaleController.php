@@ -36,7 +36,7 @@ class PresidentPigCycleSaleController extends Controller
 
         $query = PigCycleSale::query()->with([
             'cycle:id,batch_code,status,stage,current_count',
-            'buyer:id,name,contact_number,address',
+            'buyer:id,name,email,contact_number,address',
             'createdBy:id,name',
         ]);
 
@@ -66,7 +66,7 @@ class PresidentPigCycleSaleController extends Controller
 
         return view('sales.create', [
             'cycles' => PigCycle::query()->activeRecords()->orderByDesc('updated_at')->get(['id', 'batch_code', 'status', 'stage', 'current_count']),
-            'buyers' => PigBuyer::query()->orderBy('name')->get(['id', 'name', 'contact_number', 'address']),
+            'buyers' => PigBuyer::query()->orderBy('name')->get(['id', 'name', 'email', 'contact_number', 'address']),
             'selectedCycleId' => $selectedCycle,
             'paymentStatusOptions' => PigCycleSale::PAYMENT_STATUSES,
             'saleMethodOptions' => PigCycleSale::SALE_METHODS,
@@ -118,7 +118,7 @@ class PresidentPigCycleSaleController extends Controller
     {
         $sale->load([
             'cycle:id,batch_code,status,stage,current_count',
-            'buyer:id,name,contact_number,address,notes',
+            'buyer:id,name,email,contact_number,address,notes',
             'createdBy:id,name',
             'updatedBy:id,name',
         ]);
@@ -177,6 +177,7 @@ class PresidentPigCycleSaleController extends Controller
                 $builder
                     ->whereHas('buyer', function (Builder $buyerQuery) use ($search): void {
                         $buyerQuery->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%')
                             ->orWhere('contact_number', 'like', '%'.$search.'%');
                     })
                     ->orWhereHas('cycle', function (Builder $cycleQuery) use ($search): void {
@@ -230,9 +231,16 @@ class PresidentPigCycleSaleController extends Controller
             'receipt_reference' => $sale->receipt_reference,
             'receipt_url' => $sale->receiptUrl(),
             'notes' => $sale->notes,
+            'digital_receipt_number' => $sale->digital_receipt_number,
+            'digital_receipt_path' => $sale->digital_receipt_path,
+            'digital_receipt_email' => $sale->digital_receipt_email,
+            'digital_receipt_status' => $sale->digital_receipt_status,
+            'digital_receipt_sent_at' => $sale->digital_receipt_sent_at?->toIso8601String(),
+            'digital_receipt_error' => $sale->digital_receipt_error,
             'buyer' => $sale->buyer ? [
                 'id' => $sale->buyer->id,
                 'name' => $sale->buyer->name,
+                'email' => $sale->buyer->email,
                 'contact_number' => $sale->buyer->contact_number,
                 'address' => $sale->buyer->address,
                 'notes' => $sale->buyer->notes,

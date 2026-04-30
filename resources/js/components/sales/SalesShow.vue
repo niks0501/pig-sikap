@@ -1,370 +1,239 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import ToastNotification from '../common/ToastNotification.vue';
-import ReceiptUpload from '../expenses/ReceiptUpload.vue';
 
 const props = defineProps({
-    sale: {
-        type: Object,
-        required: true,
-    },
-    routes: {
-        type: Object,
-        required: true,
-    },
-    csrfToken: {
-        type: String,
-        required: true,
-    },
-    canEditPayment: {
-        type: Boolean,
-        default: false,
-    },
-    canEditReceipt: {
-        type: Boolean,
-        default: false,
-    },
-    paymentStatusOptions: {
-        type: Array,
-        default: () => [],
-    },
+    sale: { type: Object, required: true },
+    routes: { type: Object, required: true },
+    csrfToken: { type: String, required: true },
+    canEditPayment: { type: Boolean, default: false },
+    paymentStatusOptions: { type: Array, default: () => [] },
 });
 
 const saleState = reactive({ ...props.sale });
-const isSubmitting = ref(false);
-const removeReceipt = ref(false);
-const receiptVisible = ref(Boolean(saleState.receipt_url));
-const receiptKey = ref(0);
+const toast = reactive({ show: false, type: 'success', title: '', message: '' });
+const showPaymentModal = ref(false);
+const showSendModal = ref(false);
+const isUpdatingPayment = ref(false);
+const isSendingReceipt = ref(false);
 const localErrors = reactive({});
-const toast = reactive({
-    show: false,
-    type: 'success',
-    title: '',
-    message: '',
-    actionLabel: '',
-});
 
-const form = reactive({
+const paymentForm = reactive({
     payment_status: String(saleState.payment_status || 'paid'),
-    amount_paid: String(saleState.amount_paid ?? ''),
+    amount_paid: String(saleState.amount_paid || ''),
     receipt_reference: String(saleState.receipt_reference || ''),
     notes: String(saleState.notes || ''),
 });
 
-const totalAmount = computed(() => Number(saleState.amount || 0));
-const balanceAmount = computed(() => {
-    const paid = Number(form.amount_paid || 0);
-    return Math.max(totalAmount.value - paid, 0);
+const sendForm = reactive({
+    email: String(saleState.buyer?.email || saleState.digital_receipt_email || ''),
 });
 
-const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency: 'PHP',
-        minimumFractionDigits: 2,
-    }).format(Number(amount || 0));
-};
+const totalAmount = computed(() => Number(saleState.amount || 0));
+const balanceAmount = computed(() => Math.max(Number(saleState.amount || 0) - Number(saleState.amount_paid || 0), 0));
 
-const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
-};
+const formatAmount = (amount) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(amount || 0));
+const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
 
-const saleMethodLabel = (method) => {
-    if (method === 'live_weight') return 'Live Weight';
-    if (method === 'per_head') return 'Per Head';
-    return 'Unknown';
-};
+const statusClass = (status) => ({
+    paid: 'bg-emerald-100 text-emerald-800',
+    partial: 'bg-amber-100 text-amber-800',
+    pending: 'bg-rose-100 text-rose-800',
+    sent: 'bg-emerald-100 text-emerald-800',
+    failed: 'bg-rose-100 text-rose-800',
+    not_sent: 'bg-gray-100 text-gray-700',
+}[status] || 'bg-gray-100 text-gray-700');
 
-const statusBadgeClass = (status) => {
-    const meta = {
-        paid: 'bg-emerald-100 text-emerald-800',
-        partial: 'bg-amber-100 text-amber-800',
-        pending: 'bg-rose-100 text-rose-800',
-    };
-
-    return meta[status] || 'bg-gray-100 text-gray-700';
-};
-
-const statusLabel = (status) => {
-    if (!status) return 'Unknown';
-    return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-const fieldError = (field) => {
-    const localValue = localErrors?.[field];
-    const value = localValue ?? null;
-
-    if (Array.isArray(value)) {
-        return value[0] || '';
-    }
-
-    return typeof value === 'string' ? value : '';
-};
-
-const clearLocalErrors = () => {
-    Object.keys(localErrors).forEach((key) => {
-        delete localErrors[key];
-    });
-};
-
-const showToast = (type, title, message, actionLabel = '') => {
+const showToast = (type, title, message) => {
     toast.type = type;
     toast.title = title;
     toast.message = message;
-    toast.actionLabel = actionLabel;
     toast.show = true;
 };
 
-const updateFormFromSale = () => {
-    form.payment_status = String(saleState.payment_status || 'paid');
-    form.amount_paid = String(saleState.amount_paid ?? '');
-    form.receipt_reference = String(saleState.receipt_reference || '');
-    form.notes = String(saleState.notes || '');
+const openPreview = () => {
+    window.open(props.routes.receiptPreview.replace('_ID_', saleState.id), '_blank');
 };
 
-watch(() => saleState.payment_status, updateFormFromSale);
+const downloadReceipt = () => {
+    window.location.href = props.routes.receiptDownload.replace('_ID_', saleState.id);
+};
 
-const submitForm = async (event) => {
-    if (isSubmitting.value) {
-        event.preventDefault();
-        return;
-    }
-
-    event.preventDefault();
-    isSubmitting.value = true;
-    clearLocalErrors();
-
+const updatePayment = async () => {
+    isUpdatingPayment.value = true;
+    Object.keys(localErrors).forEach((key) => delete localErrors[key]);
     try {
-        const formData = new FormData(event.currentTarget);
-        formData.append('_method', 'PUT');
+        const payload = new FormData();
+        payload.append('_method', 'PUT');
+        payload.append('_token', props.csrfToken);
+        payload.append('payment_status', paymentForm.payment_status);
+        payload.append('amount_paid', paymentForm.amount_paid);
+        payload.append('receipt_reference', paymentForm.receipt_reference);
+        payload.append('notes', paymentForm.notes);
 
-        const response = await fetch(props.routes.update?.replace('_ID_', saleState.id), {
+        const response = await fetch(props.routes.update.replace('_ID_', saleState.id), {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: formData,
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: payload,
         });
-
         const data = await response.json().catch(() => ({}));
-
         if (response.status === 422) {
             Object.assign(localErrors, data.errors || {});
-            showToast('error', 'Please check the form', data.message || 'Some fields need correction.');
             return;
         }
-
         if (!response.ok) {
             showToast('error', 'Update failed', data.message || 'Please try again.');
             return;
         }
+        Object.assign(saleState, data.sale || {});
+        showPaymentModal.value = false;
+        showToast('success', 'Updated', 'Payment details updated.');
+    } finally {
+        isUpdatingPayment.value = false;
+    }
+};
+
+const sendReceipt = async () => {
+    if (!sendForm.email.trim()) {
+        localErrors.email = ['Email is required.'];
+        return;
+    }
+
+    isSendingReceipt.value = true;
+    Object.keys(localErrors).forEach((key) => delete localErrors[key]);
+    try {
+        const response = await fetch(props.routes.receiptSend.replace('_ID_', saleState.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': props.csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ email: sendForm.email.trim() }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 422) {
+            Object.assign(localErrors, data.errors || {});
+            if (!data.errors) localErrors.email = [data.message || 'Could not send receipt.'];
+            return;
+        }
+        if (!response.ok) {
+            showToast('error', 'Send failed', data.message || 'Please try again.');
+            return;
+        }
 
         Object.assign(saleState, data.sale || {});
-        updateFormFromSale();
-        removeReceipt.value = false;
-        receiptKey.value += 1;
-
-        showToast('success', 'Updated', 'Sale updated successfully.');
-    } catch (error) {
-        showToast('error', 'Connection problem', 'The sale was not updated. Please try again.');
+        showSendModal.value = false;
+        showToast('success', 'Sent', 'Digital receipt sent successfully.');
     } finally {
-        isSubmitting.value = false;
+        isSendingReceipt.value = false;
     }
 };
 </script>
 
 <template>
     <section class="space-y-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <div class="flex items-center gap-2">
-                    <h1 class="text-2xl font-bold text-gray-900">Sale #{{ saleState.id }}</h1>
-                    <span :class="['inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold', statusBadgeClass(saleState.payment_status)]">
-                        {{ statusLabel(saleState.payment_status) }}
-                    </span>
-                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Sale #{{ saleState.id }}</h1>
                 <p class="mt-1 text-sm text-gray-500">Recorded on {{ formatDate(saleState.sale_date) }}</p>
             </div>
-            <a
-                :href="props.routes.index"
-                class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-            >
-                Back to Sales
-            </a>
+            <a :href="props.routes.index" class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700">Back to Sales</a>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
             <div class="space-y-6 lg:col-span-2">
                 <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                     <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Buyer Information</h3>
-                    <div class="mt-4 space-y-2">
-                        <p class="text-lg font-semibold text-gray-900">{{ saleState.buyer?.name || 'Unknown buyer' }}</p>
-                        <p class="text-sm text-gray-500">{{ saleState.buyer?.contact_number || 'No contact provided' }}</p>
-                        <p class="text-sm text-gray-500">{{ saleState.buyer?.address || 'No address provided' }}</p>
-                    </div>
+                    <p class="mt-3 text-lg font-semibold text-gray-900">{{ saleState.buyer?.name || 'Unknown buyer' }}</p>
+                    <p class="text-sm text-gray-600">{{ saleState.buyer?.email || 'No email provided' }}</p>
+                    <p class="text-sm text-gray-600">{{ saleState.buyer?.contact_number || 'No contact number provided' }}</p>
+                    <p class="text-sm text-gray-600">{{ saleState.buyer?.address || 'No address provided' }}</p>
                 </div>
 
                 <div class="rounded-2xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-6">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-[#0c6d57]">Total Sale Amount</p>
-                            <p class="mt-2 text-3xl font-bold text-gray-900">{{ formatAmount(totalAmount) }}</p>
-                            <p class="mt-1 text-xs text-gray-500">{{ saleMethodLabel(saleState.sale_method) }}</p>
-                        </div>
-                        <div class="text-sm text-gray-700">
-                            <p>Batch: <span class="font-semibold">{{ saleState.cycle?.batch_code || 'Unknown' }}</span></p>
-                            <p>Pigs sold: <span class="font-semibold">{{ saleState.pigs_sold }}</span></p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
-                        <div class="rounded-xl bg-white p-3">
-                            <p class="text-xs uppercase text-gray-500">Paid</p>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ formatAmount(saleState.amount_paid) }}</p>
-                        </div>
-                        <div class="rounded-xl bg-white p-3">
-                            <p class="text-xs uppercase text-gray-500">Balance</p>
-                            <p class="mt-1 text-lg font-semibold text-amber-700">{{ formatAmount(balanceAmount) }}</p>
-                        </div>
-                        <div class="rounded-xl bg-white p-3">
-                            <p class="text-xs uppercase text-gray-500">Sale Date</p>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ formatDate(saleState.sale_date) }}</p>
-                        </div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-[#0c6d57]">Sale Summary</h3>
+                    <p class="mt-2 text-3xl font-bold text-gray-900">{{ formatAmount(saleState.amount) }}</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-gray-700">
+                        <p>Batch: <span class="font-semibold">{{ saleState.cycle?.batch_code || 'N/A' }}</span></p>
+                        <p>Method: <span class="font-semibold">{{ saleState.sale_method === 'live_weight' ? 'Live Weight' : 'Per Head' }}</span></p>
+                        <p>Pigs Sold: <span class="font-semibold">{{ saleState.pigs_sold }}</span></p>
+                        <p>Sale Date: <span class="font-semibold">{{ formatDate(saleState.sale_date) }}</span></p>
                     </div>
                 </div>
 
-                <div v-if="saleState.notes" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Payment Summary</h3>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-xl bg-gray-50 p-3"><p class="text-xs text-gray-500">Amount Paid</p><p class="text-lg font-semibold">{{ formatAmount(saleState.amount_paid) }}</p></div>
+                        <div class="rounded-xl bg-gray-50 p-3"><p class="text-xs text-gray-500">Balance</p><p class="text-lg font-semibold text-amber-700">{{ formatAmount(balanceAmount) }}</p></div>
+                        <div class="rounded-xl bg-gray-50 p-3"><p class="text-xs text-gray-500">Payment Status</p><span :class="['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold mt-1', statusClass(saleState.payment_status)]">{{ saleState.payment_status }}</span></div>
+                    </div>
+                    <button v-if="props.canEditPayment" type="button" class="mt-4 inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white" @click="showPaymentModal = true">Edit Payment</button>
+                </div>
+
+                <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                     <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Notes</h3>
-                    <p class="mt-3 text-sm text-gray-700">{{ saleState.notes }}</p>
+                    <p class="mt-3 text-sm text-gray-700">{{ saleState.notes || 'No notes added.' }}</p>
                 </div>
             </div>
 
             <div class="space-y-6">
                 <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Receipt</h3>
-                    <div class="mt-4">
-                        <div v-if="saleState.receipt_url" class="space-y-3">
-                            <div v-if="saleState.receipt_url.toLowerCase().endsWith('.pdf')" class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                <p class="text-sm font-semibold text-gray-700">PDF receipt attached</p>
-                                <a
-                                    :href="saleState.receipt_url"
-                                    target="_blank"
-                                    class="mt-3 inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700"
-                                >
-                                    View PDF
-                                </a>
-                            </div>
-                            <img
-                                v-else
-                                :src="saleState.receipt_url"
-                                alt="Receipt preview"
-                                class="rounded-xl border border-gray-200"
-                            >
-                        </div>
-                        <p v-else class="text-sm text-gray-500">No receipt uploaded.</p>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Digital Receipt</h3>
+                    <div class="mt-3 space-y-2 text-sm text-gray-700">
+                        <p>Receipt Number: <span class="font-semibold">{{ saleState.digital_receipt_number || 'Will be generated on preview' }}</span></p>
+                        <p>Buyer: <span class="font-semibold">{{ saleState.buyer?.name || 'N/A' }}</span></p>
+                        <p>Sale Date: <span class="font-semibold">{{ formatDate(saleState.sale_date) }}</span></p>
+                        <p>Total Amount: <span class="font-semibold">{{ formatAmount(totalAmount) }}</span></p>
+                        <p>Amount Paid: <span class="font-semibold">{{ formatAmount(saleState.amount_paid) }}</span></p>
+                        <p>Balance: <span class="font-semibold">{{ formatAmount(balanceAmount) }}</span></p>
+                        <p>Last Email Used: <span class="font-semibold">{{ saleState.digital_receipt_email || saleState.buyer?.email || 'N/A' }}</span></p>
+                        <p>Receipt Status: <span :class="['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(saleState.digital_receipt_status || 'not_sent')]">{{ saleState.digital_receipt_status || 'not_sent' }}</span></p>
                     </div>
-                </div>
-
-                <div v-if="props.canEditPayment || props.canEditReceipt" class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Update Payment</h3>
-
-                    <form class="mt-4 space-y-4" method="POST" @submit="submitForm">
-                        <input type="hidden" name="_token" :value="props.csrfToken">
-                        <input v-if="removeReceipt" type="hidden" name="remove_receipt" value="1">
-
-                        <div v-if="props.canEditPayment" class="space-y-3">
-                            <label>
-                                <span class="mb-1.5 block text-sm font-bold text-gray-700">Payment Status</span>
-                                <select
-                                    v-model="form.payment_status"
-                                    name="payment_status"
-                                    class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
-                                >
-                                    <option v-for="status in props.paymentStatusOptions" :key="status" :value="status">
-                                        {{ statusLabel(status) }}
-                                    </option>
-                                </select>
-                            </label>
-
-                            <label>
-                                <span class="mb-1.5 block text-sm font-bold text-gray-700">Amount Paid</span>
-                                <input
-                                    v-model="form.amount_paid"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    :max="totalAmount"
-                                    name="amount_paid"
-                                    class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
-                                >
-                                <p v-if="fieldError('amount_paid')" class="mt-1 text-xs font-semibold text-rose-700">
-                                    {{ fieldError('amount_paid') }}
-                                </p>
-                            </label>
-                        </div>
-
-                        <div v-if="props.canEditReceipt" class="space-y-3">
-                            <label>
-                                <span class="mb-1.5 block text-sm font-bold text-gray-700">Receipt Reference</span>
-                                <input
-                                    v-model="form.receipt_reference"
-                                    type="text"
-                                    name="receipt_reference"
-                                    class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
-                                >
-                            </label>
-
-                            <label>
-                                <span class="mb-1.5 block text-sm font-bold text-gray-700">Notes</span>
-                                <textarea
-                                    v-model="form.notes"
-                                    name="notes"
-                                    rows="3"
-                                    class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
-                                ></textarea>
-                            </label>
-
-                            <button
-                                type="button"
-                                class="inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                                @click="receiptVisible = !receiptVisible"
-                            >
-                                {{ receiptVisible ? 'Hide Receipt' : 'Manage Receipt' }}
-                            </button>
-
-                            <div v-if="receiptVisible">
-                                <ReceiptUpload
-                                    :key="receiptKey"
-                                    :current-receipt-url="saleState.receipt_url || ''"
-                                    :error-message="fieldError('receipt')"
-                                    @receipt-selected="removeReceipt = false"
-                                    @receipt-removed="(removeExisting) => { removeReceipt = Boolean(removeExisting); }"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            :disabled="isSubmitting"
-                            class="inline-flex w-full items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                            {{ isSubmitting ? 'Updating...' : 'Save Updates' }}
-                        </button>
-                    </form>
+                    <div class="mt-4 grid gap-2">
+                        <button type="button" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700" @click="openPreview">Preview Receipt</button>
+                        <button type="button" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700" @click="downloadReceipt">Download PDF</button>
+                        <button type="button" class="rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white" @click="showSendModal = true">Send to Email</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <ToastNotification
-            :show="toast.show"
-            :type="toast.type"
-            :title="toast.title"
-            :message="toast.message"
-            :action-label="toast.actionLabel"
-            @close="toast.show = false"
-        />
+        <div v-if="showPaymentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 px-4" @keydown.esc="showPaymentModal = false">
+            <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-900">Edit Payment</h3>
+                <div class="mt-4 space-y-3">
+                    <label class="block"><span class="mb-1.5 block text-sm font-bold text-gray-700">Payment Status</span><select v-model="paymentForm.payment_status" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm"><option v-for="status in props.paymentStatusOptions" :key="status" :value="status">{{ status }}</option></select></label>
+                    <label class="block"><span class="mb-1.5 block text-sm font-bold text-gray-700">Amount Paid</span><input v-model="paymentForm.amount_paid" type="number" step="0.01" min="0" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm"></label>
+                    <label class="block"><span class="mb-1.5 block text-sm font-bold text-gray-700">Receipt Reference</span><input v-model="paymentForm.receipt_reference" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm"></label>
+                    <label class="block"><span class="mb-1.5 block text-sm font-bold text-gray-700">Notes</span><textarea v-model="paymentForm.notes" rows="3" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm"></textarea></label>
+                </div>
+                <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                    <button type="button" :disabled="isUpdatingPayment" class="rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" @click="updatePayment">{{ isUpdatingPayment ? 'Saving...' : 'Save Payment' }}</button>
+                    <button type="button" class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700" @click="showPaymentModal = false">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showSendModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 px-4" @keydown.esc="showSendModal = false">
+            <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <h3 class="text-lg font-bold text-gray-900">Send Digital Receipt</h3>
+                <p class="mt-2 text-sm text-gray-600">Enter buyer email to send the receipt.</p>
+                <label class="mt-4 block">
+                    <span class="mb-1.5 block text-sm font-bold text-gray-700">Buyer Email</span>
+                    <input v-model="sendForm.email" type="email" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm" placeholder="name@example.com">
+                    <p v-if="localErrors.email" class="mt-1 text-xs font-semibold text-rose-700">{{ Array.isArray(localErrors.email) ? localErrors.email[0] : localErrors.email }}</p>
+                </label>
+                <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                    <button type="button" :disabled="isSendingReceipt" class="rounded-xl bg-[#0c6d57] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70" @click="sendReceipt">{{ isSendingReceipt ? 'Sending...' : 'Send Receipt' }}</button>
+                    <button type="button" class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700" @click="showSendModal = false">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <ToastNotification :show="toast.show" :type="toast.type" :title="toast.title" :message="toast.message" @close="toast.show = false" />
     </section>
 </template>

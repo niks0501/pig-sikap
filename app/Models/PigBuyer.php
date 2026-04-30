@@ -17,6 +17,7 @@ class PigBuyer extends Model
      */
     protected $fillable = [
         'name',
+        'email',
         'contact_number',
         'address',
         'notes',

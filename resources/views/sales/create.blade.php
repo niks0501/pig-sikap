@@ -27,6 +27,7 @@
                 'buyers' => $buyers->map(fn ($buyer) => [
                     'id' => $buyer->id,
                     'name' => $buyer->name,
+                    'email' => $buyer->email,
                     'contact_number' => $buyer->contact_number,
                     'address' => $buyer->address,
                 ]),
@@ -36,6 +37,8 @@
                 'routes' => [
                     'store' => route('sales.store'),
                     'index' => route('sales.index'),
+                    'create' => route('sales.create'),
+                    'receiptSend' => route('sales.receipt.send', ['sale' => '_ID_']),
                 ],
                 'csrfToken' => csrf_token(),
                 'oldInput' => old(),

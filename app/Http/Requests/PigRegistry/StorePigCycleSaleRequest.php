@@ -6,7 +6,6 @@ use App\Models\PigCycle;
 use App\Models\PigCycleSale;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
 class StorePigCycleSaleRequest extends FormRequest
@@ -31,6 +30,7 @@ class StorePigCycleSaleRequest extends FormRequest
             'batch_id' => ['required', 'integer', 'exists:pig_cycles,id'],
             'buyer_id' => ['nullable', 'integer', 'exists:pig_buyers,id'],
             'buyer_name' => ['required', 'string', 'max:255'],
+            'buyer_email' => ['nullable', 'email', 'max:255'],
             'buyer_contact_number' => ['nullable', 'string', 'max:50'],
             'buyer_address' => ['nullable', 'string', 'max:255'],
             'buyer_notes' => ['nullable', 'string', 'max:1000'],
@@ -44,7 +44,6 @@ class StorePigCycleSaleRequest extends FormRequest
             'amount_paid' => ['required', 'numeric', 'min:0'],
             'receipt_reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'receipt' => ['nullable', File::types(['jpg', 'jpeg', 'png', 'webp', 'pdf'])->max(8 * 1024)],
         ];
     }
 

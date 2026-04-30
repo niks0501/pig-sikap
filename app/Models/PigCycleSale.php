@@ -10,6 +10,12 @@ class PigCycleSale extends Model
 {
     use HasFactory;
 
+    public const DIGITAL_RECEIPT_STATUSES = [
+        'not_sent',
+        'sent',
+        'failed',
+    ];
+
     public const SALE_METHODS = [
         'live_weight',
         'per_head',
@@ -38,6 +44,12 @@ class PigCycleSale extends Model
         'amount_paid',
         'receipt_reference',
         'receipt_path',
+        'digital_receipt_number',
+        'digital_receipt_path',
+        'digital_receipt_email',
+        'digital_receipt_status',
+        'digital_receipt_sent_at',
+        'digital_receipt_error',
         'notes',
         'created_by',
         'updated_by',
@@ -56,6 +68,7 @@ class PigCycleSale extends Model
             'amount' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'sale_date' => 'date',
+            'digital_receipt_sent_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

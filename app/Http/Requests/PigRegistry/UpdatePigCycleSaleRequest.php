@@ -5,7 +5,6 @@ namespace App\Http\Requests\PigRegistry;
 use App\Models\PigCycleSale;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
 class UpdatePigCycleSaleRequest extends FormRequest
@@ -31,18 +30,12 @@ class UpdatePigCycleSaleRequest extends FormRequest
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'receipt_reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'receipt' => ['nullable', File::types(['jpg', 'jpeg', 'png', 'webp', 'pdf'])->max(8 * 1024)],
-            'remove_receipt' => ['nullable', 'boolean'],
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($this->boolean('remove_receipt') && $this->hasFile('receipt')) {
-                $validator->errors()->add('receipt', 'Choose either remove receipt or upload a new one, not both.');
-            }
-
             $userRole = $this->user()?->role?->slug;
             $editingPayments = $this->filled('payment_status') || $this->filled('amount_paid');
 

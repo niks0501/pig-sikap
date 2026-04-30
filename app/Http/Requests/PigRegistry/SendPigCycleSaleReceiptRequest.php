@@ -4,7 +4,7 @@ namespace App\Http\Requests\PigRegistry;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdatePigBuyerRequest extends FormRequest
+class SendPigCycleSaleReceiptRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -23,11 +23,7 @@ class UpdatePigBuyerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'contact_number' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'email' => ['required', 'email', 'max:255'],
         ];
     }
 }

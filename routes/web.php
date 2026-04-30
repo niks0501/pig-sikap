@@ -15,6 +15,7 @@ use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigBuyerController;
 use App\Http\Controllers\President\PresidentExpenseController;
 use App\Http\Controllers\President\PresidentPigCycleSaleController;
+use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -115,6 +116,9 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         Route::get('/', [PresidentPigCycleSaleController::class, 'index'])->name('index');
         Route::get('/create', [PresidentPigCycleSaleController::class, 'create'])->name('create');
         Route::post('/', [PresidentPigCycleSaleController::class, 'store'])->name('store');
+        Route::get('/{sale}/receipt/preview', [PresidentSaleReceiptController::class, 'preview'])->name('receipt.preview');
+        Route::get('/{sale}/receipt/download', [PresidentSaleReceiptController::class, 'download'])->name('receipt.download');
+        Route::post('/{sale}/receipt/send', [PresidentSaleReceiptController::class, 'send'])->name('receipt.send');
         Route::get('/{sale}', [PresidentPigCycleSaleController::class, 'show'])->name('show');
         Route::put('/{sale}', [PresidentPigCycleSaleController::class, 'update'])->name('update');
     });

@@ -18,6 +18,7 @@
                         'buyer' => $sale->buyer ? [
                             'id' => $sale->buyer->id,
                             'name' => $sale->buyer->name,
+                            'email' => $sale->buyer->email,
                             'contact_number' => $sale->buyer->contact_number,
                             'address' => $sale->buyer->address,
                         ] : null,

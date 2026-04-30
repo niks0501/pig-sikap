@@ -47,10 +47,12 @@ class ExpenseSummaryService
      */
     public function buildMonthComparison(?int $cycleId = null): array
     {
-        $thisMonthStart = now()->startOfMonth()->toDateString();
-        $thisMonthEnd = now()->endOfMonth()->toDateString();
-        $lastMonthStart = now()->subMonthNoOverflow()->startOfMonth()->toDateString();
-        $lastMonthEnd = now()->subMonthNoOverflow()->endOfMonth()->toDateString();
+        $referenceDate = now();
+        $thisMonthStart = $referenceDate->copy()->startOfMonth()->startOfDay()->toDateTimeString();
+        $thisMonthEnd = $referenceDate->copy()->endOfMonth()->endOfDay()->toDateTimeString();
+        $lastMonthReference = $referenceDate->copy()->subMonthNoOverflow();
+        $lastMonthStart = $lastMonthReference->copy()->startOfMonth()->startOfDay()->toDateTimeString();
+        $lastMonthEnd = $lastMonthReference->copy()->endOfMonth()->endOfDay()->toDateTimeString();
 
         $baseQuery = PigCycleExpense::query();
 

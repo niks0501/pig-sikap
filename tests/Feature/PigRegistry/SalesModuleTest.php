@@ -6,9 +6,10 @@ use App\Models\PigCycleAdjustment;
 use App\Models\PigCycleSale;
 use App\Models\Role;
 use App\Models\User;
+use App\Mail\SaleReceiptMail;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
@@ -94,13 +95,11 @@ test('sales routes are accessible to president treasurer and secretary but forbi
     actingAs($officer)->get(route('sales.index'))->assertForbidden();
 });
 
-test('authorized user can store sale with receipt and inventory adjusts', function () {
+test('authorized user can store sale and inventory adjusts', function () {
     $treasurer = salesUser('treasurer');
     $cycle = salesCycle($treasurer, ['current_count' => 5]);
 
-    $response = actingAs($treasurer)->post(route('sales.store'), salePayload($cycle, [
-        'receipt' => UploadedFile::fake()->image('receipt.jpg'),
-    ]));
+    $response = actingAs($treasurer)->post(route('sales.store'), salePayload($cycle));
 
     $sale = PigCycleSale::query()->latest('id')->first();
 
@@ -123,8 +122,7 @@ test('authorized user can store sale with receipt and inventory adjusts', functi
     expect($adjustment)->not->toBeNull();
     expect($adjustment->reason)->toBe('sale deduction');
 
-    expect($sale->receipt_path)->not->toBeNull();
-    expect(Storage::disk('public')->exists((string) $sale->receipt_path))->toBeTrue();
+    expect($sale->digital_receipt_status)->toBe('not_sent');
 
     assertDatabaseHas('audit_trails', [
         'action' => 'sale_created',
@@ -194,7 +192,7 @@ test('selling out a cycle updates status to sold and completed', function () {
     expect($cycle->stage)->toBe('Completed');
 });
 
-test('secretary can update receipt but cannot update payment details', function () {
+test('secretary cannot update payment details', function () {
     $president = salesUser('president');
     $secretary = salesUser('secretary');
     $cycle = salesCycle($president);
@@ -221,14 +219,71 @@ test('secretary can update receipt but cannot update payment details', function 
 
     $response = actingAs($secretary)->put(route('sales.update', $sale), [
         'receipt_reference' => 'Receipt update',
-        'receipt' => UploadedFile::fake()->image('receipt.jpg'),
     ]);
 
     $response->assertRedirect(route('sales.show', $sale));
 
     $sale->refresh();
-    expect($sale->receipt_path)->not->toBeNull();
-    expect(Storage::disk('public')->exists((string) $sale->receipt_path))->toBeTrue();
+    expect($sale->receipt_reference)->toBe('Receipt update');
+});
+
+test('sale can be recorded with buyer email', function () {
+    $treasurer = salesUser('treasurer');
+    $cycle = salesCycle($treasurer);
+
+    actingAs($treasurer)->post(route('sales.store'), salePayload($cycle, [
+        'buyer_email' => 'buyer@example.com',
+    ]));
+
+    assertDatabaseHas('pig_buyers', [
+        'name' => 'Juan Dela Cruz',
+        'email' => 'buyer@example.com',
+    ]);
+});
+
+test('authorized user can preview and download digital receipt', function () {
+    $president = salesUser('president');
+    $cycle = salesCycle($president);
+
+    actingAs($president)->post(route('sales.store'), salePayload($cycle));
+    $sale = PigCycleSale::query()->latest('id')->firstOrFail();
+
+    actingAs($president)
+        ->get(route('sales.receipt.preview', $sale))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+
+    actingAs($president)
+        ->get(route('sales.receipt.download', $sale))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+});
+
+test('authorized user can send digital receipt and status updates', function () {
+    Mail::fake();
+
+    $treasurer = salesUser('treasurer');
+    $cycle = salesCycle($treasurer);
+
+    actingAs($treasurer)->post(route('sales.store'), salePayload($cycle, [
+        'buyer_email' => 'buyer@example.com',
+    ]));
+
+    $sale = PigCycleSale::query()->latest('id')->firstOrFail();
+
+    actingAs($treasurer)
+        ->postJson(route('sales.receipt.send', $sale), [
+            'email' => 'buyer@example.com',
+        ])
+        ->assertOk();
+
+    Mail::assertSent(SaleReceiptMail::class);
+
+    assertDatabaseHas('pig_cycle_sales', [
+        'id' => $sale->id,
+        'digital_receipt_status' => 'sent',
+        'digital_receipt_email' => 'buyer@example.com',
+    ]);
 });
 
 test('authorized users can create and update buyers', function () {

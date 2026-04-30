@@ -6,11 +6,8 @@ use App\Models\PigBuyer;
 use App\Models\PigCycle;
 use App\Models\PigCycleSale;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class RecordPigCycleSaleService
 {
@@ -24,10 +21,7 @@ class RecordPigCycleSaleService
      */
     public function handle(array $payload, User $actor): PigCycleSale
     {
-        $storedReceiptPath = null;
-
-        try {
-            return DB::transaction(function () use ($payload, $actor, &$storedReceiptPath): PigCycleSale {
+        return DB::transaction(function () use ($payload, $actor): PigCycleSale {
                 $cycle = PigCycle::query()
                     ->whereKey((int) $payload['batch_id'])
                     ->lockForUpdate()
@@ -62,13 +56,7 @@ class RecordPigCycleSaleService
 
                 $buyerId = $this->resolveBuyerId($payload, $actor);
 
-                $receiptPath = null;
-                $receipt = $payload['receipt'] ?? null;
-
-                if ($receipt instanceof UploadedFile) {
-                    $receiptPath = $receipt->store('uploads/sales', 'public');
-                    $storedReceiptPath = $receiptPath;
-                }
+                $digitalReceiptNumber = $this->generateReceiptNumber((string) $payload['sale_date']);
 
                 $sale = PigCycleSale::query()->create([
                     'batch_id' => $cycle->id,
@@ -83,7 +71,8 @@ class RecordPigCycleSaleService
                     'payment_status' => $paymentStatus,
                     'amount_paid' => $amountPaid,
                     'receipt_reference' => $this->normalizeString($payload['receipt_reference'] ?? null),
-                    'receipt_path' => $receiptPath,
+                    'digital_receipt_number' => $digitalReceiptNumber,
+                    'digital_receipt_status' => 'not_sent',
                     'notes' => $this->normalizeString($payload['notes'] ?? null),
                     'created_by' => $actor->id,
                 ]);
@@ -126,18 +115,11 @@ class RecordPigCycleSaleService
 
                 return $sale->load([
                     'cycle:id,batch_code,status,stage,current_count',
-                    'buyer:id,name,contact_number,address',
+                    'buyer:id,name,email,contact_number,address',
                     'createdBy:id,name',
                     'updatedBy:id,name',
                 ]);
             });
-        } catch (Throwable $exception) {
-            if (is_string($storedReceiptPath) && $storedReceiptPath !== '') {
-                Storage::disk('public')->delete($storedReceiptPath);
-            }
-
-            throw $exception;
-        }
     }
 
     /**
@@ -148,6 +130,19 @@ class RecordPigCycleSaleService
         $buyerId = (int) ($payload['buyer_id'] ?? 0);
 
         if ($buyerId > 0) {
+            $buyer = PigBuyer::query()->find($buyerId);
+
+            if ($buyer && $buyer->email === null) {
+                $email = $this->normalizeString($payload['buyer_email'] ?? null);
+
+                if ($email !== null) {
+                    $buyer->update([
+                        'email' => $email,
+                        'updated_by' => $actor->id,
+                    ]);
+                }
+            }
+
             return $buyerId;
         }
 
@@ -161,6 +156,7 @@ class RecordPigCycleSaleService
 
         $buyer = PigBuyer::query()->create([
             'name' => $name,
+            'email' => $this->normalizeString($payload['buyer_email'] ?? null),
             'contact_number' => $this->normalizeString($payload['buyer_contact_number'] ?? null),
             'address' => $this->normalizeString($payload['buyer_address'] ?? null),
             'notes' => $this->normalizeString($payload['buyer_notes'] ?? null),
@@ -273,5 +269,18 @@ class RecordPigCycleSaleService
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function generateReceiptNumber(string $saleDate): string
+    {
+        $year = substr($saleDate, 0, 4);
+
+        if (! ctype_digit($year)) {
+            $year = now()->format('Y');
+        }
+
+        $count = PigCycleSale::query()->whereYear('sale_date', (int) $year)->count() + 1;
+
+        return sprintf('PSR-%s-%05d', $year, $count);
     }
 }

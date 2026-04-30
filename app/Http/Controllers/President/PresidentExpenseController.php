@@ -79,20 +79,22 @@ class PresidentExpenseController extends Controller
         $cycleId = trim((string) $request->query('cycle_id', ''));
 
         $query = PigCycleExpense::query()->with('cycle:id,batch_code,status,stage');
+        $referenceDate = now();
 
         if ($cycleId !== '' && ctype_digit($cycleId)) {
             $query->where('batch_id', (int) $cycleId);
         }
 
         if ($timeframe === 'this_month') {
-            $start = now()->startOfMonth()->toDateString();
-            $end = now()->endOfMonth()->toDateString();
+            $start = $referenceDate->copy()->startOfMonth()->startOfDay()->toDateTimeString();
+            $end = $referenceDate->copy()->endOfMonth()->endOfDay()->toDateTimeString();
             $query->whereBetween('expense_date', [$start, $end]);
         }
 
         if ($timeframe === 'last_month') {
-            $start = now()->subMonthNoOverflow()->startOfMonth()->toDateString();
-            $end = now()->subMonthNoOverflow()->endOfMonth()->toDateString();
+            $lastMonthReference = $referenceDate->copy()->subMonthNoOverflow();
+            $start = $lastMonthReference->copy()->startOfMonth()->startOfDay()->toDateTimeString();
+            $end = $lastMonthReference->copy()->endOfMonth()->endOfDay()->toDateTimeString();
             $query->whereBetween('expense_date', [$start, $end]);
         }
 

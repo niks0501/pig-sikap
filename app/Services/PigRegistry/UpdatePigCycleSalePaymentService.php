@@ -4,11 +4,8 @@ namespace App\Services\PigRegistry;
 
 use App\Models\PigCycleSale;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class UpdatePigCycleSalePaymentService
 {
@@ -17,27 +14,11 @@ class UpdatePigCycleSalePaymentService
      */
     public function handle(PigCycleSale $sale, array $payload, User $actor): PigCycleSale
     {
-        $newReceiptPath = null;
-        $oldReceiptPathToDelete = null;
-
-        try {
-            $updatedSale = DB::transaction(function () use ($sale, $payload, $actor, &$newReceiptPath, &$oldReceiptPathToDelete): PigCycleSale {
+        return DB::transaction(function () use ($sale, $payload, $actor): PigCycleSale {
                 $lockedSale = PigCycleSale::query()
                     ->whereKey($sale->id)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                $receiptPath = $lockedSale->receipt_path;
-                $receipt = $payload['receipt'] ?? null;
-
-                if ($receipt instanceof UploadedFile) {
-                    $newReceiptPath = $receipt->store('uploads/sales', 'public');
-                    $oldReceiptPathToDelete = $lockedSale->receipt_path;
-                    $receiptPath = $newReceiptPath;
-                } elseif ((bool) ($payload['remove_receipt'] ?? false) && is_string($lockedSale->receipt_path)) {
-                    $oldReceiptPathToDelete = $lockedSale->receipt_path;
-                    $receiptPath = null;
-                }
 
                 $paymentStatus = array_key_exists('payment_status', $payload)
                     ? $this->normalizePaymentStatus($payload['payment_status'])
@@ -63,31 +44,17 @@ class UpdatePigCycleSalePaymentService
                     'payment_status' => $paymentStatus,
                     'amount_paid' => $amountPaid,
                     'receipt_reference' => $receiptReference,
-                    'receipt_path' => $receiptPath,
                     'notes' => $notes,
                     'updated_by' => $actor->id,
                 ]);
 
                 return $lockedSale->fresh([
                     'cycle:id,batch_code,status,stage,current_count',
-                    'buyer:id,name,contact_number,address',
+                    'buyer:id,name,email,contact_number,address',
                     'createdBy:id,name',
                     'updatedBy:id,name',
                 ]);
             });
-
-            if (is_string($oldReceiptPathToDelete) && $oldReceiptPathToDelete !== '') {
-                Storage::disk('public')->delete($oldReceiptPathToDelete);
-            }
-
-            return $updatedSale;
-        } catch (Throwable $exception) {
-            if (is_string($newReceiptPath) && $newReceiptPath !== '') {
-                Storage::disk('public')->delete($newReceiptPath);
-            }
-
-            throw $exception;
-        }
     }
 
     private function normalizePaymentStatus(mixed $value): string
