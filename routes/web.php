@@ -5,18 +5,18 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
-use App\Http\Controllers\President\PresidentPigCycleStatusController;
-use App\Http\Controllers\President\PresidentPigBreederController;
 use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
 use App\Http\Controllers\President\PresidentCycleHealthTaskController;
-use App\Http\Controllers\President\PresidentHealthController;
-use App\Http\Controllers\President\PresidentPigInventoryController;
-use App\Http\Controllers\President\PresidentPigBuyerController;
 use App\Http\Controllers\President\PresidentExpenseController;
+use App\Http\Controllers\President\PresidentHealthController;
+use App\Http\Controllers\President\PresidentPigBreederController;
+use App\Http\Controllers\President\PresidentPigBuyerController;
+use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
 use App\Http\Controllers\President\PresidentPigCycleSaleController;
-use App\Http\Controllers\President\PresidentSaleReceiptController;
+use App\Http\Controllers\President\PresidentPigCycleStatusController;
+use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigProfileController;
+use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,7 +28,7 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'force_password_change'])->name('dashboard');
 
-Route::middleware(['auth', 'force_password_change', 'role:system_admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'force_password_change', 'role:system_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -45,7 +45,7 @@ Route::middleware(['auth', 'force_password_change', 'role:system_admin'])->prefi
     Route::put('/profile/password', [AdminProfileController::class, 'changePassword'])->name('profile.password');
 });
 
-Route::middleware(['auth', 'force_password_change'])->group(function () {
+Route::middleware(['auth', 'verified', 'force_password_change'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -148,37 +148,61 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
 
     // Profitability & Profit-Sharing Module
     Route::prefix('profitability')->name('profitability.')->group(function () {
-        Route::get('/', function () { return view('profitability.index'); })->name('index');
-        Route::get('/cycle/{id}', function ($id) { return view('profitability.show', ['id' => $id]); })->name('show');
+        Route::get('/', function () {
+            return view('profitability.index');
+        })->name('index');
+        Route::get('/cycle/{id}', function ($id) {
+            return view('profitability.show', ['id' => $id]);
+        })->name('show');
     });
 
-    Route::get('/profit-sharing/{id}', function ($id) { return view('profitability.sharing', ['id' => $id]); })->name('profit-sharing');
+    Route::get('/profit-sharing/{id}', function ($id) {
+        return view('profitability.sharing', ['id' => $id]);
+    })->name('profit-sharing');
 
     // Meeting Resolutions and Withdrawal Documentation Module
     Route::prefix('resolutions')->name('resolutions.')->group(function () {
-        Route::get('/', function () { return view('resolutions.index'); })->name('index');
-        Route::get('/create', function () { return view('resolutions.create'); })->name('create');
-        Route::get('/{id}', function ($id) { return view('resolutions.show', ['id' => $id]); })->name('show');
+        Route::get('/', function () {
+            return view('resolutions.index');
+        })->name('index');
+        Route::get('/create', function () {
+            return view('resolutions.create');
+        })->name('create');
+        Route::get('/{id}', function ($id) {
+            return view('resolutions.show', ['id' => $id]);
+        })->name('show');
     });
 
     Route::prefix('minutes')->name('minutes.')->group(function () {
-        Route::get('/', function () { return view('minutes.index'); })->name('index');
+        Route::get('/', function () {
+            return view('minutes.index');
+        })->name('index');
     });
 
     Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
-        Route::get('/create', function () { return view('withdrawals.create'); })->name('create');
+        Route::get('/create', function () {
+            return view('withdrawals.create');
+        })->name('create');
     });
 
     // Reports Module
     Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/', function () { return view('reports.index'); })->name('index');
-        Route::get('/generate', function () { return view('reports.generate'); })->name('generate');
-        Route::get('/{type}/preview', function ($type) { return view('reports.preview', ['type' => $type]); })->name('preview');
+        Route::get('/', function () {
+            return view('reports.index');
+        })->name('index');
+        Route::get('/generate', function () {
+            return view('reports.generate');
+        })->name('generate');
+        Route::get('/{type}/preview', function ($type) {
+            return view('reports.preview', ['type' => $type]);
+        })->name('preview');
     });
 
     // Audit Trail Module
     Route::prefix('audit-trails')->name('audit-trails.')->group(function () {
-        Route::get('/', function () { return view('audit-trails.index'); })->name('index');
+        Route::get('/', function () {
+            return view('audit-trails.index');
+        })->name('index');
     });
 });
 

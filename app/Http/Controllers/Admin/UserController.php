@@ -56,8 +56,9 @@ class UserController extends Controller
             'role_id' => $validated['role_id'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
             'must_change_password' => true,
-            'email_verified_at' => now(),
         ]);
+
+        $user->sendEmailVerificationNotification();
 
         AuditTrail::create([
             'user_id' => $request->user()->id,

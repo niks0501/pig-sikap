@@ -1,10 +1,13 @@
 <?php
 
-use App\Models\Role;
 use App\Models\AuditTrail;
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\seed;
 
@@ -131,4 +134,34 @@ test('system admin can view mortality actions in activity logs', function () {
     $response->assertJsonPath('data.0.context_json.incident_type', 'deceased');
     $response->assertJsonPath('data.0.context_json.incident_category', 'mortality');
     $response->assertJsonPath('data.0.reference', 'Cycle HC-202 • Incident #601');
+});
+
+test('system admin created users receive email verification notification', function () {
+    Notification::fake();
+
+    $systemAdminRole = Role::where('slug', 'system_admin')->firstOrFail();
+    $presidentRole = Role::where('slug', 'president')->firstOrFail();
+
+    $admin = User::factory()->create([
+        'role_id' => $systemAdminRole->id,
+        'is_active' => true,
+        'must_change_password' => false,
+        'email_verified_at' => now(),
+    ]);
+
+    $response = actingAs($admin)->postJson(route('admin.users.store'), [
+        'name' => 'New President',
+        'email' => 'new-president@example.com',
+        'role_id' => $presidentRole->id,
+        'is_active' => true,
+    ]);
+
+    $response->assertCreated();
+
+    $createdUser = User::where('email', 'new-president@example.com')->firstOrFail();
+
+    expect($createdUser->email_verified_at)->toBeNull()
+        ->and($createdUser->must_change_password)->toBeTrue();
+
+    Notification::assertSentTo($createdUser, VerifyEmail::class);
 });
