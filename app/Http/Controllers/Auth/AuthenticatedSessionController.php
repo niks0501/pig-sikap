@@ -55,6 +55,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($user->must_change_password && $this->intendedUrlIsEmailVerification($request)) {
+            return redirect()->intended(route('password.force.edit', absolute: false));
+        }
+
         if ($user->must_change_password) {
             return redirect()->route('password.force.edit');
         }
@@ -64,6 +68,22 @@ class AuthenticatedSessionController extends Controller
         }
 
         return redirect()->intended(route('dashboard', absolute: false));
+    }
+
+    /**
+     * Let first-login users complete a verification link they clicked before login.
+     */
+    private function intendedUrlIsEmailVerification(Request $request): bool
+    {
+        $intendedUrl = $request->session()->get('url.intended');
+
+        if (! is_string($intendedUrl)) {
+            return false;
+        }
+
+        $path = parse_url($intendedUrl, PHP_URL_PATH);
+
+        return is_string($path) && str_starts_with(trim($path, '/'), 'verify-email/');
     }
 
     /**
