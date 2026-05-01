@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import CycleHealthIncidentList from './CycleHealthIncidentList.vue';
 import CycleHealthTaskList from './CycleHealthTaskList.vue';
 
@@ -38,6 +38,59 @@ const counts = computed(() => props.healthSummary?.counts ?? {});
 const activeMetrics = computed(() => props.healthSummary?.active ?? {});
 const lifetimeMetrics = computed(() => props.healthSummary?.lifetime ?? {});
 const isArchived = computed(() => props.cycle?.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle?.status ?? ''));
+const timelineFilter = ref('all');
+const timelineFilterOptions = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'due_overdue', label: 'Due / Overdue' },
+    { key: 'completed', label: 'Completed' },
+];
+
+const taskTimelineItems = computed(() => props.timelineItems.filter((item) => item.kind === 'task'));
+
+const taskFilterKey = (item) => {
+    const task = item.task ?? {};
+    const status = String(task.status ?? '');
+
+    if (status === 'completed') {
+        return 'completed';
+    }
+
+    if (task.is_terminal) {
+        return 'completed';
+    }
+
+    const plannedDate = task.planned_start_date || item.timeline_date || '';
+
+    if (plannedDate !== '' && plannedDate <= props.todayDate) {
+        return 'due_overdue';
+    }
+
+    return 'pending';
+};
+
+const timelineFilterCounts = computed(() => {
+    const counts = {
+        all: props.timelineItems.length,
+        pending: 0,
+        due_overdue: 0,
+        completed: 0,
+    };
+
+    taskTimelineItems.value.forEach((item) => {
+        counts[taskFilterKey(item)] += 1;
+    });
+
+    return counts;
+});
+
+const filteredTimelineItems = computed(() => {
+    if (timelineFilter.value === 'all') {
+        return props.timelineItems;
+    }
+
+    return taskTimelineItems.value.filter((item) => taskFilterKey(item) === timelineFilter.value);
+});
 
 const formatDate = (value) => {
     if (!value) {
@@ -190,6 +243,9 @@ const formatDate = (value) => {
         </div>
 
         <div class="mt-3 grid gap-2" aria-live="polite">
+            <p class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900">
+                Completed health tasks stay visible here as historical proof. Use the filters below if the timeline becomes long.
+            </p>
             <p class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">
                 Deceased incidents deduct cycle current count immediately.
             </p>
@@ -201,8 +257,21 @@ const formatDate = (value) => {
             </p>
         </div>
 
+        <div class="mt-4 flex flex-wrap gap-2" aria-label="Timeline filters">
+            <button
+                v-for="option in timelineFilterOptions"
+                :key="option.key"
+                type="button"
+                class="inline-flex min-h-10 items-center justify-center rounded-xl border px-3 py-2 text-xs font-bold transition"
+                :class="timelineFilter === option.key ? 'border-[#0c6d57] bg-[#0c6d57] text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
+                @click="timelineFilter = option.key"
+            >
+                {{ option.label }} ({{ Number(timelineFilterCounts[option.key] || 0).toLocaleString() }})
+            </button>
+        </div>
+
         <div class="mt-5 space-y-4">
-            <template v-for="item in props.timelineItems" :key="`${item.kind}-${item.id}`">
+            <template v-for="item in filteredTimelineItems" :key="`${item.kind}-${item.id}`">
                 <CycleHealthTaskList
                     v-if="item.kind === 'task'"
                     :item="item"
@@ -214,8 +283,8 @@ const formatDate = (value) => {
                 <CycleHealthIncidentList v-else :item="item" />
             </template>
 
-            <p v-if="props.timelineItems.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-sm text-gray-500">
-                No timeline records available for this cycle yet.
+            <p v-if="filteredTimelineItems.length === 0" class="rounded-xl border border-dashed border-gray-300 px-3 py-5 text-sm text-gray-500">
+                No timeline records match this filter.
             </p>
         </div>
     </section>

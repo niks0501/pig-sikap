@@ -13,8 +13,12 @@ use Throwable;
 
 class UpdatePigCycleExpenseService
 {
+    public function __construct(
+        private readonly ExpenseAmountResolver $expenseAmountResolver
+    ) {}
+
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function handle(PigCycleExpense $expense, array $payload, User $actor): PigCycleExpense
     {
@@ -54,7 +58,10 @@ class UpdatePigCycleExpenseService
                 $lockedExpense->update([
                     'batch_id' => $cycle->id,
                     'category' => (string) $payload['category'],
-                    'amount' => (float) $payload['amount'],
+                    'quantity' => $payload['quantity'] ?? null,
+                    'unit' => $payload['unit'] ?? null,
+                    'unit_cost' => $payload['unit_cost'] ?? null,
+                    'amount' => $this->expenseAmountResolver->amount($payload),
                     'expense_date' => (string) $payload['expense_date'],
                     'notes' => (string) $payload['notes'],
                     'receipt_path' => $receiptPath,

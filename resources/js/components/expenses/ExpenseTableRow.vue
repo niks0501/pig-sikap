@@ -35,6 +35,17 @@ const formatAmount = (amount) => {
     }).format(parseFloat(amount || 0));
 };
 
+const formatQuantity = (expense) => {
+    if (expense.quantity === null && !expense.unit) {
+        return 'Lump-sum';
+    }
+
+    const quantity = Number(expense.quantity || 0);
+    const quantityText = quantity % 1 === 0 ? String(quantity) : quantity.toFixed(2);
+
+    return `${quantityText} ${expense.unit || ''}`.trim();
+};
+
 const formatCategoryLabel = (category) => {
     return category?.charAt(0).toUpperCase() + category?.slice(1) || '';
 };
@@ -112,11 +123,15 @@ const hasReceipt = computed(() => {
                     <p class="mt-0.5 text-xs text-gray-400">
                         By {{ expense.created_by_name || 'System' }} • {{ formatDate(expense.expense_date) }}
                     </p>
+                    <p class="mt-2 text-xs font-semibold text-gray-600">
+                        {{ formatQuantity(expense) }}<template v-if="expense.unit_cost"> • {{ formatAmount(expense.unit_cost) }} / {{ expense.unit || 'unit' }}</template>
+                    </p>
                 </div>
             </div>
 
             <div class="text-right shrink-0">
                 <p class="text-xl font-black text-gray-900">{{ formatAmount(expense.amount) }}</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
                 <a
                     :href="props.routes.show?.replace('_ID_', expense.id)"
                     class="mt-2 inline-flex items-center text-xs font-semibold text-[#0c6d57] hover:text-[#0a5a48]"

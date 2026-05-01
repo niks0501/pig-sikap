@@ -5,8 +5,8 @@ use App\Models\PigCycleExpense;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
@@ -120,6 +120,55 @@ test('authorized user can store expense with receipt and audit entry is recorded
     ]);
 });
 
+test('authorized user can store expense with quantity unit cost and computed total', function () {
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    $response = actingAs($treasurer)->post(route('expenses.store'), expensePayload($cycle, [
+        'quantity' => '3',
+        'unit' => 'sack',
+        'unit_cost' => '625.50',
+        'amount' => '1.00',
+        'notes' => 'Three sacks of grower feed.',
+    ]));
+
+    $expense = PigCycleExpense::query()->latest('id')->firstOrFail();
+
+    $response->assertRedirect(route('expenses.show', $expense));
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'id' => $expense->id,
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'quantity' => '3.00',
+        'unit' => 'sack',
+        'unit_cost' => '625.50',
+        'amount' => '1876.50',
+        'notes' => 'Three sacks of grower feed.',
+    ]);
+});
+
+test('authorized user can store direct amount only for lump sum expense', function () {
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    actingAs($treasurer)->post(route('expenses.store'), expensePayload($cycle, [
+        'category' => 'emergency',
+        'amount' => '500.00',
+        'notes' => 'Emergency fund release.',
+    ]))->assertRedirect()->assertSessionHasNoErrors();
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'batch_id' => $cycle->id,
+        'category' => 'emergency',
+        'quantity' => null,
+        'unit' => null,
+        'unit_cost' => null,
+        'amount' => '500.00',
+        'notes' => 'Emergency fund release.',
+    ]);
+});
+
 test('store request rejects archived cycle and future date', function () {
     $president = expenseUser('president');
     $archivedCycle = expenseCycle($president, [
@@ -162,7 +211,10 @@ test('authorized users can update expense and only president can delete', functi
     $updateResponse = actingAs($secretary)->put(route('expenses.update', $expense), [
         'batch_id' => $cycle->id,
         'category' => 'transport',
-        'amount' => 650,
+        'quantity' => '2',
+        'unit' => 'trip',
+        'unit_cost' => '325.25',
+        'amount' => 1,
         'expense_date' => now()->toDateString(),
         'notes' => 'Updated transport details',
     ]);
@@ -173,6 +225,10 @@ test('authorized users can update expense and only president can delete', functi
     assertDatabaseHas('pig_cycle_expenses', [
         'id' => $expense->id,
         'category' => 'transport',
+        'quantity' => '2.00',
+        'unit' => 'trip',
+        'unit_cost' => '325.25',
+        'amount' => '650.50',
         'notes' => 'Updated transport details',
         'updated_by' => $secretary->id,
     ]);
@@ -331,6 +387,9 @@ test('summary page shows computed totals for selected scope', function () {
         ->get(route('expenses.summary', ['timeframe' => 'this_month', 'cycle_id' => $cycle->id]))
         ->assertOk()
         ->assertSee('Php 1,250.00')
+        ->assertSee('Qty / Unit')
+        ->assertSee('Unit Cost')
+        ->assertSee('Total Amount')
         ->assertSee('Feed')
         ->assertSee('Transport');
 });

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import ToastNotification from '../common/ToastNotification.vue';
 import ReceiptUpload from './ReceiptUpload.vue';
 
@@ -102,9 +102,35 @@ const initialBatchId = computed(() => {
 const form = reactive({
     batch_id: initialBatchId.value,
     category: String(props.oldInput.category ?? props.expense?.category ?? props.preferences.last_category ?? ''),
+    quantity: String(props.oldInput.quantity ?? props.expense?.quantity ?? ''),
+    unit: String(props.oldInput.unit ?? props.expense?.unit ?? ''),
+    unit_cost: String(props.oldInput.unit_cost ?? props.expense?.unit_cost ?? ''),
     amount: String(props.oldInput.amount ?? props.expense?.amount ?? ''),
     expense_date: String(props.oldInput.expense_date ?? props.expense?.expense_date ?? today.value),
     notes: String(props.oldInput.notes ?? props.expense?.notes ?? ''),
+});
+
+const hasStructuredInput = computed(() => {
+    return form.quantity.trim() !== '' || form.unit.trim() !== '' || form.unit_cost.trim() !== '';
+});
+
+const structuredTotal = computed(() => {
+    const quantity = Number(form.quantity);
+    const unitCost = Number(form.unit_cost);
+
+    if (!Number.isFinite(quantity) || !Number.isFinite(unitCost) || quantity <= 0 || unitCost <= 0) {
+        return 0;
+    }
+
+    return Math.round(quantity * unitCost * 100) / 100;
+});
+
+const usesStructuredAmount = computed(() => structuredTotal.value > 0 && form.unit.trim() !== '');
+
+watch(structuredTotal, (total) => {
+    if (total > 0) {
+        form.amount = total.toFixed(2);
+    }
 });
 
 const filteredCycles = computed(() => {
@@ -145,7 +171,10 @@ const selectedCycleArchived = computed(() => selectedCycle.value?.isArchived ?? 
 const validations = computed(() => ({
     batch_id: Number(form.batch_id || 0) > 0 && !selectedCycleArchived.value,
     category: form.category !== '',
-    amount: Number(form.amount) > 0,
+    quantity: !hasStructuredInput.value || Number(form.quantity) > 0,
+    unit: !hasStructuredInput.value || form.unit.trim() !== '',
+    unit_cost: !hasStructuredInput.value || Number(form.unit_cost) > 0,
+    amount: usesStructuredAmount.value || Number(form.amount) > 0,
     expense_date: form.expense_date !== '' && form.expense_date <= today.value,
     notes: form.notes.trim().length > 0,
 }));
@@ -168,7 +197,21 @@ const clientSideBlockMessage = computed(() => {
     }
 
     if (!validations.value.amount) {
-        return 'Enter a valid amount greater than zero.';
+        return hasStructuredInput.value
+            ? 'Complete Quantity, Unit, and Unit Cost so Total Amount can be computed.'
+            : 'Enter a valid amount greater than zero.';
+    }
+
+    if (!validations.value.quantity) {
+        return 'Enter a valid Quantity / Bilang greater than zero.';
+    }
+
+    if (!validations.value.unit) {
+        return 'Enter Unit / Yunit when using quantity and unit cost.';
+    }
+
+    if (!validations.value.unit_cost) {
+        return 'Enter a valid Unit Cost / Halaga kada Yunit greater than zero.';
     }
 
     if (!validations.value.expense_date) {
@@ -242,12 +285,18 @@ const cancelRoute = computed(() => {
 });
 
 const applyPresetAmount = (amount) => {
+    form.quantity = '';
+    form.unit = '';
+    form.unit_cost = '';
     form.amount = String(amount);
 };
 
 const applyTemplate = (template) => {
     form.batch_id = String(template.batch_id || form.batch_id || '');
     form.category = String(template.category || '');
+    form.quantity = String(template.quantity ?? '');
+    form.unit = String(template.unit ?? '');
+    form.unit_cost = String(template.unit_cost ?? '');
     form.amount = String(template.amount || '');
     form.notes = String(template.notes || '');
     form.expense_date = today.value;
@@ -256,6 +305,9 @@ const applyTemplate = (template) => {
 const resetForAnother = (preferences = {}) => {
     form.batch_id = String(preferences.last_cycle_id || form.batch_id || '');
     form.category = String(preferences.last_category || form.category || '');
+    form.quantity = '';
+    form.unit = '';
+    form.unit_cost = '';
     form.amount = '';
     form.expense_date = today.value;
     form.notes = '';
@@ -492,10 +544,102 @@ const handleToastAction = () => {
                     </p>
                 </label>
 
+                <div class="sm:col-span-2 rounded-2xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4">
+                    <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-[#0a5a48]">Optional quantity computation</p>
+                            <p class="mt-1 text-xs text-[#0a5a48]/80">
+                                Use this for logbook entries with Bilang, Yunit, and Halaga kada Yunit. Leave blank for lump-sum expenses.
+                            </p>
+                        </div>
+                        <p class="rounded-xl bg-white px-3 py-2 text-sm font-black text-[#0c6d57]">
+                            Total Amount / Kabuuang Halaga: {{ formatAmount(usesStructuredAmount ? structuredTotal : form.amount) }}
+                        </p>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <label>
+                            <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                                Quantity / Bilang
+                                <span v-if="fieldReady('quantity') && hasStructuredInput" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                            </span>
+                            <input
+                                v-model="form.quantity"
+                                type="number"
+                                name="quantity"
+                                step="0.01"
+                                min="0.01"
+                                max="999999.99"
+                                :class="[
+                                    'w-full rounded-xl border bg-white px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+                                    fieldError('quantity')
+                                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
+                                        : 'border-gray-200 focus:border-[#0c6d57] focus:ring-[#0c6d57]/20',
+                                ]"
+                                placeholder="Example: 2"
+                            >
+                            <p v-if="fieldError('quantity')" class="mt-1.5 text-xs font-semibold text-rose-700">
+                                {{ fieldError('quantity') }}
+                            </p>
+                        </label>
+
+                        <label>
+                            <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                                Unit / Yunit
+                                <span v-if="fieldReady('unit') && hasStructuredInput" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                            </span>
+                            <input
+                                v-model="form.unit"
+                                type="text"
+                                name="unit"
+                                maxlength="50"
+                                :class="[
+                                    'w-full rounded-xl border bg-white px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+                                    fieldError('unit')
+                                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
+                                        : 'border-gray-200 focus:border-[#0c6d57] focus:ring-[#0c6d57]/20',
+                                ]"
+                                placeholder="sack, kilo, bottle"
+                            >
+                            <p v-if="fieldError('unit')" class="mt-1.5 text-xs font-semibold text-rose-700">
+                                {{ fieldError('unit') }}
+                            </p>
+                        </label>
+
+                        <label>
+                            <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                                Unit Cost / Halaga kada Yunit
+                                <span v-if="fieldReady('unit_cost') && hasStructuredInput" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                            </span>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">Php</span>
+                                <input
+                                    v-model="form.unit_cost"
+                                    type="number"
+                                    name="unit_cost"
+                                    step="0.01"
+                                    min="0.01"
+                                    max="999999.99"
+                                    :class="[
+                                        'w-full rounded-xl border py-3 pl-10 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+                                        fieldError('unit_cost')
+                                            ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
+                                            : 'border-gray-200 focus:border-[#0c6d57] focus:ring-[#0c6d57]/20',
+                                    ]"
+                                    placeholder="0.00"
+                                >
+                            </div>
+                            <p v-if="fieldError('unit_cost')" class="mt-1.5 text-xs font-semibold text-rose-700">
+                                {{ fieldError('unit_cost') }}
+                            </p>
+                        </label>
+                    </div>
+                </div>
+
                 <label>
                     <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
-                        Amount *
-                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Enter the peso amount from the receipt or paper record." aria-label="Amount help">?</button>
+                        Total Amount / Kabuuang Halaga *
+                        <button type="button" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500" title="Enter a direct amount for lump-sum expenses, or let Quantity and Unit Cost compute this total." aria-label="Amount help">?</button>
                         <span v-if="fieldReady('amount')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
                     </span>
                     <div class="relative">
@@ -507,9 +651,11 @@ const handleToastAction = () => {
                             step="0.01"
                             min="0.01"
                             max="999999.99"
-                            required
+                            :readonly="usesStructuredAmount"
+                            :required="!hasStructuredInput"
                             :class="[
                                 'w-full rounded-xl border py-3 pl-10 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+                                usesStructuredAmount ? 'cursor-not-allowed bg-gray-100 text-gray-600' : 'bg-white',
                                 fieldError('amount')
                                     ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
                                     : 'border-gray-200 focus:border-[#0c6d57] focus:ring-[#0c6d57]/20',
@@ -517,6 +663,12 @@ const handleToastAction = () => {
                             placeholder="0.00"
                         >
                     </div>
+                    <p v-if="usesStructuredAmount" class="mt-1.5 text-xs font-medium text-[#0a5a48]">
+                        Auto-computed from Quantity x Unit Cost. The server will verify this total when saving.
+                    </p>
+                    <p v-else class="mt-1.5 text-xs text-gray-500">
+                        For lump-sum expenses like emergency funds or miscellaneous costs, enter the total directly here.
+                    </p>
                     <div v-if="presetAmounts.length > 0" class="mt-2 flex flex-wrap gap-2">
                         <button
                             v-for="amount in presetAmounts"

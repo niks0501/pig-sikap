@@ -58,6 +58,12 @@ const isStatusDialogOpen = ref(false);
 const isArchiveDialogOpen = ref(false);
 const isSubmittingAdjustment = ref(false);
 const isSubmittingStatus = ref(false);
+const archiveChecklist = ref({
+    sales: false,
+    expenses: false,
+    mortality: false,
+    profitSharing: false,
+});
 const automation = computed(() => props.automation ?? {});
 
 const countdown = computed(() => automation.value.countdown ?? {});
@@ -73,6 +79,7 @@ const currentlyAffected = computed(() => Number(countSummary.value.currently_aff
 const healthyNow = computed(() => Number(countSummary.value.healthy_now ?? Math.max(Number(props.cycle.current_count || 0) - currentlyAffected.value, 0)));
 const totalRecoveredReported = computed(() => Number(countSummary.value.total_recovered_reported ?? 0));
 const totalDeceasedReported = computed(() => Number(countSummary.value.total_deceased_reported ?? countSummary.value.deceased_count ?? 0));
+const archiveChecklistComplete = computed(() => Object.values(archiveChecklist.value).every(Boolean));
 
 const formatCurrency = (value) => {
     const amount = Number(value ?? 0);
@@ -153,9 +160,19 @@ const openArchiveDialog = () => {
 
 const closeArchiveDialog = () => {
     isArchiveDialogOpen.value = false;
+    archiveChecklist.value = {
+        sales: false,
+        expenses: false,
+        mortality: false,
+        profitSharing: false,
+    };
 };
 
 const confirmArchive = async () => {
+    if (!archiveChecklistComplete.value) {
+        return;
+    }
+
     // Submit the archive form programmatically
     const form = document.createElement('form');
     form.method = 'POST';
@@ -259,7 +276,7 @@ const handleStatusSubmit = async (event) => {
                         Update Stage / Status
                     </button>
                     <button v-if="!isArchived" type="button" class="inline-flex w-full items-center justify-center rounded-xl bg-gray-800 px-4 py-3 text-base font-semibold text-white transition hover:bg-gray-900 sm:col-span-2 min-h-[48px]" @click="openArchiveDialog">
-                        Archive / Close
+                        Close Cycle / Move to Archived Records
                     </button>
                 </div>
             </div>
@@ -699,18 +716,38 @@ const handleStatusSubmit = async (event) => {
                             leave-to="opacity-0 scale-95"
                         >
                             <DialogPanel class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
-                                <DialogTitle class="text-lg font-bold text-gray-900">Archive this cycle?</DialogTitle>
+                                <DialogTitle class="text-lg font-bold text-gray-900">Close Cycle / Move to Archived Records?</DialogTitle>
                                 <p class="mt-2 text-sm text-gray-500">
-                                    This action will move <strong>{{ props.cycle.batch_code }}</strong> to the archive.
+                                    This action will move <strong>{{ props.cycle.batch_code }}</strong> to archived records.
                                     Operational editing will be restricted, but you can still view the cycle details.
                                 </p>
+
+                                <div class="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                                    <p class="text-sm font-bold text-gray-900">Before closing, confirm these records were checked:</p>
+                                    <label class="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+                                        <input v-model="archiveChecklist.sales" type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                                        <span>Sales have been recorded.</span>
+                                    </label>
+                                    <label class="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+                                        <input v-model="archiveChecklist.expenses" type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                                        <span>Expenses have been reviewed.</span>
+                                    </label>
+                                    <label class="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+                                        <input v-model="archiveChecklist.mortality" type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                                        <span>Mortality/deceased records have been reviewed.</span>
+                                    </label>
+                                    <label class="flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+                                        <input v-model="archiveChecklist.profitSharing" type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                                        <span>Profit-sharing summary has been checked.</span>
+                                    </label>
+                                </div>
 
                                 <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                                     <div class="flex items-start gap-2">
                                         <svg class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        <p class="text-sm text-amber-800">Once archived, you won't be able to adjust counts or update status.</p>
+                                        <p class="text-sm text-amber-800">Once archived, this cycle stays read-only unless a reopening flow already exists.</p>
                                     </div>
                                 </div>
 
@@ -718,8 +755,8 @@ const handleStatusSubmit = async (event) => {
                                     <button type="button" class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50" @click="closeArchiveDialog">
                                         Cancel
                                     </button>
-                                    <button type="button" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900" @click="confirmArchive">
-                                        Archive Cycle
+                                    <button type="button" :disabled="!archiveChecklistComplete" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60" @click="confirmArchive">
+                                        Close Cycle / Move to Archived Records
                                     </button>
                                 </div>
                             </DialogPanel>

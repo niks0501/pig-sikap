@@ -50,6 +50,8 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::view('/membership/how-to-join', 'membership.how-to-join')->name('membership.how-to-join');
+
     Route::middleware(['role:president'])->group(function () {
         Route::prefix('cycles')->name('cycles.')->scopeBindings()->group(function () {
             Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');

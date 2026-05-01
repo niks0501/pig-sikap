@@ -232,6 +232,17 @@ const formatAmount = (amount) => {
     }).format(parseFloat(amount || 0));
 };
 
+const formatQuantity = (expense) => {
+    if (expense.quantity === null && !expense.unit) {
+        return 'Lump-sum';
+    }
+
+    const quantity = Number(expense.quantity || 0);
+    const quantityText = quantity % 1 === 0 ? String(quantity) : quantity.toFixed(2);
+
+    return `${quantityText} ${expense.unit || ''}`.trim();
+};
+
 const showToast = (type, title, message) => {
     toast.type = type;
     toast.title = title;
@@ -416,6 +427,12 @@ class="px-6 py-4 text-left cursor-pointer select-none"
 <th class="px-6 py-4 text-left">
 <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</span>
 </th>
+<th class="px-6 py-4 text-left">
+<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Qty / Unit</span>
+</th>
+<th class="px-6 py-4 text-right">
+<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unit Cost</span>
+</th>
 <th
 class="px-6 py-4 text-left cursor-pointer select-none"
                             @click="toggleSort('cycle')"
@@ -479,6 +496,8 @@ class="px-6 py-4 text-right cursor-pointer select-none"
         Receipt attached
     </span>
 </td>
+<td class="px-6 py-4 text-sm font-semibold text-gray-700">{{ formatQuantity(expense) }}</td>
+<td class="px-6 py-4 text-sm font-semibold text-gray-700 text-right">{{ expense.unit_cost ? formatAmount(expense.unit_cost) : '-' }}</td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ expense.cycle?.batch_code || 'Unknown' }}</td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ expense.created_by_name || 'System' }}</td>
 <td class="px-6 py-4 text-lg font-black text-gray-900 text-right">{{ formatAmount(expense.amount) }}</td>

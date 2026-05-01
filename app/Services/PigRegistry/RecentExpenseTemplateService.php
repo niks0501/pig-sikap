@@ -18,10 +18,13 @@ class RecentExpenseTemplateService
             ->latest('expense_date')
             ->latest('id')
             ->limit(30)
-            ->get(['id', 'batch_id', 'category', 'amount', 'expense_date', 'notes'])
+            ->get(['id', 'batch_id', 'category', 'quantity', 'unit', 'unit_cost', 'amount', 'expense_date', 'notes'])
             ->unique(fn (PigCycleExpense $expense): string => implode('|', [
                 $expense->batch_id,
                 $expense->category,
+                (string) $expense->quantity,
+                (string) $expense->unit,
+                (string) $expense->unit_cost,
                 (string) $expense->amount,
                 trim((string) $expense->notes),
             ]))
@@ -33,6 +36,9 @@ class RecentExpenseTemplateService
                 'cycle_code' => $expense->cycle?->batch_code,
                 'category' => $expense->category,
                 'category_label' => $expense->categoryLabel(),
+                'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
+                'unit' => $expense->unit,
+                'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
                 'amount' => (float) $expense->amount,
                 'expense_date' => $expense->expense_date?->toDateString(),
                 'notes' => $expense->notes,

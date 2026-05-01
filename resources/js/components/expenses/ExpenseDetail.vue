@@ -54,6 +54,10 @@ const hasReceipt = computed(() => {
     return props.expense?.receipt_url && props.expense.receipt_url.trim() !== '';
 });
 
+const hasStructuredAmount = computed(() => {
+    return props.expense.quantity !== null || props.expense.unit || props.expense.unit_cost !== null;
+});
+
 const isCycleArchived = computed(() => {
     return props.expense.cycle?.isArchived ?? props.expense.cycle?.status === 'archived';
 });
@@ -149,6 +153,23 @@ const closeDuplicateModal = () => {
                 <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Last Updated By</p>
                 <p class="mt-1 text-sm font-semibold text-gray-900">{{ expense.updated_by_name }}</p>
                 <p class="mt-0.5 text-xs text-gray-500">on {{ formatDateTime(expense.updated_at) }}</p>
+            </div>
+
+            <div class="rounded-xl bg-[#0c6d57]/5 p-4">
+                <p class="text-xs font-semibold tracking-wide text-[#0c6d57] uppercase">Quantity / Unit</p>
+                <p class="mt-1 text-sm font-semibold text-gray-900">
+                    <template v-if="hasStructuredAmount">
+                        {{ expense.quantity ?? '-' }} {{ expense.unit || '' }}
+                    </template>
+                    <template v-else>Lump-sum expense</template>
+                </p>
+            </div>
+
+            <div class="rounded-xl bg-[#0c6d57]/5 p-4">
+                <p class="text-xs font-semibold tracking-wide text-[#0c6d57] uppercase">Unit Cost / Halaga kada Yunit</p>
+                <p class="mt-1 text-sm font-semibold text-gray-900">
+                    {{ expense.unit_cost !== null ? formatAmount(expense.unit_cost) : '-' }}
+                </p>
             </div>
 
             <div v-if="isCycleArchived" class="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4">

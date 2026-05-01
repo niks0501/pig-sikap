@@ -433,6 +433,13 @@ const cancelConfirm = () => {
                         </option>
                     </select>
                     <p v-if="fieldError('incident_type')" class="mt-1.5 text-xs font-semibold text-rose-700">{{ fieldError('incident_type') }}</p>
+                    <p v-if="!isMortalityMode" class="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">
+                        Kung namatay ang baboy, gamitin ang
+                        <a :href="props.routes.mortalityCreate || props.routes.mortality" class="underline decoration-2 underline-offset-2 hover:text-rose-900">
+                            Record Mortality / Deceased Pig
+                        </a>
+                        form para ma-upload ang photo/video at ma-record ang cause of death.
+                    </p>
                 </label>
 
                 <div v-else class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
@@ -641,7 +648,5 @@ const cancelConfirm = () => {
         </TransitionRoot>
     </section>
 </template>
-
-
 
 

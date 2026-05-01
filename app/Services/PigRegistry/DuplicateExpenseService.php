@@ -35,6 +35,9 @@ class DuplicateExpenseService
             $newExpense = PigCycleExpense::query()->create([
                 'batch_id' => $lockedExpense->batch_id,
                 'category' => $lockedExpense->category,
+                'quantity' => $lockedExpense->quantity,
+                'unit' => $lockedExpense->unit,
+                'unit_cost' => $lockedExpense->unit_cost,
                 'amount' => $lockedExpense->amount,
                 'expense_date' => $newExpenseDate,
                 'notes' => $lockedExpense->notes,

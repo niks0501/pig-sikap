@@ -70,7 +70,9 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Category</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Amount</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Qty / Unit</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Unit Cost</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total Amount</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -79,11 +81,21 @@
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expense->expense_date?->format('M d, Y') }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $categoryOptions[$expense->category] ?? ucfirst($expense->category) }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $expense->notes }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                @if ($expense->quantity !== null || $expense->unit)
+                                    {{ $expense->quantity !== null ? number_format((float) $expense->quantity, 2) : '-' }} {{ $expense->unit }}
+                                @else
+                                    Lump-sum
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                                {{ $expense->unit_cost !== null ? 'Php '.number_format((float) $expense->unit_cost, 2) : '-' }}
+                            </td>
                             <td class="px-4 py-3 text-sm text-right font-semibold text-gray-900">Php {{ number_format((float) $expense->amount, 2) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">No expenses found for the selected scope.</td>
+                            <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500">No expenses found for the selected scope.</td>
                         </tr>
                     @endforelse
                 </tbody>

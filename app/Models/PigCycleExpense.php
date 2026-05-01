@@ -25,6 +25,9 @@ class PigCycleExpense extends Model
     protected $fillable = [
         'batch_id',
         'category',
+        'quantity',
+        'unit',
+        'unit_cost',
         'amount',
         'expense_date',
         'notes',
@@ -39,6 +42,8 @@ class PigCycleExpense extends Model
     protected function casts(): array
     {
         return [
+            'quantity' => 'decimal:2',
+            'unit_cost' => 'decimal:2',
             'amount' => 'decimal:2',
             'expense_date' => 'date',
             'created_at' => 'datetime',

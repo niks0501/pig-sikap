@@ -38,6 +38,9 @@
                         @elseif(request()->routeIs('profitability.*'))
                             <li class="text-gray-400">/</li>
                             <li class="text-gray-900 font-medium">Profitability</li>
+                        @elseif(request()->routeIs('membership.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Membership</li>
                         @elseif(request()->routeIs('reports.*'))
                             <li class="text-gray-400">/</li>
                             <li class="text-gray-900 font-medium">Reports</li>

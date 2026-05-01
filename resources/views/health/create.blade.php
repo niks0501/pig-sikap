@@ -44,6 +44,7 @@
                 'store' => route('health.incidents.store'),
                 'index' => route('health.index'),
                 'mortality' => route('health.mortality'),
+                'mortalityCreate' => route('health.mortality.create', ['cycle_id' => $selectedCycleId]),
             ],
             'csrfToken' => csrf_token(),
             'eventKey' => $eventKey,

@@ -107,7 +107,7 @@ class PresidentExpenseController extends Controller
             ->latest('expense_date')
             ->latest('id')
             ->limit(8)
-            ->get(['id', 'batch_id', 'category', 'amount', 'expense_date', 'notes']);
+            ->get(['id', 'batch_id', 'category', 'quantity', 'unit', 'unit_cost', 'amount', 'expense_date', 'notes']);
 
         return view('expenses.summary', [
             'summary' => $summary,
@@ -168,6 +168,9 @@ class PresidentExpenseController extends Controller
                     'id' => $expense->id,
                     'batch_id' => $expense->batch_id,
                     'category' => $expense->category,
+                    'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
+                    'unit' => $expense->unit,
+                    'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
                     'amount' => (float) $expense->amount,
                     'expense_date' => $expense->expense_date?->toDateString(),
                     'notes' => $expense->notes,
