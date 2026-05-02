@@ -39,17 +39,17 @@
         <tr><th>Pigs Sold</th><td>{{ $sale->pigs_sold }}</td></tr>
         @if ($sale->sale_method === 'live_weight')
             <tr><th>Live Weight</th><td>{{ number_format((float) $sale->live_weight_kg, 2) }} kg</td></tr>
-            <tr><th>Price per kg</th><td>PHP {{ number_format((float) $sale->price_per_kg, 2) }}</td></tr>
+            <tr><th>Price per kg</th><td>&#8369;{{ number_format((float) $sale->price_per_kg, 2) }}</td></tr>
         @else
-            <tr><th>Price per head</th><td>PHP {{ number_format((float) $sale->price_per_head, 2) }}</td></tr>
+            <tr><th>Price per head</th><td>&#8369;{{ number_format((float) $sale->price_per_head, 2) }}</td></tr>
         @endif
     </table>
 
     <div class="section-title">Payment Summary</div>
     <table>
-        <tr><th>Total Amount</th><td class="right">PHP {{ number_format((float) $sale->amount, 2) }}</td></tr>
-        <tr><th>Amount Paid</th><td class="right">PHP {{ number_format((float) $sale->amount_paid, 2) }}</td></tr>
-        <tr><th>Balance</th><td class="right">PHP {{ number_format(max((float) $sale->amount - (float) $sale->amount_paid, 0), 2) }}</td></tr>
+        <tr><th>Total Amount</th><td class="right">&#8369;{{ number_format((float) $sale->amount, 2) }}</td></tr>
+        <tr><th>Amount Paid</th><td class="right">&#8369;{{ number_format((float) $sale->amount_paid, 2) }}</td></tr>
+        <tr><th>Balance</th><td class="right">&#8369;{{ number_format(max((float) $sale->amount - (float) $sale->amount_paid, 0), 2) }}</td></tr>
         <tr><th>Payment Status</th><td>{{ ucfirst((string) $sale->payment_status) }}</td></tr>
     </table>
 

@@ -46,7 +46,7 @@
     @if ((float) $profitability['net_profit_or_loss'] < 0)
         <div class="loss-notice">
             <strong>Loss / No Distributable Profit</strong><br>
-            This cycle recorded a net loss. All stakeholder shares are ₱0.00. No distributable profit is available.
+            This cycle recorded a net loss. All stakeholder shares are &#8369;0.00. No distributable profit is available.
         </div>
     @endif
 
@@ -67,11 +67,11 @@
 
     <div class="section-title">Financial Summary</div>
     <table>
-        <tr><th>Total Sales (Gross Revenue)</th><td class="right">₱{{ number_format((float) $profitability['total_sales'], 2) }}</td></tr>
-        <tr><th>Total Collected</th><td class="right">₱{{ number_format((float) ($profitability['total_collected'] ?? 0), 2) }}</td></tr>
-        <tr><th>Receivables (Pending Collection)</th><td class="right">₱{{ number_format((float) ($profitability['receivables'] ?? 0), 2) }}</td></tr>
-        <tr><th>Total Expenses</th><td class="right">₱{{ number_format((float) $profitability['total_expenses'], 2) }}</td></tr>
-        <tr class="total-row"><th>Net Profit / Loss</th><td class="right">₱{{ number_format((float) $profitability['net_profit_or_loss'], 2) }}</td></tr>
+        <tr><th>Total Sales (Gross Revenue)</th><td class="right">&#8369;{{ number_format((float) $profitability['total_sales'], 2) }}</td></tr>
+        <tr><th>Total Collected</th><td class="right">&#8369;{{ number_format((float) ($profitability['total_collected'] ?? 0), 2) }}</td></tr>
+        <tr><th>Receivables (Pending Collection)</th><td class="right">&#8369;{{ number_format((float) ($profitability['receivables'] ?? 0), 2) }}</td></tr>
+        <tr><th>Total Expenses</th><td class="right">&#8369;{{ number_format((float) $profitability['total_expenses'], 2) }}</td></tr>
+        <tr class="total-row"><th>Net Profit / Loss</th><td class="right">&#8369;{{ number_format((float) $profitability['net_profit_or_loss'], 2) }}</td></tr>
     </table>
 
     <div class="section-title">Expense Breakdown</div>
@@ -80,13 +80,13 @@
             @if ((float) $row['total'] > 0)
                 <tr>
                     <td>{{ $row['label'] }}</td>
-                    <td class="right">₱{{ number_format((float) $row['total'], 2) }}</td>
+                    <td class="right">&#8369;{{ number_format((float) $row['total'], 2) }}</td>
                 </tr>
             @endif
         @endforeach
         <tr class="total-row">
             <th>Total Expenses</th>
-            <td class="right">₱{{ number_format((float) $profitability['total_expenses'], 2) }}</td>
+            <td class="right">&#8369;{{ number_format((float) $profitability['total_expenses'], 2) }}</td>
         </tr>
     </table>
 
@@ -95,14 +95,14 @@
         @forelse ($profitability['sales_breakdown_rows'] as $row)
             <tr>
                 <td>{{ $row['label'] }}</td>
-                <td class="right">₱{{ number_format((float) $row['total'], 2) }}</td>
+                <td class="right">&#8369;{{ number_format((float) $row['total'], 2) }}</td>
             </tr>
         @empty
             <tr><td colspan="2" class="muted">No sales breakdown available.</td></tr>
         @endforelse
         <tr class="total-row">
             <th>Gross Revenue</th>
-            <td class="right">₱{{ number_format((float) $profitability['total_sales'], 2) }}</td>
+            <td class="right">&#8369;{{ number_format((float) $profitability['total_sales'], 2) }}</td>
         </tr>
     </table>
 
@@ -110,15 +110,15 @@
     <p class="muted" style="margin-bottom: 4px;">Association rule: 50% Caretaker, 25% Members, 25% Association Fund</p>
     <p class="muted" style="margin-bottom: 8px;">Computed as: Distributable Profit = max(Net Profit, 0). Shares = Distributable Profit × percentage.</p>
     <table>
-        <tr><th>Distributable Profit</th><td class="right">₱{{ number_format((float) $profitability['distributable_profit'], 2) }}</td></tr>
-        <tr><th>Caretaker / Nag-alaga (50%)</th><td class="right">₱{{ number_format((float) $profitability['caretaker_share'], 2) }}</td></tr>
-        <tr><th>Association Members (25%)</th><td class="right">₱{{ number_format((float) $profitability['member_share'], 2) }}</td></tr>
-        <tr><th>Association Fund / Samahan (25%)</th><td class="right">₱{{ number_format((float) ($profitability['association_share'] ?? $profitability['association_fund_share'] ?? 0), 2) }}</td></tr>
+        <tr><th>Distributable Profit</th><td class="right">&#8369;{{ number_format((float) $profitability['distributable_profit'], 2) }}</td></tr>
+        <tr><th>Caretaker / Nag-alaga (50%)</th><td class="right">&#8369;{{ number_format((float) $profitability['caretaker_share'], 2) }}</td></tr>
+        <tr><th>Association Members (25%)</th><td class="right">&#8369;{{ number_format((float) $profitability['member_share'], 2) }}</td></tr>
+        <tr><th>Association Fund / Samahan (25%)</th><td class="right">&#8369;{{ number_format((float) ($profitability['association_share'] ?? $profitability['association_fund_share'] ?? 0), 2) }}</td></tr>
     </table>
 
     @if ((float) $profitability['distributable_profit'] <= 0)
         <div style="margin-top: 10px; font-size: 11px; color: #dc2626;">
-            <strong>Note:</strong> Distributable profit is ₱0.00 because net profit is zero or negative. No amount should be distributed to stakeholders.
+            <strong>Note:</strong> Distributable profit is &#8369;0.00 because net profit is zero or negative. No amount should be distributed to stakeholders.
         </div>
     @endif
 
