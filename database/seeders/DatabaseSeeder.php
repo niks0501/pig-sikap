@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             SystemAdminSeeder::class,
             HealthTemplateSeeder::class,
+            PigSikapOwnerRecordSeeder::class,
         ]);
     }
 }
