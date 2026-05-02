@@ -276,7 +276,8 @@ const handleStatusSubmit = async (event) => {
                         Update Stage / Status
                     </button>
                     <button v-if="!isArchived" type="button" class="inline-flex w-full items-center justify-center rounded-xl bg-gray-800 px-4 py-3 text-base font-semibold text-white transition hover:bg-gray-900 sm:col-span-2 min-h-[48px]" @click="openArchiveDialog">
-                        Close Cycle / Move to Archived Records
+                        <span class="hidden sm:inline">Close Cycle</span>
+                        <span class="sm:hidden">Close</span>
                     </button>
                 </div>
             </div>
@@ -716,11 +717,19 @@ const handleStatusSubmit = async (event) => {
                             leave-to="opacity-0 scale-95"
                         >
                             <DialogPanel class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
-                                <DialogTitle class="text-lg font-bold text-gray-900">Close Cycle / Move to Archived Records?</DialogTitle>
+                                <DialogTitle class="text-lg font-bold text-gray-900">Close Cycle: Move to Archived Records</DialogTitle>
                                 <p class="mt-2 text-sm text-gray-500">
-                                    This action will move <strong>{{ props.cycle.batch_code }}</strong> to archived records.
-                                    Operational editing will be restricted, but you can still view the cycle details.
+                                    Closing <strong>{{ props.cycle.batch_code }}</strong> moves it to archived records.
+                                    Editing operations will be restricted, but you can still view cycle details and historical data.
                                 </p>
+
+                                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                                    <p class="text-sm font-bold text-rose-800">This action cannot be undone.</p>
+                                    <p class="mt-1 text-xs text-rose-700">
+                                        Once archived, the cycle becomes read-only. No new expenses, sales, health incidents, or count adjustments can be added.
+                                        Please verify that all records are final before proceeding.
+                                    </p>
+                                </div>
 
                                 <div class="mt-4 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
                                     <p class="text-sm font-bold text-gray-900">Before closing, confirm these records were checked:</p>
@@ -756,7 +765,7 @@ const handleStatusSubmit = async (event) => {
                                         Cancel
                                     </button>
                                     <button type="button" :disabled="!archiveChecklistComplete" class="inline-flex items-center justify-center rounded-xl bg-gray-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60" @click="confirmArchive">
-                                        Close Cycle / Move to Archived Records
+                                        Close Cycle & Move to Archived Records
                                     </button>
                                 </div>
                             </DialogPanel>

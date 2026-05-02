@@ -38,7 +38,7 @@ const counts = computed(() => props.healthSummary?.counts ?? {});
 const activeMetrics = computed(() => props.healthSummary?.active ?? {});
 const lifetimeMetrics = computed(() => props.healthSummary?.lifetime ?? {});
 const isArchived = computed(() => props.cycle?.stage === 'Completed' || ['Sold', 'Closed'].includes(props.cycle?.status ?? ''));
-const timelineFilter = ref('all');
+const timelineFilter = ref('due_overdue');
 const timelineFilterOptions = [
     { key: 'all', label: 'All' },
     { key: 'pending', label: 'Pending' },

@@ -496,6 +496,82 @@ test('recent templates return last five unique expenses for the user', function 
         ->assertJsonPath('templates.1.notes', 'Motor fare');
 });
 
+test('legacy expenses with null quantity unit and unit_cost still display correctly in index show and summary', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    $legacy = PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'emergency',
+        'amount' => '375.00',
+        'expense_date' => now()->toDateString(),
+        'notes' => 'Old legacy expense without structured fields',
+        'created_by' => $president->id,
+        'quantity' => null,
+        'unit' => null,
+        'unit_cost' => null,
+    ]);
+
+    actingAs($president)
+        ->get(route('expenses.index'))
+        ->assertOk();
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'id' => $legacy->id,
+        'amount' => '375.00',
+        'quantity' => null,
+        'unit' => null,
+        'unit_cost' => null,
+    ]);
+
+    actingAs($president)
+        ->get(route('expenses.show', $legacy))
+        ->assertOk()
+        ->assertSee('Old legacy expense without structured fields');
+
+    actingAs($president)
+        ->get(route('expenses.summary', ['cycle_id' => $cycle->id]))
+        ->assertOk()
+        ->assertViewHas('summary', function (array $summary) {
+            return $summary['total_amount'] === 375.0
+                && $summary['by_category']['emergency'] === 375.0;
+        });
+});
+
+test('structured input overrides manual amount on update regardless of user provided total', function () {
+    $treasurer = expenseUser('treasurer');
+    $cycle = expenseCycle($treasurer);
+
+    $expense = PigCycleExpense::query()->create([
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => 500,
+        'expense_date' => now()->subDay()->toDateString(),
+        'notes' => 'Original feed',
+        'created_by' => $treasurer->id,
+    ]);
+
+    actingAs($treasurer)->put(route('expenses.update', $expense), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'quantity' => '5',
+        'unit' => 'sack',
+        'unit_cost' => '200.00',
+        'amount' => '99.99',
+        'expense_date' => now()->toDateString(),
+        'notes' => 'Updated with structured override',
+    ])->assertRedirect();
+
+    assertDatabaseHas('pig_cycle_expenses', [
+        'id' => $expense->id,
+        'quantity' => '5.00',
+        'unit' => 'sack',
+        'unit_cost' => '200.00',
+        'amount' => '1000.00',
+        'notes' => 'Updated with structured override',
+    ]);
+});
+
 test('summary view includes month over month comparison data', function () {
     $president = expenseUser('president');
     $cycle = expenseCycle($president);

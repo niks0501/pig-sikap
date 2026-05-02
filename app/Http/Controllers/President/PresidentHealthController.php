@@ -118,6 +118,13 @@ class PresidentHealthController extends Controller
     public function schedule(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
+        $view = trim((string) $request->query('view', 'list'));
+        $allowedViews = ['list', 'calendar'];
+
+        if (! in_array($view, $allowedViews, true)) {
+            $view = 'list';
+        }
+
         $terminalStatuses = CycleHealthTask::TERMINAL_STATUSES;
 
         $baseQuery = CycleHealthTask::query()->with(['cycle:id,batch_code']);
@@ -154,11 +161,32 @@ class PresidentHealthController extends Controller
             ->limit(30)
             ->get();
 
+        $allScheduledTasks = (clone $baseQuery)
+            ->whereNotIn('status', $terminalStatuses)
+            ->whereNotNull('planned_start_date')
+            ->orderBy('planned_start_date')
+            ->limit(200)
+            ->get();
+
+        $calendarTasks = $allScheduledTasks->map(fn (CycleHealthTask $t): array => [
+            'id' => $t->id,
+            'task_name' => $t->task_name,
+            'task_type' => $t->task_type,
+            'status' => $t->status,
+            'formatted_status' => $t->formatted_status,
+            'planned_start_date' => optional($t->planned_start_date)->format('Y-m-d'),
+            'actual_date' => optional($t->actual_date)->format('Y-m-d'),
+            'cycle' => ['id' => optional($t->cycle)->id, 'batch_code' => optional($t->cycle)->batch_code],
+        ])->values();
+
         return view('health.schedule', [
             'search' => $search,
+            'view' => $view,
             'overdueTasks' => $overdueTasks,
             'dueTodayTasks' => $dueTodayTasks,
             'upcomingTasks' => $upcomingTasks,
+            'allScheduledTasks' => $allScheduledTasks,
+            'calendarTasks' => $calendarTasks,
         ]);
     }
 

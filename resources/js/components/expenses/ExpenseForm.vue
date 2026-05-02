@@ -547,9 +547,14 @@ const handleToastAction = () => {
                 <div class="sm:col-span-2 rounded-2xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-sm font-bold text-[#0a5a48]">Optional quantity computation</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-sm font-bold text-[#0a5a48]">Optional Quantity Computation</p>
+                                <span v-if="usesStructuredAmount" class="rounded-full bg-[#0c6d57] px-2.5 py-0.5 text-[11px] font-bold text-white">Structured Mode</span>
+                                <span v-else-if="!hasStructuredInput" class="rounded-full bg-white border border-[#0c6d57]/30 px-2.5 py-0.5 text-[11px] font-bold text-[#0c6d57]">Direct Amount Mode</span>
+                                <span v-else class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">Incomplete</span>
+                            </div>
                             <p class="mt-1 text-xs text-[#0a5a48]/80">
-                                Use this for logbook entries with Bilang, Yunit, and Halaga kada Yunit. Leave blank for lump-sum expenses.
+                                For logbook entries with Bilang, Yunit, and Halaga kada Yunit. Leave blank for lump-sum expenses.
                             </p>
                         </div>
                         <p class="rounded-xl bg-white px-3 py-2 text-sm font-black text-[#0c6d57]">

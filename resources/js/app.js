@@ -30,6 +30,7 @@ import CycleHealthPanel from './components/health/CycleHealthPanel.vue';
 import HealthIncidentCreateForm from './components/health/HealthIncidentCreateForm.vue';
 import HealthDashboard from './components/health/HealthDashboard.vue';
 import TreatmentCalendar from './components/health/TreatmentCalendar.vue';
+import ScheduleCalendar from './components/health/ScheduleCalendar.vue';
 import PigCycleArchived from './components/pig-registry/PigCycleArchived.vue';
 import PigCycleCreate from './components/pig-registry/PigCycleCreate.vue';
 import PigCycleEdit from './components/pig-registry/PigCycleEdit.vue';
@@ -73,6 +74,7 @@ const componentRegistry = {
   'health-incident-create-form': HealthIncidentCreateForm,
   'health-dashboard': HealthDashboard,
   'treatment-calendar': TreatmentCalendar,
+  'schedule-calendar': ScheduleCalendar,
   'pig-registry-index': PigRegistryIndex,
   'pig-cycle-create': PigCycleCreate,
   'pig-cycle-edit': PigCycleEdit,
