@@ -1,116 +1,102 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('profitability.show', ['id' => $id]) }}" class="text-gray-500 hover:text-[#0c6d57] transition-colors rounded-lg p-1.5 hover:bg-[#0c6d57]/10" aria-label="Back">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Profit Sharing: Batch 2024-A
-            </h2>
+        <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">Profit Sharing: {{ $cycle->batch_code }}</h2>
+            <p class="text-sm text-gray-500">Association rule: 50% caretaker, 25% members, 25% association fund.</p>
         </div>
     </x-slot>
 
-    <div class="max-w-4xl mx-auto py-8 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center px-4 sm:px-0 mb-6">
-            <div class="text-sm text-gray-500">
-                Net Profit Available for Distribution: <strong>₱42,500.00</strong>
+    @php
+        $money = fn ($value) => '₱'.number_format((float) $value, 2);
+        $net = (float) $profitability['net_profit_or_loss'];
+        $hasDistribution = (float) $profitability['distributable_profit'] > 0;
+    @endphp
+
+    <div class="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        @if (session('status'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                {{ session('status') }}
             </div>
-            <button onclick="window.print()" class="inline-flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                Print Distribution Report
-            </button>
+        @endif
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+            <a href="{{ route('profitability.show', $cycle) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Back to Breakdown</a>
+            <button type="button" onclick="window.print()" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Print Sharing Report</button>
         </div>
 
-        <div class="bg-white overflow-hidden shadow-sm border border-gray-100 rounded-xl printable-element">
-            <div class="p-6 md:p-8">
-                <div class="text-center mb-10">
-                    <h3 class="text-3xl font-extrabold text-[#0c6d57]">SIKAP Distribution Model</h3>
-                    <p class="text-gray-500 mt-2">Standard 50% Caretaker / 25% Member / 25% Association breakdown</p>
-                </div>
+        @if ($snapshot)
+            <section class="rounded-2xl border border-gray-300 bg-gray-50 p-5">
+                <p class="text-sm font-bold text-gray-900">Finalized Snapshot - read-only</p>
+                <p class="mt-1 text-sm text-gray-600">Finalized by {{ $snapshot->finalizedBy?->name ?? 'Unknown user' }} on {{ $snapshot->finalized_at?->format('M d, Y h:i A') }}.</p>
+                @if ($snapshot->notes)
+                    <p class="mt-2 rounded-xl bg-white px-3 py-2 text-sm text-gray-700">{{ $snapshot->notes }}</p>
+                @endif
+            </section>
+        @endif
 
-                <!-- Visual Segmented Bar -->
-                <div class="mb-12">
-                    <div class="w-full h-8 rounded-full overflow-hidden flex shadow-inner">
-                        <div class="bg-[#0c6d57] h-full" style="width: 50%;" title="Caretaker 50%"></div>
-                        <div class="bg-[#0c6d57]/80 h-full border-l border-white/20" style="width: 25%;" title="Member 25%"></div>
-                        <div class="bg-[#0c6d57]/60 h-full border-l border-white/20" style="width: 25%;" title="Association 25%"></div>
-                    </div>
-                    <div class="flex justify-between mt-3 text-xs md:text-sm font-medium text-gray-500">
-                        <div class="w-1/2 text-left pl-2">50%</div>
-                        <div class="w-1/4 text-center">25%</div>
-                        <div class="w-1/4 text-right pr-2">25%</div>
-                    </div>
-                </div>
+        <section class="rounded-2xl border {{ $hasDistribution ? 'border-[#0c6d57]/20 bg-[#0c6d57]/5' : 'border-amber-200 bg-amber-50' }} p-6 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] {{ $hasDistribution ? 'text-[#0c6d57]' : 'text-amber-800' }}">Distributable Profit</p>
+            <p class="mt-2 text-4xl font-extrabold {{ $hasDistribution ? 'text-[#0a5a48]' : 'text-amber-900' }}">{{ $money($profitability['distributable_profit']) }}</p>
+            <p class="mt-2 text-sm {{ $hasDistribution ? 'text-[#0a5a48]' : 'text-amber-900' }}">
+                @if ($net < 0)
+                    This cycle has a loss of {{ $money(abs($net)) }}. No profit should be distributed.
+                @elseif (! $hasDistribution)
+                    This cycle has no profit to distribute. All shares remain ₱0.00.
+                @else
+                    Distribution is based only on net profit after all recorded expenses are deducted.
+                @endif
+            </p>
+        </section>
 
-                <!-- Breakdown Calculation -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Caretaker Share -->
-                    <div class="border border-[#0c6d57]/20 bg-[#0c6d57]/5 rounded-xl p-6 text-center transform transition duration-200 hover:-translate-y-1">
-                        <div class="w-12 h-12 bg-[#0c6d57] rounded-full flex items-center justify-center text-white mx-auto mb-4 shadow-sm">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        </div>
-                        <p class="text-sm font-bold text-[#0c6d57] uppercase tracking-wide">Caretaker Share</p>
-                        <p class="text-xs text-gray-500 mt-1 mb-3">Labor & Maintenance</p>
-                        <p class="text-3xl font-extrabold text-gray-900 border-t border-[#0c6d57]/20 pt-4">₱21,250.00</p>
-                    </div>
+        <section class="grid gap-4 md:grid-cols-3">
+            <article class="rounded-2xl border border-[#0c6d57]/20 bg-white p-5 text-center shadow-sm">
+                <p class="text-sm font-bold text-[#0c6d57]">Caretaker / Nag-alaga</p>
+                <p class="mt-1 text-xs text-gray-500">50% share</p>
+                <p class="mt-4 border-t border-gray-100 pt-4 text-3xl font-extrabold text-gray-900">{{ $money($profitability['caretaker_share']) }}</p>
+            </article>
+            <article class="rounded-2xl border border-[#0c6d57]/20 bg-white p-5 text-center shadow-sm">
+                <p class="text-sm font-bold text-[#0c6d57]">Association Members</p>
+                <p class="mt-1 text-xs text-gray-500">25% share</p>
+                <p class="mt-4 border-t border-gray-100 pt-4 text-3xl font-extrabold text-gray-900">{{ $money($profitability['member_share']) }}</p>
+            </article>
+            <article class="rounded-2xl border border-[#0c6d57]/20 bg-white p-5 text-center shadow-sm">
+                <p class="text-sm font-bold text-[#0c6d57]">Association Fund / Samahan</p>
+                <p class="mt-1 text-xs text-gray-500">25% share</p>
+                <p class="mt-4 border-t border-gray-100 pt-4 text-3xl font-extrabold text-gray-900">{{ $money($profitability['association_share']) }}</p>
+            </article>
+        </section>
 
-                    <!-- Member Share -->
-                    <div class="border border-[#0c6d57]/20 bg-white rounded-xl p-6 text-center transform transition duration-200 hover:-translate-y-1">
-                        <div class="w-12 h-12 bg-[#0c6d57]/80 rounded-full flex items-center justify-center text-white mx-auto mb-4 shadow-sm">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        </div>
-                        <p class="text-sm font-bold text-[#0c6d57] uppercase tracking-wide">Member Share</p>
-                        <p class="text-xs text-gray-500 mt-1 mb-3">Investment Return</p>
-                        <p class="text-3xl font-extrabold text-gray-900 border-t border-gray-100 pt-4">₱10,625.00</p>
-                    </div>
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900">Distribution Check</h3>
+            <p class="mt-2 text-sm text-gray-600">
+                {{ $money($profitability['caretaker_share']) }} + {{ $money($profitability['member_share']) }} + {{ $money($profitability['association_share']) }} = {{ $money($profitability['distributable_profit']) }}
+            </p>
+        </section>
 
-                    <!-- Association Share -->
-                    <div class="border border-[#0c6d57]/20 bg-white rounded-xl p-6 text-center transform transition duration-200 hover:-translate-y-1">
-                        <div class="w-12 h-12 bg-[#0c6d57]/60 rounded-full flex items-center justify-center text-white mx-auto mb-4 shadow-sm">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        </div>
-                        <p class="text-sm font-bold text-[#0c6d57] uppercase tracking-wide">Association Fund</p>
-                        <p class="text-xs text-gray-500 mt-1 mb-3">Reinvestment & Ops</p>
-                        <p class="text-3xl font-extrabold text-gray-900 border-t border-gray-100 pt-4">₱10,625.00</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer Action -->
-            <div class="bg-gray-50 p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-900">Total Validated</p>
-                        <p class="text-xs text-gray-500 tracking-tight">₱21,250 + ₱10,625 + ₱10,625 = ₱42,500.00</p>
-                    </div>
-                </div>
-                <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
-                    <button class="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-white text-gray-700 hover:bg-gray-50 px-5 py-2.5 border border-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                        Export as PDF
-                    </button>
-                    <a href="{{ route('profitability.index') }}" class="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#0c6d57] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#0a5c49] transition-colors shadow-sm">
-                        Finish & Close
-                    </a>
-                </div>
-            </div>
-        </div>
+        @if ($canFinalize)
+            <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm print:hidden">
+                <h3 class="text-lg font-bold text-amber-900">Finalize for Reports and Resolutions</h3>
+                <p class="mt-2 text-sm text-amber-900">After finalizing, this snapshot is locked as the official profitability basis for reports and approval documents.</p>
+                <form method="POST" action="{{ route('profitability.finalize', $cycle) }}" class="mt-4 space-y-3">
+                    @csrf
+                    <label class="block">
+                        <span class="mb-1 block text-sm font-bold text-gray-700">Finalization Notes (optional)</span>
+                        <textarea name="notes" rows="3" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="Example: Approved after reviewing expense and sales records.">{{ old('notes') }}</textarea>
+                        @error('notes')
+                            <span class="mt-1 block text-sm font-semibold text-rose-700">{{ $message }}</span>
+                        @enderror
+                    </label>
+                    @error('cycle')
+                        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{{ $message }}</div>
+                    @enderror
+                    <button type="submit" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] sm:w-auto">Finalize Snapshot</button>
+                </form>
+            </section>
+        @elseif (! $snapshot)
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm print:hidden">
+                <h3 class="text-lg font-bold text-gray-900">Snapshot Not Finalized</h3>
+                <p class="mt-2 text-sm text-gray-600">Only the President can finalize profitability after the cycle is completed, sold, or closed.</p>
+            </section>
+        @endif
     </div>
-
-    <!-- Print Styles -->
-    <style>
-        @media print {
-            body { background: white !important; }
-            .max-w-4xl { max-width: 100% !important; padding: 0 !important; }
-            button, a { display: none !important; }
-            .printable-element { box-shadow: none !important; border: none !important; }
-            .text-center.mb-10 { margin-bottom: 2rem !important; }
-            /* Make sure colors show when printing */
-            .bg-\[\#0c6d57\] { background-color: #0c6d57 !important; -webkit-print-color-adjust: exact; }
-            .bg-\[\#0c6d57\]\/80 { background-color: rgba(12, 109, 87, 0.8) !important; -webkit-print-color-adjust: exact; }
-            .bg-\[\#0c6d57\]\/60 { background-color: rgba(12, 109, 87, 0.6) !important; -webkit-print-color-adjust: exact; }
-        }
-    </style>
 </x-app-layout>

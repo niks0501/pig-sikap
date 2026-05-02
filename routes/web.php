@@ -16,6 +16,7 @@ use App\Http\Controllers\President\PresidentPigCycleSaleController;
 use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigProfileController;
+use App\Http\Controllers\President\PresidentProfitabilityController;
 use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -149,18 +150,14 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
     });
 
     // Profitability & Profit-Sharing Module
-    Route::prefix('profitability')->name('profitability.')->group(function () {
-        Route::get('/', function () {
-            return view('profitability.index');
-        })->name('index');
-        Route::get('/cycle/{id}', function ($id) {
-            return view('profitability.show', ['id' => $id]);
-        })->name('show');
+    Route::middleware(['role:president,treasurer,secretary'])->prefix('profitability')->name('profitability.')->group(function () {
+        Route::get('/', [PresidentProfitabilityController::class, 'index'])->name('index');
+        Route::get('/cycle/{cycle}', [PresidentProfitabilityController::class, 'show'])->name('show');
+        Route::get('/cycle/{cycle}/sharing', [PresidentProfitabilityController::class, 'sharing'])->name('sharing');
+        Route::post('/cycle/{cycle}/finalize', [PresidentProfitabilityController::class, 'finalize'])->name('finalize');
     });
 
-    Route::get('/profit-sharing/{id}', function ($id) {
-        return view('profitability.sharing', ['id' => $id]);
-    })->name('profit-sharing');
+    Route::middleware(['role:president,treasurer,secretary'])->get('/profit-sharing/{cycle}', [PresidentProfitabilityController::class, 'sharing'])->name('profit-sharing');
 
     // Meeting Resolutions and Withdrawal Documentation Module
     Route::prefix('resolutions')->name('resolutions.')->group(function () {

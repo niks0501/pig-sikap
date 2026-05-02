@@ -73,6 +73,17 @@ const warnings = computed(() => (Array.isArray(automation.value.warnings) ? auto
 const countSummary = computed(() => automation.value.counts ?? {});
 const expenseSummary = computed(() => automation.value.expenses ?? {});
 const profitabilitySummary = computed(() => automation.value.profitability ?? {});
+const profitabilityStatusLabel = computed(() => {
+    const status = profitabilitySummary.value.status || 'insufficient_data';
+
+    return {
+        profit: 'Profit',
+        loss: 'Loss',
+        break_even: 'Break-even',
+        zero_sales: 'Zero Sales',
+        insufficient_data: 'Insufficient Data',
+    }[status] || 'For Review';
+});
 const currentlySick = computed(() => Number(countSummary.value.currently_sick ?? countSummary.value.sick_count ?? 0));
 const currentlyIsolated = computed(() => Number(countSummary.value.currently_isolated ?? countSummary.value.isolated_count ?? 0));
 const currentlyAffected = computed(() => Number(countSummary.value.currently_affected ?? (currentlySick.value + currentlyIsolated.value)));
@@ -272,6 +283,9 @@ const handleStatusSubmit = async (event) => {
                         <span class="hidden sm:inline">Record Mortality</span>
                         <span class="sm:hidden">Mortality</span>
                     </a>
+                    <a :href="props.routes.profitabilityShow" class="inline-flex items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-[#0c6d57]/5 px-4 py-3 text-base font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/10 min-h-[48px] sm:col-span-2">
+                        Review Profitability
+                    </a>
                     <button type="button" :disabled="isArchived" class="inline-flex items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-3 text-base font-semibold text-white transition hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2 min-h-[48px]" @click="openStatusDialog">
                         Update Stage / Status
                     </button>
@@ -402,6 +416,30 @@ const handleStatusSubmit = async (event) => {
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">Caretaker Share (50%)</p>
                 <p class="mt-2 text-base font-semibold text-gray-900">{{ formatCurrency(profitabilitySummary.caretaker_share) }}</p>
             </article>
+        </section>
+
+        <section class="rounded-xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4 shadow-sm sm:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="text-base font-bold text-[#0a5a48]">Profitability & Sharing</h3>
+                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="Number(profitabilitySummary.net_profit_or_loss || 0) < 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'">
+                            {{ profitabilityStatusLabel }}
+                        </span>
+                    </div>
+                    <p class="mt-2 text-sm text-[#0a5a48]/80">
+                        This summary comes from encoded sales and expense logs. Use the profitability page for report-ready breakdowns and finalization.
+                    </p>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2 lg:min-w-80">
+                    <a :href="props.routes.profitabilityShow" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">
+                        View Breakdown
+                    </a>
+                    <a :href="props.routes.profitabilitySharing" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[#0c6d57]/30 bg-white px-4 py-2 text-sm font-semibold text-[#0c6d57] transition hover:bg-[#0c6d57]/5">
+                        View Sharing
+                    </a>
+                </div>
+            </div>
         </section>
 
         <div class="grid gap-6 xl:grid-cols-3">

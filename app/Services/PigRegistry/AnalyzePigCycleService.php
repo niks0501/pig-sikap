@@ -2,17 +2,15 @@
 
 namespace App\Services\PigRegistry;
 
-use App\Models\Pig;
 use App\Models\PigCycle;
-use App\Models\PigCycleExpense;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class AnalyzePigCycleService
 {
     public function __construct(
         private readonly CycleHealthSummaryService $cycleHealthSummaryService,
-        private readonly CycleSummaryService $cycleSummaryService
+        private readonly CycleSummaryService $cycleSummaryService,
+        private readonly ComputeCycleProfitabilityService $computeCycleProfitabilityService
     ) {}
 
     /**
@@ -24,11 +22,8 @@ class AnalyzePigCycleService
         $daysRemaining = $cycle->days_until_ready_for_sale;
 
         $countSummary = $this->buildCountSummary($cycle);
-        $expenseSummary = $this->buildExpenseSummary($cycle);
-        $profitabilitySummary = $this->buildProfitabilitySummary(
-            $expenseSummary['total_cycle_expense'],
-            $expenseSummary['total_cycle_sales']
-        );
+        $profitabilitySummary = $this->computeCycleProfitabilityService->handle($cycle);
+        $expenseSummary = $this->buildExpenseSummary($profitabilitySummary);
         $healthSummary = $this->cycleHealthSummaryService->handle($cycle);
 
         return [
@@ -88,44 +83,12 @@ class AnalyzePigCycleService
     /**
      * @return array<string, mixed>
      */
-    private function buildExpenseSummary(PigCycle $cycle): array
+    private function buildExpenseSummary(array $profitabilitySummary): array
     {
-        $grouped = $cycle->expenses()
-            ->select('category', DB::raw('SUM(amount) as total'))
-            ->groupBy('category')
-            ->pluck('total', 'category');
-
-        $breakdown = [];
-
-        foreach (PigCycleExpense::CATEGORIES as $category) {
-            $breakdown[$category] = round((float) ($grouped[$category] ?? 0), 2);
-        }
-
-        $totalExpenses = round(array_sum($breakdown), 2);
-        $totalSales = round((float) $cycle->sales()->sum('amount'), 2);
-
         return [
-            'breakdown' => $breakdown,
-            'total_cycle_expense' => $totalExpenses,
-            'total_cycle_sales' => $totalSales,
-        ];
-    }
-
-    /**
-     * @return array<string, float>
-     */
-    private function buildProfitabilitySummary(float $totalExpenses, float $totalSales): array
-    {
-        $grossIncome = $totalSales;
-        $netProfitOrLoss = round($grossIncome - $totalExpenses, 2);
-        $distributableProfit = max($netProfitOrLoss, 0.0);
-
-        return [
-            'gross_income' => $grossIncome,
-            'net_profit_or_loss' => $netProfitOrLoss,
-            'caretaker_share' => round($distributableProfit * 0.50, 2),
-            'member_share' => round($distributableProfit * 0.25, 2),
-            'association_share' => round($distributableProfit * 0.25, 2),
+            'breakdown' => $profitabilitySummary['expense_breakdown'],
+            'total_cycle_expense' => $profitabilitySummary['total_expenses'],
+            'total_cycle_sales' => $profitabilitySummary['total_sales'],
         ];
     }
 

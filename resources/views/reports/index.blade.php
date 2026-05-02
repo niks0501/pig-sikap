@@ -107,12 +107,12 @@
                                 <div class="w-10 h-10 rounded-lg bg-[#0c6d57]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                                     <svg class="w-5 h-5 text-[#0c6d57]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </div>
-                                <h4 class="font-bold text-gray-800 mb-1">Profitability</h4>
-                                <p class="text-xs text-gray-500 line-clamp-2">Return on Investment (ROI) and net profit calculation per cycle.</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Profitability & Sharing</h4>
+                                <p class="text-xs text-gray-500 line-clamp-2">Cycle net profit, 50/25/25 sharing, and finalized snapshot records.</p>
                             </div>
                             <div class="p-3 border-t">
-                                <a href="{{ route('reports.generate', ['type' => 'profitability']) }}" class="flex items-center justify-center w-full py-2 px-4 rounded-lg bg-gray-50 text-sm font-medium text-[#0c6d57] hover:bg-[#0c6d57]/10 transition-colors">
-                                    Generate Report
+                                <a href="{{ route('profitability.index') }}" class="flex items-center justify-center w-full py-2 px-4 rounded-lg bg-gray-50 text-sm font-medium text-[#0c6d57] hover:bg-[#0c6d57]/10 transition-colors">
+                                    Open Reports
                                 </a>
                             </div>
                         </div>

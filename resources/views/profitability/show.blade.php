@@ -1,109 +1,114 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('profitability.index') }}" class="text-gray-500 hover:text-[#0c6d57] transition-colors rounded-lg p-1.5 hover:bg-[#0c6d57]/10" aria-label="Back">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Batch 2024-A (Fattener) Profitability
-            </h2>
+        <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ $cycle->batch_code }} Profitability</h2>
+            <p class="text-sm text-gray-500">Cycle financial result computed from recorded sales and expenses.</p>
         </div>
     </x-slot>
 
-    <div class="max-w-4xl mx-auto py-8 sm:px-6 lg:px-8">
-        <!-- Main Actions -->
-        <div class="flex justify-between items-center px-4 sm:px-0 mb-6">
-            <div class="text-sm text-gray-500">
-                Period: Jan 1, 2024 - Apr 30, 2024
+    @php
+        $money = fn ($value) => '₱'.number_format((float) $value, 2);
+        $net = (float) $profitability['net_profit_or_loss'];
+        $statusLabels = [
+            'profit' => 'Profit',
+            'loss' => 'Loss',
+            'break_even' => 'Break-even',
+            'zero_sales' => 'Zero Sales',
+            'insufficient_data' => 'Insufficient Data',
+        ];
+        $statusLabel = $profitability['is_finalized'] ? 'Finalized Snapshot' : ($statusLabels[$profitability['status']] ?? 'For Review');
+    @endphp
+
+    <div class="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+            <a href="{{ route('profitability.index') }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Back to Profitability</a>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <a href="{{ route('cycles.show', $cycle) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Open Cycle Details</a>
+                <a href="{{ route('profitability.sharing', $cycle) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">View Profit Sharing</a>
             </div>
-            <button onclick="window.print()" class="inline-flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                Print Report
-            </button>
         </div>
 
-        <div class="bg-white overflow-hidden shadow-sm border border-gray-100 rounded-xl printable-card">
-            <!-- Header section -->
-            <div class="p-6 border-b border-gray-100 bg-gray-50">
-                <div class="flex flex-col items-center justify-center py-4">
-                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                    <h3 class="text-gray-500 text-sm font-medium tracking-wide uppercase">Final Net Profit</h3>
-                    <p class="text-4xl font-extrabold text-gray-900 mt-2 tracking-tight">₱42,500.00</p>
-                </div>
-            </div>
+        @if ($snapshot)
+            <section class="rounded-2xl border border-gray-300 bg-gray-50 p-5">
+                <p class="text-sm font-bold text-gray-900">Finalized Snapshot - read-only</p>
+                <p class="mt-1 text-sm text-gray-600">Finalized by {{ $snapshot->finalizedBy?->name ?? 'Unknown user' }} on {{ $snapshot->finalized_at?->format('M d, Y h:i A') }}. These values are locked for reports and resolutions.</p>
+            </section>
+        @endif
 
-            <!-- Breakdown section -->
-            <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
-                <!-- Sales Side -->
-                <div class="p-6">
-                    <h4 class="text-lg font-bold items-center gap-2 flex mb-4 text-gray-800">
-                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Total Sales
-                    </h4>
-                    <div class="space-y-4">
-                        <div class="flex justify-between py-2 border-b border-gray-50">
-                            <span class="text-gray-600">Live Weight Logs</span>
-                            <span class="font-medium text-gray-900">₱80,000.00</span>
-                        </div>
-                        <div class="flex justify-between py-2 border-b border-gray-50">
-                            <span class="text-gray-600">Meat Cuts / Mixed</span>
-                            <span class="font-medium text-gray-900">₱5,000.00</span>
-                        </div>
-                        <div class="flex justify-between pt-4">
-                            <span class="font-bold text-gray-900">Gross Revenue</span>
-                            <span class="font-bold text-gray-900">₱85,000.00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Expenses Side -->
-                <div class="p-6">
-                    <h4 class="text-lg font-bold items-center gap-2 flex mb-4 text-gray-800">
-                        <span class="w-2 h-2 rounded-full bg-red-500"></span> Total Expenses
-                    </h4>
-                    <div class="space-y-4">
-                        <div class="flex justify-between py-2 border-b border-gray-50">
-                            <span class="text-gray-600">Feeds & Supplements</span>
-                            <span class="font-medium text-gray-900">₱30,000.00</span>
-                        </div>
-                        <div class="flex justify-between py-2 border-b border-gray-50">
-                            <span class="text-gray-600">Veterinary</span>
-                            <span class="font-medium text-gray-900">₱5,000.00</span>
-                        </div>
-                        <div class="flex justify-between py-2 border-b border-gray-50">
-                            <span class="text-gray-600">Maintenance & Bills</span>
-                            <span class="font-medium text-gray-900">₱7,500.00</span>
-                        </div>
-                        <div class="flex justify-between pt-4">
-                            <span class="font-bold text-gray-900">Total Costs</span>
-                            <span class="font-bold text-gray-900 text-red-600">- ₱42,500.00</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer Action -->
-            <div class="bg-gray-50 p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <section class="rounded-2xl border {{ $net < 0 ? 'border-rose-200 bg-rose-50' : 'border-[#0c6d57]/20 bg-[#0c6d57]/5' }} p-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <h5 class="font-semibold text-gray-800">Next Step: Profit Distribution</h5>
-                    <p class="text-sm text-gray-500 mt-1">Review the 50/25/25 distribution model for this cycle.</p>
+                    <span class="inline-flex rounded-full {{ $net < 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800' }} px-3 py-1 text-xs font-bold">{{ $statusLabel }}</span>
+                    <h3 class="mt-4 text-sm font-semibold uppercase tracking-[0.16em] {{ $net < 0 ? 'text-rose-700' : 'text-[#0c6d57]' }}">Net Profit / Loss</h3>
+                    <p class="mt-2 text-4xl font-extrabold {{ $net < 0 ? 'text-rose-800' : 'text-[#0a5a48]' }}">{{ $money($net) }}</p>
                 </div>
-                <a href="{{ route('profit-sharing', ['id' => $id]) }}" class="w-full sm:w-auto inline-flex justify-center items-center gap-2 bg-[#0c6d57] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#0a5c49] transition-colors shadow-sm">
-                    View Profit Sharing
-                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </a>
+                <div class="grid gap-3 sm:grid-cols-2 lg:w-96">
+                    <div class="rounded-xl bg-white/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Total Sales</p>
+                        <p class="mt-1 text-xl font-bold text-gray-900">{{ $money($profitability['total_sales']) }}</p>
+                    </div>
+                    <div class="rounded-xl bg-white/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">Total Expenses</p>
+                        <p class="mt-1 text-xl font-bold text-gray-900">{{ $money($profitability['total_expenses']) }}</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Print Styles -->
-    <style>
-        @media print {
-            body { background: white !important; }
-            .max-w-4xl { max-width: 100% !important; padding: 0 !important; }
-            button, a { display: none !important; }
-            .printable-card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
-        }
-    </style>
+        <section class="grid gap-6 lg:grid-cols-2">
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h3 class="text-lg font-bold text-gray-900">Sales Breakdown</h3>
+                <p class="mt-1 text-sm text-gray-500">Revenue recorded under this pig cycle.</p>
+                <div class="mt-4 space-y-3">
+                    @forelse ($profitability['sales_breakdown_rows'] as $row)
+                        <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
+                            <div>
+                                <p class="font-semibold text-gray-900">{{ $row['label'] }}</p>
+                                @if ($row['pigs_sold'] !== null)
+                                    <p class="text-xs text-gray-500">{{ number_format((int) $row['pigs_sold']) }} pigs sold</p>
+                                @endif
+                            </div>
+                            <p class="font-bold text-gray-900">{{ $money($row['total']) }}</p>
+                        </div>
+                    @empty
+                        <div class="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-4 py-5 text-sm text-amber-800">No sales recorded yet. Profit sharing will remain unavailable until sales are encoded.</div>
+                    @endforelse
+                </div>
+                <div class="mt-4 flex justify-between border-t border-gray-100 pt-4 text-sm font-bold text-gray-900">
+                    <span>Gross Revenue</span>
+                    <span>{{ $money($profitability['total_sales']) }}</span>
+                </div>
+            </article>
+
+            <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h3 class="text-lg font-bold text-gray-900">Expense Breakdown</h3>
+                <p class="mt-1 text-sm text-gray-500">Costs deducted before profit sharing.</p>
+                <div class="mt-4 space-y-3">
+                    @foreach ($profitability['expense_breakdown_rows'] as $row)
+                        <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
+                            <p class="font-semibold text-gray-900">{{ $row['label'] }}</p>
+                            <p class="font-bold text-gray-900">{{ $money($row['total']) }}</p>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="mt-4 flex justify-between border-t border-gray-100 pt-4 text-sm font-bold text-gray-900">
+                    <span>Total Expenses</span>
+                    <span>{{ $money($profitability['total_expenses']) }}</span>
+                </div>
+            </article>
+        </section>
+
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900">Next Step</h3>
+            @if ($net < 0)
+                <p class="mt-2 text-sm text-gray-600">This cycle has a loss. Profit shares must remain ₱0.00 and the result should be reviewed for resolution documentation.</p>
+            @else
+                <p class="mt-2 text-sm text-gray-600">Review the 50/25/25 sharing breakdown before preparing reports or resolution documents.</p>
+            @endif
+            <div class="mt-4 flex flex-col gap-2 sm:flex-row print:hidden">
+                <a href="{{ route('profitability.sharing', $cycle) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48]">Review Profit Sharing</a>
+                <a href="{{ route('reports.index') }}" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Open Reports</a>
+            </div>
+        </section>
+    </div>
 </x-app-layout>

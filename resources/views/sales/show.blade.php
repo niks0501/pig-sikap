@@ -49,6 +49,7 @@
                     'receiptPreview' => route('sales.receipt.preview', ['sale' => '_ID_']),
                     'receiptDownload' => route('sales.receipt.download', ['sale' => '_ID_']),
                     'receiptSend' => route('sales.receipt.send', ['sale' => '_ID_']),
+                    'profitabilityShow' => $sale->cycle ? route('profitability.show', $sale->cycle) : null,
                 ],
                 'csrfToken' => csrf_token(),
                 'canEditPayment' => $canEditPayment,
