@@ -156,9 +156,14 @@ class PigCycle extends Model
         return $this->hasMany(PigCycleSale::class, 'batch_id');
     }
 
+    public function profitabilitySnapshots(): HasMany
+    {
+        return $this->hasMany(ProfitabilitySnapshot::class, 'pig_cycle_id');
+    }
+
     public function profitabilitySnapshot(): HasOne
     {
-        return $this->hasOne(ProfitabilitySnapshot::class, 'pig_cycle_id');
+        return $this->hasOne(ProfitabilitySnapshot::class, 'pig_cycle_id')->where('is_current', true);
     }
 
     public function healthTasks(): HasMany

@@ -62,7 +62,7 @@ function profitabilityExpense(PigCycle $cycle, float $amount, string $category =
     ]);
 }
 
-function profitabilitySale(PigCycle $cycle, float $amount): PigCycleSale
+function profitabilitySale(PigCycle $cycle, float $amount, array $overrides = []): PigCycleSale
 {
     return PigCycleSale::query()->create([
         'batch_id' => $cycle->id,
@@ -74,6 +74,7 @@ function profitabilitySale(PigCycle $cycle, float $amount): PigCycleSale
         'payment_status' => 'paid',
         'amount_paid' => $amount,
         'created_by' => $cycle->created_by,
+        ...$overrides,
     ]);
 }
 
@@ -147,7 +148,7 @@ test('finalized snapshot remains unchanged when expenses change later', function
         ->get(route('profitability.sharing', $cycle))
         ->assertOk()
         ->assertViewHas('profitability', fn (array $profitability): bool => $profitability['net_profit_or_loss'] === 3000.0)
-        ->assertSee('Finalized Snapshot');
+        ->assertSee('Finalized Official Snapshot');
 });
 
 test('only president can finalize and active cycles cannot be finalized', function () {
@@ -171,10 +172,171 @@ test('only president can finalize and active cycles cannot be finalized', functi
         'status' => 'Ready for Sale',
         'current_count' => 2,
     ]);
+    profitabilityExpense($activeCycle, 1000);
+    profitabilitySale($activeCycle, 4000);
 
     actingAs($president)
         ->from(route('profitability.sharing', $activeCycle))
         ->post(route('profitability.finalize', $activeCycle))
         ->assertRedirect(route('profitability.sharing', $activeCycle))
         ->assertSessionHasErrors(['cycle']);
+});
+
+test('snapshot show page displays finalized values', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle));
+
+    $snapshot = $cycle->profitabilitySnapshot;
+
+    actingAs($president)
+        ->get(route('profitability.snapshots.show', $snapshot))
+        ->assertOk()
+        ->assertSee('Finalized Official Snapshot')
+        ->assertSee('₱3,000.00');
+});
+
+test('re-finalization creates version 2 with reason', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    $sale = profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle), ['notes' => 'First version']);
+
+    $sale->update(['amount' => 5000, 'amount_paid' => 5000]);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle), [
+            're_finalize' => 1,
+            're_finalize_reason_code' => 'corrected_sale',
+            're_finalize_reason_notes' => 'Customer paid additional amount',
+            'notes' => 'Updated after additional payment',
+        ])
+        ->assertRedirect(route('profitability.sharing', $cycle));
+
+    assertDatabaseHas('profitability_snapshots', [
+        'pig_cycle_id' => $cycle->id,
+        'version_number' => 2,
+        'is_current' => true,
+        're_finalize_reason_code' => 'corrected_sale',
+    ]);
+});
+
+test('data changed after finalization is visible in sharing view', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    $sale = profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle));
+
+    $sale->update(['amount' => 5000, 'amount_paid' => 5000]);
+
+    actingAs($president)
+        ->get(route('profitability.sharing', $cycle))
+        ->assertOk()
+        ->assertSee('Data Changed After Finalization');
+});
+
+test('treasurer can view but cannot finalize', function () {
+    $treasurer = profitabilityUser('treasurer');
+    $cycle = profitabilityCycle($treasurer);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    actingAs($treasurer)
+        ->get(route('profitability.show', $cycle))
+        ->assertOk();
+
+    actingAs($treasurer)
+        ->get(route('profitability.sharing', $cycle))
+        ->assertOk();
+
+    actingAs($treasurer)
+        ->post(route('profitability.finalize', $cycle))
+        ->assertForbidden();
+});
+
+test('secretary can view sharing and snapshot page', function () {
+    $secretary = profitabilityUser('secretary');
+    $cycle = profitabilityCycle($secretary);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    $president = profitabilityUser('president');
+    $cycle->update(['created_by' => $president->id]);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle));
+
+    $snapshot = $cycle->profitabilitySnapshot;
+
+    actingAs($secretary)
+        ->get(route('profitability.snapshots.show', $snapshot))
+        ->assertOk();
+});
+
+test('draft report preview returns PDF response', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->get(route('profitability.report.preview', $cycle))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
+});
+
+test('snapshot report download returns PDF attachment', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->post(route('profitability.finalize', $cycle));
+
+    $snapshot = $cycle->profitabilitySnapshot;
+
+    actingAs($president)
+        ->get(route('profitability.snapshots.report.download', $snapshot))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('Content-Disposition');
+});
+
+test('show view renders break-even advisory', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000, [
+        'sale_method' => 'live_weight',
+        'live_weight_kg' => 200.00,
+        'price_per_kg' => 20.00,
+    ]);
+
+    actingAs($president)
+        ->get(route('profitability.show', $cycle))
+        ->assertOk()
+        ->assertSee('Break-even Advisory');
+});
+
+test('show view shows validation checklist for president', function () {
+    $president = profitabilityUser('president');
+    $cycle = profitabilityCycle($president);
+    profitabilityExpense($cycle, 1000);
+    profitabilitySale($cycle, 4000);
+
+    actingAs($president)
+        ->get(route('profitability.show', $cycle))
+        ->assertOk()
+        ->assertSee('Finalization Checklist');
 });

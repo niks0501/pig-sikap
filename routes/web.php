@@ -17,6 +17,8 @@ use App\Http\Controllers\President\PresidentPigCycleStatusController;
 use App\Http\Controllers\President\PresidentPigInventoryController;
 use App\Http\Controllers\President\PresidentPigProfileController;
 use App\Http\Controllers\President\PresidentProfitabilityController;
+use App\Http\Controllers\President\PresidentProfitabilityReportController;
+use App\Http\Controllers\President\PresidentProfitabilitySnapshotController;
 use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -152,9 +154,17 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
     // Profitability & Profit-Sharing Module
     Route::middleware(['role:president,treasurer,secretary'])->prefix('profitability')->name('profitability.')->group(function () {
         Route::get('/', [PresidentProfitabilityController::class, 'index'])->name('index');
-        Route::get('/cycle/{cycle}', [PresidentProfitabilityController::class, 'show'])->name('show');
-        Route::get('/cycle/{cycle}/sharing', [PresidentProfitabilityController::class, 'sharing'])->name('sharing');
-        Route::post('/cycle/{cycle}/finalize', [PresidentProfitabilityController::class, 'finalize'])->name('finalize');
+        Route::get('/cycles/{cycle}', [PresidentProfitabilityController::class, 'show'])->name('show');
+        Route::get('/cycles/{cycle}/sharing', [PresidentProfitabilityController::class, 'sharing'])->name('sharing');
+        Route::get('/cycles/{cycle}/report/preview', [PresidentProfitabilityReportController::class, 'livePreview'])->name('report.preview');
+        Route::get('/cycles/{cycle}/report/download', [PresidentProfitabilityReportController::class, 'liveDownload'])->name('report.download');
+        Route::get('/snapshots/{snapshot}', [PresidentProfitabilitySnapshotController::class, 'show'])->name('snapshots.show');
+        Route::get('/snapshots/{snapshot}/report/preview', [PresidentProfitabilityReportController::class, 'snapshotPreview'])->name('snapshots.report.preview');
+        Route::get('/snapshots/{snapshot}/report/download', [PresidentProfitabilityReportController::class, 'snapshotDownload'])->name('snapshots.report.download');
+    });
+
+    Route::middleware(['role:president'])->prefix('profitability')->name('profitability.')->group(function () {
+        Route::post('/cycles/{cycle}/finalize', [PresidentProfitabilityController::class, 'finalize'])->name('finalize');
     });
 
     Route::middleware(['role:president,treasurer,secretary'])->get('/profit-sharing/{cycle}', [PresidentProfitabilityController::class, 'sharing'])->name('profit-sharing');
