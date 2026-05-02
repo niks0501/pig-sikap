@@ -17,6 +17,11 @@
     </style>
 </head>
 <body>
+    @php
+        // Use ASCII currency prefix for stable DomPDF rendering across environments.
+        $currencyPrefix = 'PHP ';
+    @endphp
+
     <div class="header">
         <div class="title">Digital Sales Receipt</div>
         <div>{{ $associationName }}</div>
@@ -25,39 +30,39 @@
 
     <div class="section-title">Buyer Information</div>
     <table>
-        <tr><th>Buyer Name</th><td>{{ $sale->buyer?->name ?? 'N/A' }}</td></tr>
-        <tr><th>Buyer Email</th><td>{{ $sale->buyer?->email ?? $sale->digital_receipt_email ?? 'N/A' }}</td></tr>
-        <tr><th>Contact Number</th><td>{{ $sale->buyer?->contact_number ?? 'N/A' }}</td></tr>
-        <tr><th>Address</th><td>{{ $sale->buyer?->address ?? 'N/A' }}</td></tr>
+        <tr><th>Buyer Name</th><td class="right">{{ $sale->buyer?->name ?? 'N/A' }}</td></tr>
+        <tr><th>Buyer Email</th><td class="right">{{ $sale->buyer?->email ?? $sale->digital_receipt_email ?? 'N/A' }}</td></tr>
+        <tr><th>Contact Number</th><td class="right">{{ $sale->buyer?->contact_number ?? 'N/A' }}</td></tr>
+        <tr><th>Address</th><td class="right">{{ $sale->buyer?->address ?? 'N/A' }}</td></tr>
     </table>
 
     <div class="section-title">Sale Details</div>
     <table>
-        <tr><th>Batch/Cycle</th><td>{{ $sale->cycle?->batch_code ?? 'N/A' }}</td></tr>
-        <tr><th>Sale Date</th><td>{{ $sale->sale_date?->format('M d, Y') }}</td></tr>
-        <tr><th>Sale Method</th><td>{{ $sale->sale_method === 'live_weight' ? 'Live Weight' : 'Per Head' }}</td></tr>
-        <tr><th>Pigs Sold</th><td>{{ $sale->pigs_sold }}</td></tr>
+        <tr><th>Batch/Cycle</th><td class="right">{{ $sale->cycle?->batch_code ?? 'N/A' }}</td></tr>
+        <tr><th>Sale Date</th><td class="right">{{ $sale->sale_date?->format('M d, Y') }}</td></tr>
+        <tr><th>Sale Method</th><td class="right">{{ $sale->sale_method === 'live_weight' ? 'Live Weight' : 'Per Head' }}</td></tr>
+        <tr><th>Pigs Sold</th><td class="right">{{ $sale->pigs_sold }}</td></tr>
         @if ($sale->sale_method === 'live_weight')
-            <tr><th>Live Weight</th><td>{{ number_format((float) $sale->live_weight_kg, 2) }} kg</td></tr>
-            <tr><th>Price per kg</th><td>&#8369;{{ number_format((float) $sale->price_per_kg, 2) }}</td></tr>
+            <tr><th>Live Weight</th><td class="right">{{ number_format((float) $sale->live_weight_kg, 2) }} kg</td></tr>
+            <tr><th>Price per kg</th><td class="right">{{ $currencyPrefix }}{{ number_format((float) $sale->price_per_kg, 2) }}</td></tr>
         @else
-            <tr><th>Price per head</th><td>&#8369;{{ number_format((float) $sale->price_per_head, 2) }}</td></tr>
+            <tr><th>Price per head</th><td class="right">{{ $currencyPrefix }}{{ number_format((float) $sale->price_per_head, 2) }}</td></tr>
         @endif
     </table>
 
     <div class="section-title">Payment Summary</div>
     <table>
-        <tr><th>Total Amount</th><td class="right">&#8369;{{ number_format((float) $sale->amount, 2) }}</td></tr>
-        <tr><th>Amount Paid</th><td class="right">&#8369;{{ number_format((float) $sale->amount_paid, 2) }}</td></tr>
-        <tr><th>Balance</th><td class="right">&#8369;{{ number_format(max((float) $sale->amount - (float) $sale->amount_paid, 0), 2) }}</td></tr>
-        <tr><th>Payment Status</th><td>{{ ucfirst((string) $sale->payment_status) }}</td></tr>
+        <tr><th>Total Amount</th><td class="right">{{ $currencyPrefix }}{{ number_format((float) $sale->amount, 2) }}</td></tr>
+        <tr><th>Amount Paid</th><td class="right">{{ $currencyPrefix }}{{ number_format((float) $sale->amount_paid, 2) }}</td></tr>
+        <tr><th>Balance</th><td class="right">{{ $currencyPrefix }}{{ number_format(max((float) $sale->amount - (float) $sale->amount_paid, 0), 2) }}</td></tr>
+        <tr><th>Payment Status</th><td class="right">{{ ucfirst((string) $sale->payment_status) }}</td></tr>
     </table>
 
     <div class="section-title">Other Details</div>
     <table>
-        <tr><th>Recorded By</th><td>{{ $sale->createdBy?->name ?? 'N/A' }}</td></tr>
-        <tr><th>Receipt Reference</th><td>{{ $sale->receipt_reference ?? 'N/A' }}</td></tr>
-        <tr><th>Notes</th><td>{{ $sale->notes ?? 'N/A' }}</td></tr>
+        <tr><th>Recorded By</th><td class="right">{{ $sale->createdBy?->name ?? 'N/A' }}</td></tr>
+        <tr><th>Receipt Reference</th><td class="right">{{ $sale->receipt_reference ?? 'N/A' }}</td></tr>
+        <tr><th>Notes</th><td class="right">{{ $sale->notes ?? 'N/A' }}</td></tr>
     </table>
 
     <div class="footer">
