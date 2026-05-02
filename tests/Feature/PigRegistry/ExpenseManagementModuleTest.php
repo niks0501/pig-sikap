@@ -616,3 +616,160 @@ test('summary view includes month over month comparison data', function () {
                 && count($summary['top_categories'] ?? []) === 1;
         });
 });
+
+test('index date_from and date_to filter returns expenses within the range', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '300.00',
+        'expense_date' => '2026-04-01',
+        'notes' => 'April 1 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '500.00',
+        'expense_date' => '2026-04-15',
+        'notes' => 'April 15 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '800.00',
+        'expense_date' => '2026-04-30',
+        'notes' => 'April 30 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $response = actingAs($president)
+        ->getJson(route('expenses.index', [
+            'date_from' => '2026-04-10',
+            'date_to' => '2026-04-25',
+        ]))
+        ->assertOk();
+
+    $expenses = $response->json('expenses');
+
+    expect($expenses)->toHaveCount(1)
+        ->and($expenses[0]['notes'])->toBe('April 15 expense');
+});
+
+test('index inverted date range is swapped and returns all matching records', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '300.00',
+        'expense_date' => '2026-04-15',
+        'notes' => 'Mid-month feed',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '500.00',
+        'expense_date' => '2026-04-01',
+        'notes' => 'Earlier feed',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '800.00',
+        'expense_date' => '2026-04-30',
+        'notes' => 'Later feed',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $response = actingAs($president)
+        ->getJson(route('expenses.index', [
+            'date_from' => '2026-04-30',
+            'date_to' => '2026-04-01',
+        ]))
+        ->assertOk();
+
+    $expenses = $response->json('expenses');
+
+    expect($expenses)->toHaveCount(3);
+});
+
+test('index month filter returns expenses for that month only', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '300.00',
+        'expense_date' => '2026-04-05',
+        'notes' => 'April expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'medicine',
+        'amount' => '450.00',
+        'expense_date' => '2026-03-20',
+        'notes' => 'March expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $response = actingAs($president)
+        ->getJson(route('expenses.index', ['month' => '2026-04']))
+        ->assertOk();
+
+    $expenses = $response->json('expenses');
+
+    expect($expenses)->toHaveCount(1)
+        ->and($expenses[0]['notes'])->toBe('April expense');
+});
+
+test('index month filter takes precedence over date_from and date_to', function () {
+    $president = expenseUser('president');
+    $cycle = expenseCycle($president);
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '300.00',
+        'expense_date' => '2026-04-15',
+        'notes' => 'April 15 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '500.00',
+        'expense_date' => '2026-04-25',
+        'notes' => 'April 25 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    actingAs($president)->post(route('expenses.store'), [
+        'batch_id' => $cycle->id,
+        'category' => 'feed',
+        'amount' => '800.00',
+        'expense_date' => '2026-04-01',
+        'notes' => 'April 1 expense',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $response = actingAs($president)
+        ->getJson(route('expenses.index', [
+            'month' => '2026-04',
+            'date_from' => '2026-04-20',
+            'date_to' => '2026-04-25',
+        ]))
+        ->assertOk();
+
+    $expenses = $response->json('expenses');
+
+    expect($expenses)->toHaveCount(3)
+        ->and(collect($expenses)->pluck('notes')->sort()->values()->all())->toBe([
+            'April 1 expense',
+            'April 15 expense',
+            'April 25 expense',
+        ]);
+});

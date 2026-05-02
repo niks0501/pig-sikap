@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 
 const props = defineProps({
     initialFilters: {
@@ -60,6 +60,22 @@ const activeFilterCount = computed(() => {
 const sortBy = reactive({
     column: 'expense_date',
     direction: 'desc',
+});
+
+const dateToMin = computed(() => filters.date_from || undefined);
+const dateFromMax = computed(() => filters.date_to || undefined);
+
+watch(() => filters.month, (newVal) => {
+    if (newVal !== '') {
+        filters.date_from = '';
+        filters.date_to = '';
+    }
+});
+
+watch([() => filters.date_from, () => filters.date_to], ([from, to]) => {
+    if (from !== '' || to !== '') {
+        filters.month = '';
+    }
 });
 
 const datePresets = [
@@ -165,7 +181,7 @@ const clearAndApply = () => {
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
             <div>
                 <label for="filter-search" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Search
@@ -220,6 +236,18 @@ class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] f
             </div>
 
             <div>
+                <label for="filter-month" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Month
+                </label>
+<input
+id="filter-month"
+v-model="filters.month"
+type="month"
+class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]"
+>
+            </div>
+
+            <div>
                 <label for="filter-date-from" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     From
                 </label>
@@ -227,6 +255,7 @@ class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] f
 id="filter-date-from"
 v-model="filters.date_from"
 type="date"
+:max="dateFromMax"
 class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]"
 >
             </div>
@@ -239,6 +268,7 @@ class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] f
 id="filter-date-to"
 v-model="filters.date_to"
 type="date"
+:min="dateToMin"
 class="w-full rounded-lg border-gray-200 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]"
 >
             </div>

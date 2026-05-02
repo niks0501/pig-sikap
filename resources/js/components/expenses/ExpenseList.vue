@@ -31,6 +31,8 @@ const props = defineProps({
             category: '',
             cycle_id: '',
             month: '',
+            date_from: '',
+            date_to: '',
         }),
     },
     categories: {

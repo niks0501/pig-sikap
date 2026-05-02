@@ -456,7 +456,9 @@ class PresidentExpenseController extends Controller
             $query->where('batch_id', (int) $filters['cycle_id']);
         }
 
-        if ($filters['month'] !== '' && preg_match('/^\d{4}-\d{2}$/', $filters['month']) === 1) {
+        $hasMonth = $filters['month'] !== '' && preg_match('/^\d{4}-\d{2}$/', $filters['month']) === 1;
+
+        if ($hasMonth) {
             try {
                 $month = Carbon::createFromFormat('Y-m-d', $filters['month'].'-01');
 
@@ -469,14 +471,27 @@ class PresidentExpenseController extends Controller
             } catch (\Throwable) {
                 // Ignore invalid month filter values.
             }
+
+            return;
         }
 
-        if ($filters['date_from'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_from']) === 1) {
-            $query->whereDate('expense_date', '>=', $filters['date_from']);
+        $validDateFrom = $filters['date_from'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_from']) === 1;
+        $validDateTo = $filters['date_to'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_to']) === 1;
+        $dateFrom = $filters['date_from'];
+        $dateTo = $filters['date_to'];
+
+        if ($validDateFrom && $validDateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
 
-        if ($filters['date_to'] !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['date_to']) === 1) {
-            $query->whereDate('expense_date', '<=', $filters['date_to']);
+        if ($validDateFrom || $validDateTo) {
+            if ($validDateFrom) {
+                $query->whereDate('expense_date', '>=', $dateFrom);
+            }
+
+            if ($validDateTo) {
+                $query->whereDate('expense_date', '<=', $dateTo);
+            }
         }
     }
 
