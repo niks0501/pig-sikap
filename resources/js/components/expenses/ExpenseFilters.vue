@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive } from 'vue';
 
 const props = defineProps({
     initialFilters: {
@@ -132,37 +132,13 @@ const formatCategoryLabel = (category) => {
     return category.charAt(0).toUpperCase() + category.slice(1);
 };
 
-const emitFilters = () => {
-    emit('filters-changed', { ...filters });
-};
-
-watch(filters, () => {
-    emitFilters();
-}, { deep: true });
-
-const buildQueryString = () => {
-    const params = new URLSearchParams();
-
-    if (filters.search) params.set('search', filters.search);
-    if (filters.category) params.set('category', filters.category);
-    if (filters.cycle_id) params.set('cycle_id', filters.cycle_id);
-    if (filters.month) params.set('month', filters.month);
-    if (filters.date_from) params.set('date_from', filters.date_from);
-    if (filters.date_to) params.set('date_to', filters.date_to);
-
-    return params.toString();
-};
-
 const applyFilters = () => {
-    const queryString = buildQueryString();
-    const url = queryString ? `${props.baseUrl}?${queryString}` : props.baseUrl;
-
-    window.location.href = url;
+    emit('apply-filters', { ...filters });
 };
 
 const clearAndApply = () => {
     clearFilters();
-    applyFilters();
+    emit('apply-filters', { ...filters });
 };
 </script>
 

@@ -35,17 +35,6 @@ const formatAmount = (amount) => {
     }).format(parseFloat(amount || 0));
 };
 
-const formatQuantity = (expense) => {
-    if (expense.quantity === null && !expense.unit) {
-        return 'Lump-sum';
-    }
-
-    const quantity = Number(expense.quantity || 0);
-    const quantityText = quantity % 1 === 0 ? String(quantity) : quantity.toFixed(2);
-
-    return `${quantityText} ${expense.unit || ''}`.trim();
-};
-
 const formatCategoryLabel = (category) => {
     return category?.charAt(0).toUpperCase() + category?.slice(1) || '';
 };
@@ -77,9 +66,6 @@ const categoryMeta = computed(() => {
     return meta[props.expense.category] || meta.feed;
 });
 
-const hasReceipt = computed(() => {
-    return props.expense?.receipt_url && props.expense.receipt_url.trim() !== '';
-});
 </script>
 
 <template>
@@ -102,29 +88,18 @@ const hasReceipt = computed(() => {
                 >
 
                 <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <p :class="['inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold', categoryMeta.classes]">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="categoryMeta.icon" />
-                            </svg>
-                            {{ formatCategoryLabel(expense.category) }}
-                        </p>
-                        <span v-if="hasReceipt" class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-[#0c6d57]">
-                            <svg class="h-3 w-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Receipt
-                        </span>
-                    </div>
+                    <p :class="['inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold', categoryMeta.classes]">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="categoryMeta.icon" />
+                        </svg>
+                        {{ formatCategoryLabel(expense.category) }}
+                    </p>
                     <p class="mt-1 text-sm font-semibold text-gray-900 truncate">{{ expense.notes }}</p>
                     <p class="mt-1 text-xs text-gray-500">
                         {{ expense.cycle?.batch_code || 'Unknown cycle' }}
                     </p>
                     <p class="mt-0.5 text-xs text-gray-400">
-                        By {{ expense.created_by_name || 'System' }} • {{ formatDate(expense.expense_date) }}
-                    </p>
-                    <p class="mt-2 text-xs font-semibold text-gray-600">
-                        {{ formatQuantity(expense) }}<template v-if="expense.unit_cost"> • {{ formatAmount(expense.unit_cost) }} / {{ expense.unit || 'unit' }}</template>
+                        {{ formatDate(expense.expense_date) }}
                     </p>
                 </div>
             </div>

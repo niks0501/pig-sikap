@@ -31,7 +31,7 @@ class PresidentExpenseController extends Controller
 {
     use RecordsAuditTrail;
 
-    public function index(Request $request, ExpenseSummaryService $expenseSummaryService): View
+    public function index(Request $request, ExpenseSummaryService $expenseSummaryService): View|JsonResponse
     {
         $filters = [
             'search' => trim((string) $request->query('search', '')),
@@ -59,6 +59,40 @@ class PresidentExpenseController extends Controller
         $summary['month_over_month'] = $expenseSummaryService->buildMonthComparison(
             $filters['cycle_id'] !== '' && ctype_digit($filters['cycle_id']) ? (int) $filters['cycle_id'] : null
         );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'expenses' => collect($expenses->items())->map(function ($expense) {
+                    return [
+                        'id' => $expense->id,
+                        'batch_id' => $expense->batch_id,
+                        'category' => $expense->category,
+                        'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
+                        'unit' => $expense->unit,
+                        'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
+                        'amount' => (float) $expense->amount,
+                        'expense_date' => $expense->expense_date?->toDateString(),
+                        'notes' => $expense->notes,
+                        'receipt_url' => $expense->receiptUrl(),
+                        'cycle' => $expense->cycle ? [
+                            'id' => $expense->cycle->id,
+                            'batch_code' => $expense->cycle->batch_code,
+                            'status' => $expense->cycle->status,
+                            'stage' => $expense->cycle->stage,
+                            'isArchived' => $expense->cycle->isArchived(),
+                        ] : null,
+                        'created_by_name' => $expense->createdBy?->name,
+                    ];
+                })->values(),
+                'summary' => $summary,
+                'pagination' => [
+                    'current_page' => $expenses->currentPage(),
+                    'last_page' => $expenses->lastPage(),
+                    'per_page' => $expenses->perPage(),
+                    'total' => $expenses->total(),
+                ],
+            ]);
+        }
 
         return view('expenses.index', [
             'expenses' => $expenses,

@@ -64,6 +64,11 @@ const props = defineProps({
     },
 });
 
+const expensesList = ref([...props.expenses]);
+const paginationData = ref({ ...props.pagination });
+const summaryData = ref({ ...props.summary });
+const currentFilters = ref({ ...props.filters });
+
 const emit = defineEmits(['bulk-action']);
 
 const isLoading = ref(false);
@@ -80,11 +85,11 @@ const toast = reactive({
     message: '',
 });
 
-const hasExpenses = computed(() => props.expenses && props.expenses.length > 0);
+const hasExpenses = computed(() => expensesList.value && expensesList.value.length > 0);
 
 const isAllSelected = computed(() => {
-    if (!hasExpenses.value || props.expenses.length === 0) return false;
-    return props.expenses.every((expense) => selectedIds.value.has(expense.id));
+    if (!hasExpenses.value || expensesList.value.length === 0) return false;
+    return expensesList.value.every((expense) => selectedIds.value.has(expense.id));
 });
 
 const selectedCount = computed(() => selectedIds.value.size);
@@ -96,15 +101,15 @@ const visibleTotal = computed(() => {
 });
 
 const selectedTotal = computed(() => {
-    return props.expenses
+    return expensesList.value
         .filter((expense) => selectedIds.value.has(expense.id))
         .reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
 });
 
 const createRoute = computed(() => {
-    if (props.filters?.cycle_id) {
+    if (currentFilters.value?.cycle_id) {
         const url = new URL(props.routes.create, window.location.origin);
-        url.searchParams.set('cycle_id', props.filters.cycle_id);
+        url.searchParams.set('cycle_id', currentFilters.value.cycle_id);
 
         return url.pathname + url.search;
     }
@@ -115,7 +120,7 @@ const createRoute = computed(() => {
 const sortedExpenses = computed(() => {
     if (!hasExpenses.value) return [];
 
-    const sorted = [...props.expenses];
+    const sorted = [...expensesList.value];
 
     sorted.sort((a, b) => {
         let aVal, bVal;
@@ -172,7 +177,7 @@ const toggleSelectAll = () => {
     if (isAllSelected.value) {
         selectedIds.value.clear();
     } else {
-        props.expenses.forEach((expense) => {
+        expensesList.value.forEach((expense) => {
             selectedIds.value.add(expense.id);
         });
     }
@@ -254,6 +259,58 @@ const clearSelection = () => {
     selectedIds.value.clear();
 };
 
+const buildQueryParams = (filters, page = 1) => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.category) params.set('category', filters.category);
+    if (filters.cycle_id) params.set('cycle_id', filters.cycle_id);
+    if (filters.month) params.set('month', filters.month);
+    if (filters.date_from) params.set('date_from', filters.date_from);
+    if (filters.date_to) params.set('date_to', filters.date_to);
+    params.set('page', String(page));
+    return params.toString();
+};
+
+const fetchData = async (filters, page = 1) => {
+    isLoading.value = true;
+
+    try {
+        const queryString = buildQueryParams(filters, page);
+        const url = `${props.routes.index}?${queryString}`;
+
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            showToast('error', 'Failed to load', errorData.message || 'Please try again.');
+            return;
+        }
+
+        const data = await response.json();
+
+        expensesList.value = data.expenses;
+        paginationData.value = data.pagination;
+        summaryData.value = data.summary;
+        currentFilters.value = { ...filters, page };
+
+        clearSelection();
+    } catch (error) {
+        showToast('error', 'Connection problem', 'Please try again.');
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const handleFiltersApply = (filters) => {
+    fetchData(filters, 1);
+};
+
+const goToPage = (page) => {
+    fetchData(currentFilters.value, page);
+};
+
 const performBulkDelete = () => {
     bulkActionType.value = 'delete';
     showBulkConfirm.value = true;
@@ -284,7 +341,8 @@ const confirmBulkAction = async () => {
 
         if (response.ok) {
             const data = await response.json();
-            window.location.href = data.redirect_url || props.routes.index;
+            await fetchData(currentFilters.value, 1);
+            showToast('success', 'Deleted', data.message || 'Expenses deleted successfully.');
         } else {
             const data = await response.json().catch(() => ({}));
             showToast('error', 'Bulk delete failed', data.message || 'Please try again.');
@@ -314,10 +372,11 @@ const cancelBulkAction = () => {
         />
 
         <ExpenseFilters
-            :initial-filters="props.filters"
+            :initial-filters="currentFilters"
             :categories="props.categories"
             :cycles="props.cycles"
             :base-url="props.routes.index"
+            @apply-filters="handleFiltersApply"
         />
 
         <div class="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -326,7 +385,7 @@ const cancelBulkAction = () => {
                     Showing {{ sortedExpenses.length }} expense(s) totaling {{ formatAmount(visibleTotal) }}
                 </p>
                 <p class="mt-0.5 text-xs text-gray-500">
-                    {{ props.pagination.total }} record(s) match the current filters
+                    {{ paginationData.total }} record(s) match the current filters
                 </p>
             </div>
             <a
@@ -377,7 +436,13 @@ const cancelBulkAction = () => {
             </a>
         </div>
 
-        <div v-else>
+        <div v-else class="relative">
+            <div v-if="isLoading" class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/60">
+                <svg class="h-8 w-8 animate-spin text-[#0c6d57]" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </div>
             <div class="grid gap-3 sm:hidden">
                 <ExpenseTableRow
                     v-for="expense in sortedExpenses"
@@ -427,12 +492,6 @@ class="px-6 py-4 text-left cursor-pointer select-none"
 <th class="px-6 py-4 text-left">
 <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Notes</span>
 </th>
-<th class="px-6 py-4 text-left">
-<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Qty / Unit</span>
-</th>
-<th class="px-6 py-4 text-right">
-<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Unit Cost</span>
-</th>
 <th
 class="px-6 py-4 text-left cursor-pointer select-none"
                             @click="toggleSort('cycle')"
@@ -444,9 +503,6 @@ class="px-6 py-4 text-left cursor-pointer select-none"
                                 </svg>
                             </div>
                         </th>
-<th class="px-6 py-4 text-left">
-<span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Recorded By</span>
-</th>
 <th
 class="px-6 py-4 text-right cursor-pointer select-none"
                             @click="toggleSort('amount')"
@@ -496,10 +552,7 @@ class="px-6 py-4 text-right cursor-pointer select-none"
         Receipt attached
     </span>
 </td>
-<td class="px-6 py-4 text-sm font-semibold text-gray-700">{{ formatQuantity(expense) }}</td>
-<td class="px-6 py-4 text-sm font-semibold text-gray-700 text-right">{{ expense.unit_cost ? formatAmount(expense.unit_cost) : '-' }}</td>
 <td class="px-6 py-4 text-sm text-gray-700">{{ expense.cycle?.batch_code || 'Unknown' }}</td>
-<td class="px-6 py-4 text-sm text-gray-700">{{ expense.created_by_name || 'System' }}</td>
 <td class="px-6 py-4 text-lg font-black text-gray-900 text-right">{{ formatAmount(expense.amount) }}</td>
 <td class="px-6 py-4 text-right text-sm">
                             <a :href="props.routes.show?.replace('_ID_', expense.id)" class="text-[#0c6d57] font-semibold hover:text-[#0a5a48]">
@@ -512,24 +565,28 @@ class="px-6 py-4 text-right cursor-pointer select-none"
         </div>
         </div>
 
-        <div v-if="props.pagination && props.pagination.last_page > 1" class="flex justify-center gap-2">
-            <a
-                v-if="props.pagination.current_page > 1"
-                :href="`${props.routes.index}?page=${props.pagination.current_page - 1}`"
-                class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+        <div v-if="paginationData && paginationData.last_page > 1" class="flex justify-center gap-2">
+            <button
+                v-if="paginationData.current_page > 1"
+                type="button"
+                class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                :disabled="isLoading"
+                @click="goToPage(paginationData.current_page - 1)"
             >
                 Previous
-            </a>
+            </button>
             <span class="rounded-lg bg-[#0c6d57] px-3 py-2 text-sm font-semibold text-white">
-                {{ props.pagination.current_page }} / {{ props.pagination.last_page }}
+                {{ paginationData.current_page }} / {{ paginationData.last_page }}
             </span>
-            <a
-                v-if="props.pagination.current_page < props.pagination.last_page"
-                :href="`${props.routes.index}?page=${props.pagination.current_page + 1}`"
-                class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            <button
+                v-if="paginationData.current_page < paginationData.last_page"
+                type="button"
+                class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                :disabled="isLoading"
+                @click="goToPage(paginationData.current_page + 1)"
             >
                 Next
-            </a>
+            </button>
         </div>
 
         <TransitionRoot v-if="showBulkConfirm" appear show as="template">
