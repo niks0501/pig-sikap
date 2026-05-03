@@ -23,7 +23,12 @@ use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Workflow\DswdSubmissionController;
 use App\Http\Controllers\Workflow\MeetingController;
+use App\Http\Controllers\Workflow\ResolutionApprovalController;
 use App\Http\Controllers\Workflow\ResolutionController;
+use App\Http\Controllers\Workflow\ResolutionDocumentController;
+use App\Http\Controllers\Workflow\ResolutionDswdDocumentController;
+use App\Http\Controllers\Workflow\ResolutionFileController;
+use App\Http\Controllers\Workflow\ResolutionSignatureController;
 use App\Http\Controllers\Workflow\WithdrawalController;
 use App\Services\Workflow\WorkflowDashboardService;
 use Illuminate\Support\Facades\Route;
@@ -195,6 +200,16 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
         // DSWD Submissions
         Route::post('/resolutions/{resolution}/dswd', [DswdSubmissionController::class, 'store'])->name('resolutions.dswd.store');
+
+        // Resolution Document Workflow
+        Route::post('/resolutions/{resolution}/generate-pdf', [ResolutionDocumentController::class, 'generatePdf'])->name('resolutions.generate-pdf');
+        Route::post('/resolutions/{resolution}/generate-docx', [ResolutionDocumentController::class, 'generateDocx'])->name('resolutions.generate-docx');
+        Route::post('/resolutions/{resolution}/upload-signed', [ResolutionSignatureController::class, 'uploadSigned'])->name('resolutions.upload-signed');
+        Route::post('/resolutions/{resolution}/upload-signature-sheet', [ResolutionSignatureController::class, 'uploadSignatureSheet'])->name('resolutions.upload-signature-sheet');
+        Route::post('/resolutions/{resolution}/verify-approvals', [ResolutionApprovalController::class, 'verifyThreshold'])->name('resolutions.verify-approvals');
+        Route::post('/resolutions/{resolution}/upload-dswd-approval', [ResolutionDswdDocumentController::class, 'uploadApproval'])->name('resolutions.upload-dswd-approval');
+        Route::get('/resolutions/{resolution}/documents/{documentType}/download/{version?}', [ResolutionFileController::class, 'download'])->name('resolutions.download');
+        Route::get('/resolutions/{resolution}/documents/{documentType}/preview/{version?}', [ResolutionFileController::class, 'preview'])->name('resolutions.preview');
 
         // Withdrawals
         Route::get('/resolutions/{resolution}/withdraw', [WithdrawalController::class, 'create'])->name('withdrawals.create');

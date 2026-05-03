@@ -122,6 +122,7 @@ class ResolutionController extends Controller
             'dswdSubmission',
             'withdrawals.requester:id,name',
             'withdrawals.liquidationReport',
+            'documentVersions.generatedBy:id,name',
         ]);
 
         $eligibility = $this->eligibilityService->canWithdraw($resolution);

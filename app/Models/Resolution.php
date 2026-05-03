@@ -28,6 +28,21 @@ class Resolution extends Model
         'finalized',
     ];
 
+    /** Workflow statuses for the document lifecycle. */
+    public const WORKFLOW_STATUSES = [
+        'draft',
+        'generated',
+        'printed',
+        'signature_sheet_uploaded',
+        'pending_member_approval',
+        'member_approved',
+        'dswd_pending',
+        'dswd_approved',
+        'withdrawal_ready',
+        'withdrawn',
+        'archived',
+    ];
+
     /**
      * @var list<string>
      */
@@ -36,6 +51,16 @@ class Resolution extends Model
         'title',
         'description',
         'resolution_file_path',
+        'resolution_number',
+        'generated_pdf_path',
+        'generated_docx_path',
+        'signed_file_path',
+        'physical_signatures_pdf_path',
+        'dswd_approval_file_path',
+        'version',
+        'signature_verified_at',
+        'workflow_status',
+        'resolution_number_assigned_at',
         'status',
         'approval_deadline',
         'created_by',
@@ -49,6 +74,8 @@ class Resolution extends Model
     {
         return [
             'approval_deadline' => 'date',
+            'signature_verified_at' => 'datetime',
+            'resolution_number_assigned_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -109,6 +136,30 @@ class Resolution extends Model
     public function withdrawals(): HasMany
     {
         return $this->hasMany(Withdrawal::class);
+    }
+
+    /**
+     * All document versions for this resolution.
+     */
+    public function documentVersions(): HasMany
+    {
+        return $this->hasMany(DocumentVersion::class);
+    }
+
+    /**
+     * Signed document versions only.
+     */
+    public function signedDocumentVersions(): HasMany
+    {
+        return $this->documentVersions()->where('document_type', 'signed_resolution');
+    }
+
+    /**
+     * DSWD approval document versions only.
+     */
+    public function dswdApprovalVersions(): HasMany
+    {
+        return $this->documentVersions()->where('document_type', 'dswd_approval');
     }
 
     // ─── Accessors ────────────────────────────────────────────
@@ -181,5 +232,69 @@ class Resolution extends Model
         }
 
         return asset('storage/' . $this->resolution_file_path);
+    }
+
+    /**
+     * Generate the next resolution number in sequence.
+     */
+    public static function generateResolutionNumber(): string
+    {
+        $year = date('Y');
+        $lastNumber = static::where('resolution_number', 'like', "RES-{$year}-%")
+            ->orderByRaw('CAST(SUBSTRING_INDEX(resolution_number, "-", -1) AS UNSIGNED) DESC')
+            ->value('resolution_number');
+
+        $nextSequence = 1;
+
+        if ($lastNumber) {
+            $parts = explode('-', $lastNumber);
+            $nextSequence = ((int) end($parts)) + 1;
+        }
+
+        return sprintf('RES-%s-%03d', $year, $nextSequence);
+    }
+
+    /**
+     * Human-readable workflow status label.
+     */
+    public function getWorkflowStatusLabelAttribute(): string
+    {
+        $labels = [
+            'draft' => 'Draft',
+            'generated' => 'Document Generated',
+            'printed' => 'Printed',
+            'signature_sheet_uploaded' => 'Signatures Uploaded',
+            'pending_member_approval' => 'Pending Member Approval',
+            'member_approved' => 'Member Approved',
+            'dswd_pending' => 'DSWD Pending',
+            'dswd_approved' => 'DSWD Approved',
+            'withdrawal_ready' => 'Ready for Withdrawal',
+            'withdrawn' => 'Withdrawn',
+            'archived' => 'Archived',
+        ];
+
+        return $labels[$this->workflow_status] ?? ucfirst(str_replace('_', ' ', $this->workflow_status));
+    }
+
+    /**
+     * Color key for workflow status badge.
+     */
+    public function getWorkflowStatusColorAttribute(): string
+    {
+        $colors = [
+            'draft' => 'gray',
+            'generated' => 'blue',
+            'printed' => 'blue',
+            'signature_sheet_uploaded' => 'amber',
+            'pending_member_approval' => 'amber',
+            'member_approved' => 'emerald',
+            'dswd_pending' => 'indigo',
+            'dswd_approved' => 'emerald',
+            'withdrawal_ready' => 'emerald',
+            'withdrawn' => 'emerald',
+            'archived' => 'gray',
+        ];
+
+        return $colors[$this->workflow_status] ?? 'gray';
     }
 }

@@ -56,6 +56,8 @@ import MeetingDetail from './components/workflow/MeetingDetail.vue';
 import ResolutionsList from './components/workflow/ResolutionsList.vue';
 import ResolutionForm from './components/workflow/ResolutionForm.vue';
 import ResolutionDetail from './components/workflow/ResolutionDetail.vue';
+import DocumentChecklist from './components/workflow/DocumentChecklist.vue';
+import FileUpload from './components/workflow/FileUpload.vue';
 import WithdrawalForm from './components/workflow/WithdrawalForm.vue';
 
 const componentRegistry = {
@@ -107,6 +109,8 @@ const componentRegistry = {
     'resolutions-list': ResolutionsList,
     'resolution-form': ResolutionForm,
     'resolution-detail': ResolutionDetail,
+    'document-checklist': DocumentChecklist,
+    'file-upload': FileUpload,
     'withdrawal-form': WithdrawalForm,
 };
 

@@ -13,12 +13,19 @@
     </div>
     @endif
 
+    @if (session('error'))
+    <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        {{ session('error') }}
+    </div>
+    @endif
+
     @if ($errors->any())
     <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
         {{ $errors->first() }}
     </div>
     @endif
 
+    {{-- Resolution Detail Vue Component --}}
     <div
         data-vue-component="resolution-detail"
         data-props="{{ json_encode([
@@ -27,6 +34,9 @@
                 'title' => $resolution->title,
                 'description' => $resolution->description,
                 'status' => $resolution->status,
+                'workflow_status' => $resolution->workflow_status ?? 'draft',
+                'workflow_status_label' => $resolution->workflow_status_label,
+                'resolution_number' => $resolution->resolution_number,
                 'approval_deadline' => $resolution->approval_deadline?->format('M d, Y'),
                 'resolution_file_url' => $resolution->resolutionFileUrl(),
                 'grand_total' => (float) $resolution->grand_total,
@@ -35,6 +45,7 @@
                 'approval_percentage' => (float) $resolution->approval_percentage,
                 'approved_count' => $resolution->approved_count,
                 'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
+                'total_members' => $totalMembers,
                 'creator_name' => $resolution->creator?->name,
                 'created_at' => $resolution->created_at?->format('M d, Y h:i A'),
             ],
@@ -97,5 +108,89 @@
             'csrfToken' => csrf_token(),
         ]) }}"
     ></div>
+
+    {{-- Document Workflow Checklist --}}
+    @php
+        $user = auth()->user();
+        $permissions = [
+            'canGenerate' => $user->can('generateDocuments', $resolution),
+            'canUploadSigned' => $user->can('uploadSignedDocument', $resolution),
+            'canVerifyApproval' => $user->can('verifyApprovalThreshold', $resolution),
+            'canUploadDswd' => $user->can('uploadDswdApproval', $resolution),
+        ];
+    @endphp
+
+    <div class="mt-6"
+        data-vue-component="document-checklist"
+        data-props="{{ json_encode([
+            'resolution' => [
+                'id' => $resolution->id,
+                'workflow_status' => $resolution->workflow_status ?? 'draft',
+                'workflow_status_label' => $resolution->workflow_status_label,
+                'resolution_number' => $resolution->resolution_number,
+                'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
+                'approval_percentage' => (float) $resolution->approval_percentage,
+                'approved_count' => $resolution->approved_count,
+                'total_members' => $totalMembers,
+            ],
+            'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
+                'id' => $dv->id,
+                'version_number' => $dv->version_number,
+                'document_type' => $dv->document_type,
+                'file_url' => $dv->file_url,
+                'file_size' => $dv->file_size,
+                'formatted_file_size' => $dv->formatted_file_size,
+                'file_hash' => $dv->file_hash,
+                'generated_at' => $dv->generated_at?->format('M d, Y h:i A'),
+                'generated_by' => $dv->generatedBy?->name,
+                'description' => $dv->description,
+            ])->values(),
+            'permissions' => $permissions,
+            'routes' => [
+                'generatePdf' => route('workflow.resolutions.generate-pdf', $resolution),
+                'generateDocx' => route('workflow.resolutions.generate-docx', $resolution),
+                'verifyApprovals' => route('workflow.resolutions.verify-approvals', $resolution),
+            ],
+            'csrfToken' => csrf_token(),
+        ]) }}"
+    ></div>
+
+    {{-- File Upload: Signed Document --}}
+    @if ($permissions['canUploadSigned'])
+    <div class="mt-6"
+        data-vue-component="file-upload"
+        data-props="{{ json_encode([
+            'uploadUrl' => route('workflow.resolutions.upload-signed', $resolution),
+            'csrfToken' => csrf_token(),
+            'fieldName' => 'signed_document',
+            'accept' => '.pdf',
+            'maxSize' => 10 * 1024 * 1024,
+            'acceptLabel' => 'PDF files',
+            'maxSizeLabel' => '10MB',
+            'label' => 'Upload Signed Resolution',
+            'showDescription' => true,
+            'showSignatureSheet' => true,
+        ]) }}"
+    ></div>
+    @endif
+
+    {{-- File Upload: DSWD Approval --}}
+    @if ($permissions['canUploadDswd'])
+    <div class="mt-6"
+        data-vue-component="file-upload"
+        data-props="{{ json_encode([
+            'uploadUrl' => route('workflow.resolutions.upload-dswd-approval', $resolution),
+            'csrfToken' => csrf_token(),
+            'fieldName' => 'dswd_approval_file',
+            'accept' => '.pdf,.doc,.docx',
+            'maxSize' => 10 * 1024 * 1024,
+            'acceptLabel' => 'PDF, DOC, DOCX files',
+            'maxSizeLabel' => '10MB',
+            'label' => 'Upload DSWD Approval Document',
+            'showDescription' => true,
+            'showDswdFields' => true,
+        ]) }}"
+    ></div>
+    @endif
 </div>
 </x-app-layout>
