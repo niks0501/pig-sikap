@@ -169,30 +169,50 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
     Route::middleware(['role:president,treasurer,secretary'])->get('/profit-sharing/{cycle}', [PresidentProfitabilityController::class, 'sharing'])->name('profit-sharing');
 
-    // Meeting Resolutions and Withdrawal Documentation Module
-    Route::prefix('resolutions')->name('resolutions.')->group(function () {
-        Route::get('/', function () {
-            return view('resolutions.index');
-        })->name('index');
-        Route::get('/create', function () {
-            return view('resolutions.create');
-        })->name('create');
-        Route::get('/{id}', function ($id) {
-            return view('resolutions.show', ['id' => $id]);
-        })->name('show');
+    // ── Meeting Resolutions & Withdrawal Documentation Workflow ───────
+    Route::middleware(['role:president,treasurer,secretary'])->prefix('workflow')->name('workflow.')->group(function () {
+        // Meetings
+        Route::get('/meetings', [\App\Http\Controllers\Workflow\MeetingController::class, 'index'])->name('meetings.index');
+        Route::get('/meetings/create', [\App\Http\Controllers\Workflow\MeetingController::class, 'create'])->name('meetings.create');
+        Route::post('/meetings', [\App\Http\Controllers\Workflow\MeetingController::class, 'store'])->name('meetings.store');
+        Route::get('/meetings/{meeting}', [\App\Http\Controllers\Workflow\MeetingController::class, 'show'])->name('meetings.show');
+        Route::put('/meetings/{meeting}', [\App\Http\Controllers\Workflow\MeetingController::class, 'update'])->name('meetings.update');
+
+        // Resolutions
+        Route::get('/resolutions', [\App\Http\Controllers\Workflow\ResolutionController::class, 'index'])->name('resolutions.index');
+        Route::get('/resolutions/create', [\App\Http\Controllers\Workflow\ResolutionController::class, 'create'])->name('resolutions.create');
+        Route::post('/resolutions', [\App\Http\Controllers\Workflow\ResolutionController::class, 'store'])->name('resolutions.store');
+        Route::get('/resolutions/{resolution}', [\App\Http\Controllers\Workflow\ResolutionController::class, 'show'])->name('resolutions.show');
+
+        // Approvals
+        Route::post('/resolutions/{resolution}/approvals', [\App\Http\Controllers\Workflow\ResolutionController::class, 'recordApprovals'])->name('resolutions.approvals.store');
+        Route::get('/resolutions/{resolution}/approvals/data', [\App\Http\Controllers\Workflow\ResolutionController::class, 'approvalData'])->name('resolutions.approvals.data');
+
+        // DSWD Submissions
+        Route::post('/resolutions/{resolution}/dswd', [\App\Http\Controllers\Workflow\DswdSubmissionController::class, 'store'])->name('resolutions.dswd.store');
+
+        // Withdrawals
+        Route::get('/resolutions/{resolution}/withdraw', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'create'])->name('withdrawals.create');
+        Route::post('/resolutions/{resolution}/withdraw', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'store'])->name('withdrawals.store');
+
+        // Reports
+        Route::post('/withdrawals/{withdrawal}/report', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'generateReport'])->name('withdrawals.report');
+
+        // Budget vs. Actual expense comparison (REQ-010)
+        Route::get('/withdrawals/{withdrawal}/budget-vs-actual', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'budgetVsActual'])->name('withdrawals.budget-vs-actual');
+
+        // Dashboard summary API (REQ-012)
+        Route::get('/dashboard/summary', function () {
+            $summary = app(\App\Services\Workflow\WorkflowDashboardService::class)->getSummary();
+
+            return response()->json($summary);
+        })->name('dashboard.summary');
     });
 
-    Route::prefix('minutes')->name('minutes.')->group(function () {
-        Route::get('/', function () {
-            return view('minutes.index');
-        })->name('index');
-    });
-
-    Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
-        Route::get('/create', function () {
-            return view('withdrawals.create');
-        })->name('create');
-    });
+    // Legacy route redirects for sidebar compatibility
+    Route::get('/resolutions', fn () => redirect()->route('workflow.resolutions.index'))->name('resolutions.index');
+    Route::get('/minutes', fn () => redirect()->route('workflow.meetings.index'))->name('minutes.index');
+    Route::get('/withdrawals/create', fn () => redirect()->route('workflow.resolutions.index'))->name('withdrawals.create');
 
     // Reports Module
     Route::prefix('reports')->name('reports.')->group(function () {

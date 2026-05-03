@@ -50,6 +50,13 @@ import ReceiptUpload from './components/expenses/ReceiptUpload.vue';
 import SalesForm from './components/sales/SalesForm.vue';
 import SalesIndex from './components/sales/SalesIndex.vue';
 import SalesShow from './components/sales/SalesShow.vue';
+import MeetingsList from './components/workflow/MeetingsList.vue';
+import MeetingForm from './components/workflow/MeetingForm.vue';
+import MeetingDetail from './components/workflow/MeetingDetail.vue';
+import ResolutionsList from './components/workflow/ResolutionsList.vue';
+import ResolutionForm from './components/workflow/ResolutionForm.vue';
+import ResolutionDetail from './components/workflow/ResolutionDetail.vue';
+import WithdrawalForm from './components/workflow/WithdrawalForm.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -94,6 +101,13 @@ const componentRegistry = {
     'sales-form': SalesForm,
     'sales-index': SalesIndex,
     'sales-show': SalesShow,
+    'meetings-list': MeetingsList,
+    'meeting-form': MeetingForm,
+    'meeting-detail': MeetingDetail,
+    'resolutions-list': ResolutionsList,
+    'resolution-form': ResolutionForm,
+    'resolution-detail': ResolutionDetail,
+    'withdrawal-form': WithdrawalForm,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

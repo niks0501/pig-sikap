@@ -24,6 +24,7 @@ class PigCycleExpense extends Model
      */
     protected $fillable = [
         'batch_id',
+        'withdrawal_id',
         'category',
         'quantity',
         'unit',
@@ -102,5 +103,13 @@ class PigCycleExpense extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * Withdrawal this expense is linked to (for liquidation report).
+     */
+    public function withdrawal(): BelongsTo
+    {
+        return $this->belongsTo(Withdrawal::class);
     }
 }
