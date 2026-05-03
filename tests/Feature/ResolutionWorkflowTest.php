@@ -11,7 +11,9 @@
 use App\Models\Meeting;
 use App\Models\Resolution;
 use App\Models\User;
+use App\Services\Workflow\ResolutionService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 // ── Helpers ──────────────────────────────────────────────
@@ -21,7 +23,7 @@ use Illuminate\Support\Facades\Storage;
  */
 function createRole(string $name, string $slug): int
 {
-    return \DB::table('roles')->insertGetId([
+    return DB::table('roles')->insertGetId([
         'name' => $name,
         'slug' => $slug,
         'description' => "{$name} role",
@@ -36,7 +38,7 @@ function createRole(string $name, string $slug): int
  */
 function makeOfficer(string $roleSlug = 'secretary'): User
 {
-    $role = \DB::table('roles')->where('slug', $roleSlug)->first();
+    $role = DB::table('roles')->where('slug', $roleSlug)->first();
 
     if (! $role) {
         $roleId = createRole(ucfirst($roleSlug), $roleSlug);
@@ -53,9 +55,9 @@ function makeOfficer(string $roleSlug = 'secretary'): User
 /**
  * Create multiple active members so the approval % can be computed.
  */
-function createActiveMembers(int $count = 10): \Illuminate\Support\Collection
+function createActiveMembers(int $count = 10): Collection
 {
-    $role = \DB::table('roles')->where('slug', 'member')->first();
+    $role = DB::table('roles')->where('slug', 'member')->first();
     $roleId = $role ? $role->id : createRole('Member', 'member');
 
     return User::factory()->count($count)->create([
@@ -70,7 +72,7 @@ function createActiveMembers(int $count = 10): \Illuminate\Support\Collection
 function seedMeeting(User $officer): Meeting
 {
     return Meeting::create([
-        'title' => 'Monthly Meeting – ' . fake()->monthName(),
+        'title' => 'Monthly Meeting – '.fake()->monthName(),
         'date' => now()->subDay()->toDateString(),
         'location' => 'Barangay Hall',
         'agenda' => 'Discuss feed procurement',
@@ -105,7 +107,6 @@ function seedResolution(Meeting $meeting, User $officer): Resolution
 
     return $resolution;
 }
-
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MEETING TESTS                                              ║
@@ -169,7 +170,6 @@ test('meeting index page loads and shows meetings', function () {
     $response->assertViewHas('meetings');
 });
 
-
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  RESOLUTION TESTS                                           ║
 // ╚══════════════════════════════════════════════════════════════╝
@@ -215,13 +215,12 @@ test('resolution auto-fills title from meeting when created via meeting link', f
     $secretary = makeOfficer('secretary');
     $meeting = seedMeeting($secretary);
 
-    $resolution = app(\App\Services\Workflow\ResolutionService::class)
+    $resolution = app(ResolutionService::class)
         ->createFromMeeting($meeting, $secretary);
 
     expect($resolution->title)->toContain($meeting->title);
     expect($resolution->meeting_id)->toBe($meeting->id);
 });
-
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  APPROVAL TESTS (75% threshold)                             ║
@@ -305,7 +304,6 @@ test('approval data API returns all members with approval status', function () {
     ]);
 });
 
-
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  DSWD SUBMISSION TESTS                                      ║
 // ╚══════════════════════════════════════════════════════════════╝
@@ -352,7 +350,6 @@ test('DSWD approval advances resolution status', function () {
     $resolution->refresh();
     expect($resolution->status)->toBe('dswd_submitted');
 });
-
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  WITHDRAWAL TESTS                                           ║
@@ -453,7 +450,6 @@ test('withdrawal amount cannot exceed remaining balance', function () {
     $response->assertJsonValidationErrors('amount');
 });
 
-
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  LIQUIDATION REPORT TESTS                                   ║
 // ╚══════════════════════════════════════════════════════════════╝
@@ -463,6 +459,18 @@ test('liquidation report finalizes the resolution', function () {
     $meeting = seedMeeting($secretary);
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'withdrawn']);
+
+    $resolution->approvals()->create([
+        'user_id' => $secretary->id,
+        'is_approved' => true,
+        'approved_at' => now(),
+    ]);
+
+    $resolution->dswdSubmissions()->create([
+        'status' => 'approved',
+        'submitted_at' => now(),
+        'submitted_by' => $secretary->id,
+    ]);
 
     $withdrawal = $resolution->withdrawals()->create([
         'requested_by' => $secretary->id,

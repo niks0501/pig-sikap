@@ -2,9 +2,12 @@
 
 namespace App\Services\Workflow;
 
+use App\Events\Workflow\ReportFinalized;
 use App\Models\LiquidationReport;
 use App\Models\User;
 use App\Models\Withdrawal;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Generates liquidation reports for completed withdrawals.
@@ -12,6 +15,10 @@ use App\Models\Withdrawal;
  */
 class ReportService
 {
+    public function __construct(
+        private readonly WithdrawalLiquidationPdfService $pdfService
+    ) {}
+
     /**
      * Generate a liquidation report for a withdrawal.
      * Pulls budget line-items from the resolution and actual expenses linked to the withdrawal.
@@ -29,20 +36,20 @@ class ReportService
             $variance = $approvedBudget - $actualTotal;
 
             $summary = "Liquidation Report for Resolution: {$resolution->title}\n"
-                . "Approved Budget: ₱" . number_format($approvedBudget, 2) . "\n"
-                . "Withdrawn Amount: ₱" . number_format($withdrawnAmount, 2) . "\n"
-                . "Actual Expenses: ₱" . number_format($actualTotal, 2) . "\n"
-                . "Variance: ₱" . number_format($variance, 2)
-                . ($variance < 0 ? ' (OVER BUDGET)' : '') . "\n"
-                . "Remaining Balance: ₱" . number_format($resolution->remaining_balance, 2);
+                .'Approved Budget: ₱'.number_format($approvedBudget, 2)."\n"
+                .'Withdrawn Amount: ₱'.number_format($withdrawnAmount, 2)."\n"
+                .'Actual Expenses: ₱'.number_format($actualTotal, 2)."\n"
+                .'Variance: ₱'.number_format($variance, 2)
+                .($variance < 0 ? ' (OVER BUDGET)' : '')."\n"
+                .'Remaining Balance: ₱'.number_format($resolution->remaining_balance, 2);
 
             // Append budget vs. actual line-items
             if ($resolution->lineItems->isNotEmpty()) {
                 $summary .= "\n\n--- Budget Line Items ---";
                 foreach ($resolution->lineItems as $li) {
                     $summary .= "\n• {$li->category}: {$li->description} "
-                        . "({$li->quantity} {$li->unit} × ₱" . number_format((float) $li->unit_cost, 2) . ")"
-                        . " = ₱" . number_format((float) $li->total, 2);
+                        ."({$li->quantity} {$li->unit} × ₱".number_format((float) $li->unit_cost, 2).')'
+                        .' = ₱'.number_format((float) $li->total, 2);
                 }
             }
 
@@ -50,23 +57,39 @@ class ReportService
                 $summary .= "\n\n--- Actual Expenses ---";
                 foreach ($actualExpenses as $exp) {
                     $summary .= "\n• {$exp->category}: "
-                        . ($exp->notes ?: 'No description')
-                        . " = ₱" . number_format((float) $exp->amount, 2)
-                        . " ({$exp->expense_date->format('M d, Y')})";
+                        .($exp->notes ?: 'No description')
+                        .' = ₱'.number_format((float) $exp->amount, 2)
+                        ." ({$exp->expense_date->format('M d, Y')})";
                 }
             }
         }
 
-        $report = LiquidationReport::create([
-            'withdrawal_id' => $withdrawal->id,
-            'generated_by' => $user->id,
-            'summary' => $summary,
-            'finalized_at' => now(),
-        ]);
+        $report = LiquidationReport::updateOrCreate(
+            ['withdrawal_id' => $withdrawal->id],
+            [
+                'generated_by' => $user->id,
+                'summary' => $summary,
+                'finalized_at' => now(),
+            ]
+        );
 
-        event(new \App\Events\Workflow\ReportFinalized($report, $withdrawal));
+        try {
+            $pdf = $this->pdfService->buildAndStore($report);
 
-        return $report;
+            $report->update([
+                'report_file_path' => $pdf['stored_path'],
+            ]);
+        } catch (Throwable $exception) {
+            Log::error('Liquidation report PDF generation failed.', [
+                'report_id' => $report->id,
+                'withdrawal_id' => $withdrawal->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        event(new ReportFinalized($report, $withdrawal));
+
+        return $report->refresh();
     }
 
     /**

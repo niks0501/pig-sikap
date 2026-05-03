@@ -76,6 +76,41 @@ async function saveDswd() {
     finally { savingDswd.value = false }
 }
 
+// ── Liquidation report state ──
+const reportLoading = ref({})
+const reportErrors = ref({})
+
+async function generateLiquidationReport(withdrawal) {
+    if (!withdrawal.generate_report_url) return
+
+    reportLoading.value = { ...reportLoading.value, [withdrawal.id]: true }
+    reportErrors.value = { ...reportErrors.value, [withdrawal.id]: null }
+
+    const fd = new FormData()
+    fd.append('_token', props.csrfToken)
+
+    try {
+        const r = await fetch(withdrawal.generate_report_url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': props.csrfToken },
+            body: fd,
+        })
+        const d = await r.json().catch(() => ({}))
+
+        if (!r.ok) {
+            const message = d.errors?.withdrawal?.join(' ') || d.message || 'Liquidation report could not be generated. Please try again.'
+            reportErrors.value = { ...reportErrors.value, [withdrawal.id]: message }
+            return
+        }
+
+        window.location.reload()
+    } catch {
+        reportErrors.value = { ...reportErrors.value, [withdrawal.id]: 'The report could not be generated because the connection was interrupted.' }
+    } finally {
+        reportLoading.value = { ...reportLoading.value, [withdrawal.id]: false }
+    }
+}
+
 // ── Helpers ──
 const fmt = v => '₱' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2 })
 const pct = computed(() => props.resolution.approval_percentage)
@@ -292,16 +327,25 @@ const steps = computed(() => [
         </div>
         <div v-if="withdrawals.length === 0" class="text-center py-6 text-gray-400 text-sm">No withdrawals yet.</div>
         <div v-else class="space-y-3">
-            <div v-for="w in withdrawals" :key="w.id" class="flex items-center justify-between px-4 py-3 rounded-lg border border-gray-100">
+            <div v-for="w in withdrawals" :key="w.id" class="px-4 py-3 rounded-lg border border-gray-100">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-sm font-semibold text-gray-900">{{ fmt(w.amount) }}</p>
                     <p class="text-xs text-gray-500">{{ w.requester_name }} · {{ w.requested_at }}</p>
                     <p v-if="w.notes" class="text-xs text-gray-500 mt-0.5">{{ w.notes }}</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                     <span :class="wBadge[w.status]" class="px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">{{ w.status }}</span>
-                    <span v-if="w.has_report" class="text-xs text-emerald-600">📄 Report</span>
-                    <a v-if="w.proof_file_url" :href="w.proof_file_url" target="_blank" class="text-xs text-[#0c6d57] hover:underline">📎 Proof</a>
+                    <a v-if="w.has_report && w.preview_url" :href="w.preview_url" target="_blank" rel="noopener" class="inline-flex min-h-[44px] items-center rounded-xl border border-[#0c6d57]/20 bg-[#e7f5f0] px-3 py-2 text-xs font-semibold text-[#0c6d57] hover:bg-[#d5eee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0c6d57] focus-visible:ring-offset-2">Preview PDF</a>
+                    <a v-if="w.has_report && w.download_url" :href="w.download_url" class="inline-flex min-h-[44px] items-center rounded-xl bg-[#0c6d57] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0a5a48] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0c6d57] focus-visible:ring-offset-2">Download PDF</a>
+                    <button v-if="!w.has_report && w.generate_report_url" type="button" @click="generateLiquidationReport(w)" :disabled="reportLoading[w.id]" class="inline-flex min-h-[44px] items-center rounded-xl bg-[#0c6d57] px-3 py-2 text-xs font-semibold text-white hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0c6d57] focus-visible:ring-offset-2">
+                        {{ reportLoading[w.id] ? 'Generating Report...' : 'Generate Liquidation Report' }}
+                    </button>
+                    <a v-if="w.proof_file_url" :href="w.proof_file_url" target="_blank" class="inline-flex min-h-[44px] items-center rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-[#0c6d57] hover:bg-gray-50">View Proof</a>
+                </div>
+                </div>
+                <div v-if="reportErrors[w.id]" class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    {{ reportErrors[w.id] }}
                 </div>
             </div>
         </div>

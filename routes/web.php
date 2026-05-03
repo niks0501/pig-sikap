@@ -21,6 +21,11 @@ use App\Http\Controllers\President\PresidentProfitabilityReportController;
 use App\Http\Controllers\President\PresidentProfitabilitySnapshotController;
 use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Workflow\DswdSubmissionController;
+use App\Http\Controllers\Workflow\MeetingController;
+use App\Http\Controllers\Workflow\ResolutionController;
+use App\Http\Controllers\Workflow\WithdrawalController;
+use App\Services\Workflow\WorkflowDashboardService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -172,38 +177,40 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
     // ── Meeting Resolutions & Withdrawal Documentation Workflow ───────
     Route::middleware(['role:president,treasurer,secretary'])->prefix('workflow')->name('workflow.')->group(function () {
         // Meetings
-        Route::get('/meetings', [\App\Http\Controllers\Workflow\MeetingController::class, 'index'])->name('meetings.index');
-        Route::get('/meetings/create', [\App\Http\Controllers\Workflow\MeetingController::class, 'create'])->name('meetings.create');
-        Route::post('/meetings', [\App\Http\Controllers\Workflow\MeetingController::class, 'store'])->name('meetings.store');
-        Route::get('/meetings/{meeting}', [\App\Http\Controllers\Workflow\MeetingController::class, 'show'])->name('meetings.show');
-        Route::put('/meetings/{meeting}', [\App\Http\Controllers\Workflow\MeetingController::class, 'update'])->name('meetings.update');
+        Route::get('/meetings', [MeetingController::class, 'index'])->name('meetings.index');
+        Route::get('/meetings/create', [MeetingController::class, 'create'])->name('meetings.create');
+        Route::post('/meetings', [MeetingController::class, 'store'])->name('meetings.store');
+        Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
+        Route::put('/meetings/{meeting}', [MeetingController::class, 'update'])->name('meetings.update');
 
         // Resolutions
-        Route::get('/resolutions', [\App\Http\Controllers\Workflow\ResolutionController::class, 'index'])->name('resolutions.index');
-        Route::get('/resolutions/create', [\App\Http\Controllers\Workflow\ResolutionController::class, 'create'])->name('resolutions.create');
-        Route::post('/resolutions', [\App\Http\Controllers\Workflow\ResolutionController::class, 'store'])->name('resolutions.store');
-        Route::get('/resolutions/{resolution}', [\App\Http\Controllers\Workflow\ResolutionController::class, 'show'])->name('resolutions.show');
+        Route::get('/resolutions', [ResolutionController::class, 'index'])->name('resolutions.index');
+        Route::get('/resolutions/create', [ResolutionController::class, 'create'])->name('resolutions.create');
+        Route::post('/resolutions', [ResolutionController::class, 'store'])->name('resolutions.store');
+        Route::get('/resolutions/{resolution}', [ResolutionController::class, 'show'])->name('resolutions.show');
 
         // Approvals
-        Route::post('/resolutions/{resolution}/approvals', [\App\Http\Controllers\Workflow\ResolutionController::class, 'recordApprovals'])->name('resolutions.approvals.store');
-        Route::get('/resolutions/{resolution}/approvals/data', [\App\Http\Controllers\Workflow\ResolutionController::class, 'approvalData'])->name('resolutions.approvals.data');
+        Route::post('/resolutions/{resolution}/approvals', [ResolutionController::class, 'recordApprovals'])->name('resolutions.approvals.store');
+        Route::get('/resolutions/{resolution}/approvals/data', [ResolutionController::class, 'approvalData'])->name('resolutions.approvals.data');
 
         // DSWD Submissions
-        Route::post('/resolutions/{resolution}/dswd', [\App\Http\Controllers\Workflow\DswdSubmissionController::class, 'store'])->name('resolutions.dswd.store');
+        Route::post('/resolutions/{resolution}/dswd', [DswdSubmissionController::class, 'store'])->name('resolutions.dswd.store');
 
         // Withdrawals
-        Route::get('/resolutions/{resolution}/withdraw', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'create'])->name('withdrawals.create');
-        Route::post('/resolutions/{resolution}/withdraw', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'store'])->name('withdrawals.store');
+        Route::get('/resolutions/{resolution}/withdraw', [WithdrawalController::class, 'create'])->name('withdrawals.create');
+        Route::post('/resolutions/{resolution}/withdraw', [WithdrawalController::class, 'store'])->name('withdrawals.store');
 
         // Reports
-        Route::post('/withdrawals/{withdrawal}/report', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'generateReport'])->name('withdrawals.report');
+        Route::post('/withdrawals/{withdrawal}/report', [WithdrawalController::class, 'generateReport'])->name('withdrawals.report');
+        Route::get('/withdrawals/{withdrawal}/report/{report}/preview', [WithdrawalController::class, 'previewPdf'])->name('withdrawals.report.preview');
+        Route::get('/withdrawals/{withdrawal}/report/{report}/download', [WithdrawalController::class, 'downloadPdf'])->name('withdrawals.report.download');
 
         // Budget vs. Actual expense comparison (REQ-010)
-        Route::get('/withdrawals/{withdrawal}/budget-vs-actual', [\App\Http\Controllers\Workflow\WithdrawalController::class, 'budgetVsActual'])->name('withdrawals.budget-vs-actual');
+        Route::get('/withdrawals/{withdrawal}/budget-vs-actual', [WithdrawalController::class, 'budgetVsActual'])->name('withdrawals.budget-vs-actual');
 
         // Dashboard summary API (REQ-012)
         Route::get('/dashboard/summary', function () {
-            $summary = app(\App\Services\Workflow\WorkflowDashboardService::class)->getSummary();
+            $summary = app(WorkflowDashboardService::class)->getSummary();
 
             return response()->json($summary);
         })->name('dashboard.summary');
