@@ -30,6 +30,9 @@ use App\Http\Controllers\Workflow\ResolutionDswdDocumentController;
 use App\Http\Controllers\Workflow\ResolutionFileController;
 use App\Http\Controllers\Workflow\ResolutionSignatureController;
 use App\Http\Controllers\Workflow\WithdrawalController;
+use App\Http\Controllers\DocumentManagement\DocumentTypeController;
+use App\Http\Controllers\DocumentManagement\DocumentUploadController;
+use App\Http\Controllers\DocumentManagement\DocumentPageController;
 use App\Services\Workflow\WorkflowDashboardService;
 use Illuminate\Support\Facades\Route;
 
@@ -228,8 +231,34 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
             $summary = app(WorkflowDashboardService::class)->getSummary();
 
             return response()->json($summary);
-        })->name('dashboard.summary');
-    });
+})->name('dashboard.summary');
+
+// Document management routes
+Route::middleware(['role:president,secretary,treasurer'])->prefix('documents')->name('documents.')->group(function () {
+    // Page routes must be defined before the catch-all {documentUpload} route
+    Route::get('/upload', [DocumentPageController::class, 'upload'])->name('page.upload');
+    Route::get('/review', [DocumentPageController::class, 'review'])->name('page.review');
+    Route::get('/types', [DocumentPageController::class, 'manageTypes'])->name('page.types');
+
+    // API routes
+    Route::get('/', [DocumentUploadController::class, 'index'])->name('index');
+    Route::get('/summary', [DocumentUploadController::class, 'summary'])->name('summary');
+    Route::post('/upload', [DocumentUploadController::class, 'store'])->name('upload');
+    Route::get('/{documentUpload}', [DocumentUploadController::class, 'show'])->name('show');
+    Route::patch('/{documentUpload}/status', [DocumentUploadController::class, 'updateStatus'])->name('status');
+    Route::get('/{documentUpload}/download', [DocumentUploadController::class, 'download'])->name('download');
+});
+
+Route::middleware(['role:president,system_admin'])->prefix('admin/document-types')->name('admin.document-types.')->group(function () {
+    Route::get('/', [DocumentTypeController::class, 'index'])->name('index');
+    Route::post('/', [DocumentTypeController::class, 'store'])->name('store');
+    Route::get('/{documentType}', [DocumentTypeController::class, 'show'])->name('show');
+    Route::put('/{documentType}', [DocumentTypeController::class, 'update'])->name('update');
+    Route::delete('/{documentType}', [DocumentTypeController::class, 'destroy'])->name('destroy');
+});
+
+Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.list');
+});
 
     // Legacy route redirects for sidebar compatibility
     Route::get('/resolutions', fn () => redirect()->route('workflow.resolutions.index'))->name('resolutions.index');

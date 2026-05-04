@@ -162,10 +162,24 @@ class ResolutionController extends Controller
         );
 
         if ($request->expectsJson()) {
+            $resolution = $resolution->fresh(['approvals.user']);
+
             return response()->json([
                 'message' => 'Approvals recorded successfully.',
-                'resolution' => $resolution->fresh(['approvals.user']),
-                'approval_percentage' => $resolution->approval_percentage,
+                'resolution' => [
+                    'status' => $resolution->status,
+                    'approval_percentage' => (float) $resolution->approval_percentage,
+                    'approved_count' => $resolution->approved_count,
+                    'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
+                ],
+                'approvals' => $resolution->approvals->map(fn ($a) => [
+                    'id' => $a->id,
+                    'user_id' => $a->user_id,
+                    'user_name' => $a->user?->name,
+                    'is_approved' => $a->is_approved,
+                    'approved_at' => $a->approved_at?->format('M d, Y'),
+                    'rejection_reason' => $a->rejection_reason,
+                ]),
             ]);
         }
 

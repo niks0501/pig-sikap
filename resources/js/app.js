@@ -59,6 +59,8 @@ import ResolutionDetail from './components/workflow/ResolutionDetail.vue';
 import DocumentChecklist from './components/workflow/DocumentChecklist.vue';
 import FileUpload from './components/workflow/FileUpload.vue';
 import WithdrawalForm from './components/workflow/WithdrawalForm.vue';
+import DocumentUploadForm from './components/documents/DocumentUploadForm.vue';
+import DocumentReviewList from './components/documents/DocumentReviewList.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -112,6 +114,8 @@ const componentRegistry = {
     'document-checklist': DocumentChecklist,
     'file-upload': FileUpload,
     'withdrawal-form': WithdrawalForm,
+'document-upload-form': DocumentUploadForm,
+'document-review-list': DocumentReviewList,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

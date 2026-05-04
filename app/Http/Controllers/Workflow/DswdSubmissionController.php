@@ -45,9 +45,24 @@ class DswdSubmissionController extends Controller
         );
 
         if ($request->expectsJson()) {
+            $resolution->load(['approvals.user.role', 'dswdSubmission', 'withdrawals.requester', 'withdrawals.liquidationReport']);
+
             return response()->json([
                 'message' => 'DSWD status updated successfully.',
                 'submission' => $submission,
+                'resolution' => [
+                    'status' => $resolution->status,
+                    'approval_percentage' => (float) $resolution->approval_percentage,
+                    'approved_count' => $resolution->approved_count,
+                    'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
+                    'dswdSubmission' => $resolution->dswdSubmission ? [
+                        'id' => $resolution->dswdSubmission->id,
+                        'status' => $resolution->dswdSubmission->status,
+                        'submitted_at' => $resolution->dswdSubmission->submitted_at?->format('M d, Y'),
+                        'submission_file_url' => $resolution->dswdSubmission->submissionFileUrl(),
+                        'notes' => $resolution->dswdSubmission->notes,
+                    ] : null,
+                ],
             ]);
         }
 

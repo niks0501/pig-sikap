@@ -47,9 +47,15 @@ class ResolutionApprovalController extends Controller
             );
 
             if ($request->expectsJson()) {
+                $resolution = $resolution->fresh();
+
                 return response()->json([
                     'message' => '75% approval threshold verified. Resolution ready for DSWD submission.',
-                    'workflow_status' => $resolution->fresh()->workflow_status,
+                    'workflow_status' => $resolution->workflow_status,
+                    'resolution' => [
+                        'status' => $resolution->status,
+                        'workflow_status' => $resolution->workflow_status,
+                    ],
                 ]);
             }
 

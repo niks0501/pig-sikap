@@ -1,12 +1,5 @@
 <x-app-layout>
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-6">
-        <a href="{{ route('workflow.resolutions.index') }}" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0c6d57] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            Back to Resolutions
-        </a>
-    </div>
-
     @if (session('status'))
     <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
         {{ session('status') }}
@@ -25,7 +18,16 @@
     </div>
     @endif
 
-    {{-- Resolution Detail Vue Component --}}
+    @php
+        $user = auth()->user();
+        $permissions = [
+            'canGenerate' => $user->can('generateDocuments', $resolution),
+            'canUploadSigned' => $user->can('uploadSignedDocument', $resolution),
+            'canVerifyApproval' => $user->can('verifyApprovalThreshold', $resolution),
+            'canUploadDswd' => $user->can('uploadDswdApproval', $resolution),
+        ];
+    @endphp
+
     <div
         data-vue-component="resolution-detail"
         data-props="{{ json_encode([
@@ -94,45 +96,6 @@
                 'proof_file_url' => $w->proofFileUrl(),
                 'notes' => $w->notes,
             ])->values(),
-            'totalMembers' => $totalMembers,
-            'eligibility' => $eligibility,
-            'threshold' => \App\Models\Resolution::APPROVAL_THRESHOLD,
-            'routes' => [
-                'approvalsStore' => route('workflow.resolutions.approvals.store', $resolution),
-                'approvalsData' => route('workflow.resolutions.approvals.data', $resolution),
-                'dswdStore' => route('workflow.resolutions.dswd.store', $resolution),
-                'withdrawCreate' => route('workflow.withdrawals.create', $resolution),
-                'withdrawStore' => route('workflow.withdrawals.store', $resolution),
-                'resolutionsIndex' => route('workflow.resolutions.index'),
-            ],
-            'csrfToken' => csrf_token(),
-        ]) }}"
-    ></div>
-
-    {{-- Document Workflow Checklist --}}
-    @php
-        $user = auth()->user();
-        $permissions = [
-            'canGenerate' => $user->can('generateDocuments', $resolution),
-            'canUploadSigned' => $user->can('uploadSignedDocument', $resolution),
-            'canVerifyApproval' => $user->can('verifyApprovalThreshold', $resolution),
-            'canUploadDswd' => $user->can('uploadDswdApproval', $resolution),
-        ];
-    @endphp
-
-    <div class="mt-6"
-        data-vue-component="document-checklist"
-        data-props="{{ json_encode([
-            'resolution' => [
-                'id' => $resolution->id,
-                'workflow_status' => $resolution->workflow_status ?? 'draft',
-                'workflow_status_label' => $resolution->workflow_status_label,
-                'resolution_number' => $resolution->resolution_number,
-                'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
-                'approval_percentage' => (float) $resolution->approval_percentage,
-                'approved_count' => $resolution->approved_count,
-                'total_members' => $totalMembers,
-            ],
             'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
                 'id' => $dv->id,
                 'version_number' => $dv->version_number,
@@ -146,51 +109,24 @@
                 'description' => $dv->description,
             ])->values(),
             'permissions' => $permissions,
+            'totalMembers' => $totalMembers,
+            'eligibility' => $eligibility,
+            'threshold' => \App\Models\Resolution::APPROVAL_THRESHOLD,
             'routes' => [
+                'approvalsStore' => route('workflow.resolutions.approvals.store', $resolution),
+                'approvalsData' => route('workflow.resolutions.approvals.data', $resolution),
+                'dswdStore' => route('workflow.resolutions.dswd.store', $resolution),
+                'withdrawCreate' => route('workflow.withdrawals.create', $resolution),
+                'withdrawStore' => route('workflow.withdrawals.store', $resolution),
+                'resolutionsIndex' => route('workflow.resolutions.index'),
                 'generatePdf' => route('workflow.resolutions.generate-pdf', $resolution),
                 'generateDocx' => route('workflow.resolutions.generate-docx', $resolution),
+                'uploadSigned' => route('workflow.resolutions.upload-signed', $resolution),
                 'verifyApprovals' => route('workflow.resolutions.verify-approvals', $resolution),
+                'uploadDswd' => route('workflow.resolutions.upload-dswd-approval', $resolution),
             ],
             'csrfToken' => csrf_token(),
         ]) }}"
     ></div>
-
-    {{-- File Upload: Signed Document --}}
-    @if ($permissions['canUploadSigned'])
-    <div class="mt-6"
-        data-vue-component="file-upload"
-        data-props="{{ json_encode([
-            'uploadUrl' => route('workflow.resolutions.upload-signed', $resolution),
-            'csrfToken' => csrf_token(),
-            'fieldName' => 'signed_document',
-            'accept' => '.pdf',
-            'maxSize' => 10 * 1024 * 1024,
-            'acceptLabel' => 'PDF files',
-            'maxSizeLabel' => '10MB',
-            'label' => 'Upload Signed Resolution',
-            'showDescription' => true,
-            'showSignatureSheet' => true,
-        ]) }}"
-    ></div>
-    @endif
-
-    {{-- File Upload: DSWD Approval --}}
-    @if ($permissions['canUploadDswd'])
-    <div class="mt-6"
-        data-vue-component="file-upload"
-        data-props="{{ json_encode([
-            'uploadUrl' => route('workflow.resolutions.upload-dswd-approval', $resolution),
-            'csrfToken' => csrf_token(),
-            'fieldName' => 'dswd_approval_file',
-            'accept' => '.pdf,.doc,.docx',
-            'maxSize' => 10 * 1024 * 1024,
-            'acceptLabel' => 'PDF, DOC, DOCX files',
-            'maxSizeLabel' => '10MB',
-            'label' => 'Upload DSWD Approval Document',
-            'showDescription' => true,
-            'showDswdFields' => true,
-        ]) }}"
-    ></div>
-    @endif
 </div>
 </x-app-layout>

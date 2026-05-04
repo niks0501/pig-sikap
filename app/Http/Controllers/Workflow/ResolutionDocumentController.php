@@ -33,10 +33,24 @@ class ResolutionDocumentController extends Controller
             $result = $this->docService->generatePdf($resolution, $request->validated());
 
             if ($request->expectsJson()) {
+                $resolution->load('documentVersions.generatedBy:id,name');
+
                 return response()->json([
                     'message' => 'Resolution PDF generated successfully.',
                     'file_path' => $result['file_path'],
                     'version' => $result['version'],
+                    'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
+                        'id' => $dv->id,
+                        'version_number' => $dv->version_number,
+                        'document_type' => $dv->document_type,
+                        'file_url' => $dv->file_url,
+                        'file_size' => $dv->file_size,
+                        'formatted_file_size' => $dv->formatted_file_size,
+                        'file_hash' => $dv->file_hash,
+                        'generated_at' => $dv->generated_at?->format('M d, Y h:i A'),
+                        'generated_by' => $dv->generatedBy?->name,
+                        'description' => $dv->description,
+                    ]),
                 ]);
             }
 
@@ -67,10 +81,24 @@ class ResolutionDocumentController extends Controller
             $result = $this->docService->generateDocx($resolution, $request->validated());
 
             if ($request->expectsJson()) {
+                $resolution->load('documentVersions.generatedBy:id,name');
+
                 return response()->json([
                     'message' => 'Editable DOCX draft created successfully.',
                     'file_path' => $result['file_path'],
                     'version' => $result['version'],
+                    'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
+                        'id' => $dv->id,
+                        'version_number' => $dv->version_number,
+                        'document_type' => $dv->document_type,
+                        'file_url' => $dv->file_url,
+                        'file_size' => $dv->file_size,
+                        'formatted_file_size' => $dv->formatted_file_size,
+                        'file_hash' => $dv->file_hash,
+                        'generated_at' => $dv->generated_at?->format('M d, Y h:i A'),
+                        'generated_by' => $dv->generatedBy?->name,
+                        'description' => $dv->description,
+                    ]),
                 ]);
             }
 

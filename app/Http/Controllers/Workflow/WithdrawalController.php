@@ -85,9 +85,17 @@ class WithdrawalController extends Controller
         );
 
         if ($request->expectsJson()) {
+            $resolution->refresh();
+
             return response()->json([
                 'message' => 'Withdrawal request created successfully.',
-                'withdrawal' => $withdrawal,
+                'withdrawal' => $withdrawal->load('requester'),
+                'resolution' => [
+                    'grand_total' => (float) $resolution->grand_total,
+                    'total_withdrawn' => (float) $resolution->total_withdrawn,
+                    'remaining_balance' => (float) $resolution->remaining_balance,
+                    'status' => $resolution->status,
+                ],
                 'redirect_url' => route('workflow.resolutions.show', $resolution),
             ], 201);
         }
@@ -137,11 +145,25 @@ class WithdrawalController extends Controller
         );
 
         if ($request->expectsJson()) {
+            $withdrawal->load('liquidationReport');
+
             return response()->json([
                 'message' => 'Liquidation report generated successfully.',
                 'report' => $report,
                 'preview_url' => route('workflow.withdrawals.report.preview', [$withdrawal, $report]),
                 'download_url' => route('workflow.withdrawals.report.download', [$withdrawal, $report]),
+                'withdrawal' => [
+                    'id' => $withdrawal->id,
+                    'status' => $withdrawal->status,
+                    'completed_at' => $withdrawal->completed_at?->format('M d, Y'),
+                    'has_report' => true,
+                    'preview_url' => route('workflow.withdrawals.report.preview', [$withdrawal, $report]),
+                    'download_url' => route('workflow.withdrawals.report.download', [$withdrawal, $report]),
+                ],
+                'resolution' => [
+                    'status' => $withdrawal->resolution->fresh()->status,
+                    'remaining_balance' => (float) $withdrawal->resolution->remaining_balance,
+                ],
             ]);
         }
 
