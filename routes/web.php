@@ -332,11 +332,27 @@ Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::cla
             Route::delete('/{schedule}', [\App\Http\Controllers\ReportSchedulesController::class, 'destroy'])->name('destroy');
         });
 
-    // Audit Trail Module
-    Route::prefix('audit-trails')->name('audit-trails.')->group(function () {
-        Route::get('/', function () {
-            return view('audit-trails.index');
-        })->name('index');
+    // Audit Trail Module — president only
+    Route::middleware(['role:president'])->prefix('audit-trails')->name('audit-trails.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AuditTrailController::class, 'index'])->name('index');
+        Route::get('/json', [\App\Http\Controllers\AuditTrailController::class, 'json'])->name('json');
+        Route::get('/export', [\App\Http\Controllers\AuditTrailController::class, 'export'])->name('export');
+    });
+
+    // Module-scoped audit endpoints — president only
+    Route::middleware(['role:president'])->group(function () {
+        Route::get('/cycles/{cycle}/audit', [\App\Http\Controllers\AuditTrailController::class, 'cycleAudit'])
+            ->name('cycles.audit')
+            ->scopeBindings();
+        Route::get('/batches/{cycle}/audit', [\App\Http\Controllers\AuditTrailController::class, 'cycleAudit'])
+            ->name('batches.audit')
+            ->scopeBindings();
+        Route::get('/workflow/resolutions/{resolution}/audit', [\App\Http\Controllers\AuditTrailController::class, 'resolutionAudit'])
+            ->name('workflow.resolutions.audit')
+            ->scopeBindings();
+        Route::get('/workflow/meetings/{meeting}/audit', [\App\Http\Controllers\AuditTrailController::class, 'meetingAudit'])
+            ->name('workflow.meetings.audit')
+            ->scopeBindings();
     });
 });
 

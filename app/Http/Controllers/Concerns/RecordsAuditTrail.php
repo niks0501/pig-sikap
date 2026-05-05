@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Models\AuditTrail;
+use App\Services\AuditTrailService;
 use Illuminate\Http\Request;
 
+/**
+ * Provides a convenience method for controllers to record audit trail entries.
+ * Delegates to AuditTrailService for centralized recording logic.
+ *
+ * @mixin \App\Http\Controllers\Controller
+ */
 trait RecordsAuditTrail
 {
     protected function recordAudit(
@@ -14,14 +20,12 @@ trait RecordsAuditTrail
         string $module = 'pig_registry',
         ?array $context = null
     ): void {
-        AuditTrail::create([
-            'user_id' => $request->user()?->id,
-            'action' => $action,
-            'module' => $module,
-            'description' => $description,
-            'context_json' => $context,
-            'ip_address' => $request->ip(),
-            'user_agent' => (string) $request->userAgent(),
-        ]);
+        app(AuditTrailService::class)->record(
+            $request,
+            $action,
+            $description,
+            $module,
+            $context
+        );
     }
 }

@@ -9,6 +9,7 @@ Alpine.start();
 
 // Vue Component Registration
 import AuditTrailList from './components/AuditTrailList.vue';
+import ModuleAuditTrail from './components/ModuleAuditTrail.vue';
 import AdminActivityLogs from './components/admin/AdminActivityLogs.vue';
 import AdminDashboard from './components/admin/AdminDashboard.vue';
 import AdminProfile from './components/admin/AdminProfile.vue';
@@ -82,6 +83,7 @@ import ReportHistoryTable from './components/reports/ReportHistoryTable.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
+  'module-audit-trail': ModuleAuditTrail,
   'admin-dashboard': AdminDashboard,
   'admin-user-management': AdminUserManagement,
   'admin-role-management': AdminRoleManagement,

@@ -15,5 +15,8 @@
         </div>
     </x-slot>
 
-    <div data-vue-component="audit-trail-list"></div>
+    <div
+        data-vue-component="audit-trail-list"
+        data-props='@json(["fetchUrl" => route("audit-trails.json"), "exportUrl" => route("audit-trails.export")])'
+    ></div>
 </x-app-layout>
