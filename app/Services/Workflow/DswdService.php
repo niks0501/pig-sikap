@@ -25,15 +25,22 @@ class DswdService
             $filePath = $data['submission_file']->store('dswd_submissions', 'public');
         }
 
+        $updateData = [
+            'status' => $data['status'],
+            'submission_file_path' => $filePath ?? DswdSubmission::where('resolution_id', $resolution->id)->value('submission_file_path'),
+            'submitted_at' => in_array($data['status'], ['submitted', 'approved']) ? now() : null,
+            'notes' => $data['notes'] ?? null,
+            'submitted_by' => $user->id,
+        ];
+
+        // Record the DSWD approval date when status transitions to approved
+        if ($data['status'] === 'approved') {
+            $updateData['dswd_approval_date'] = now();
+        }
+
         $submission = DswdSubmission::updateOrCreate(
             ['resolution_id' => $resolution->id],
-            [
-                'status' => $data['status'],
-                'submission_file_path' => $filePath ?? DswdSubmission::where('resolution_id', $resolution->id)->value('submission_file_path'),
-                'submitted_at' => in_array($data['status'], ['submitted', 'approved']) ? now() : null,
-                'notes' => $data['notes'] ?? null,
-                'submitted_by' => $user->id,
-            ]
+            $updateData
         );
 
         // Auto-advance resolution status if DSWD approved

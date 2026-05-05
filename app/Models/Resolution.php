@@ -51,6 +51,7 @@ class Resolution extends Model
         'meeting_id',
         'title',
         'description',
+        'focal_person_name',
         'resolution_file_path',
         'resolution_number',
         'generated_pdf_path',
@@ -209,25 +210,21 @@ class Resolution extends Model
     }
 
     /**
-     * Compute approval percentage (approved / eligible members × 100).
-     * Uses the member snapshot if available, otherwise falls back
-     * to live User::count() for backward compatibility.
+     * Compute approval percentage (approved / meeting present attendees × 100).
+     * Denominator is active members who were present at the meeting,
+     * not all user accounts.
      */
     public function getApprovalPercentageAttribute(): float
     {
-        $snapshot = $this->relationLoaded('memberSnapshot')
-            ? $this->memberSnapshot
-            : $this->memberSnapshot()->first();
+        $presentAttendees = $this->getMeetingPresentCount();
 
-        $totalMembers = $snapshot ? $snapshot->eligible_count : User::where('is_active', true)->count();
-
-        if ($totalMembers === 0) {
+        if ($presentAttendees === 0) {
             return 0;
         }
 
-        $approvedCount = $this->approvals()->where('is_approved', true)->count();
+        $approvedCount = $this->approved_count;
 
-        return round(($approvedCount / $totalMembers) * 100, 1);
+        return round(($approvedCount / $presentAttendees) * 100, 1);
     }
 
     /**
@@ -240,10 +237,14 @@ class Resolution extends Model
 
     /**
      * Whether approval threshold has been met.
-     * Checks from snapshot if available, otherwise uses live threshold.
+     * Denominator is meeting present attendees (not all active users).
+     * The snapshot stores required_approvals which is ceil(present * 0.75).
      */
     public function hasMetApprovalThreshold(): bool
     {
+        $presentAttendees = $this->getMeetingPresentCount();
+
+        // Also check snapshot if available (for backward compatibility)
         $snapshot = $this->relationLoaded('memberSnapshot')
             ? $this->memberSnapshot
             : $this->memberSnapshot()->first();
@@ -252,7 +253,26 @@ class Resolution extends Model
             return $this->approved_count >= $snapshot->required_approvals;
         }
 
-        return $this->approval_percentage >= self::APPROVAL_THRESHOLD;
+        // Guard: no present attendees means threshold cannot be met
+        if ($presentAttendees === 0) {
+            return false;
+        }
+
+        $required = (int) ceil($presentAttendees * (self::APPROVAL_THRESHOLD / 100));
+
+        return $this->approved_count >= $required;
+    }
+
+    /**
+     * Get the number of members who were present at the associated meeting.
+     */
+    public function getMeetingPresentCount(): int
+    {
+        if ($this->relationLoaded('meeting')) {
+            return $this->meeting->present_count;
+        }
+
+        return $this->meeting()->first()?->present_count ?? 0;
     }
 
     /**

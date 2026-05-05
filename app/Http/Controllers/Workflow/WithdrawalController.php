@@ -11,6 +11,7 @@ use App\Models\Withdrawal;
 use App\Services\Workflow\EligibilityService;
 use App\Services\Workflow\ReportService;
 use App\Services\Workflow\WithdrawalService;
+use App\Services\Workflow\WorkflowTransitionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,8 @@ class WithdrawalController extends Controller
     public function __construct(
         private readonly WithdrawalService $withdrawalService,
         private readonly EligibilityService $eligibilityService,
-        private readonly ReportService $reportService
+        private readonly ReportService $reportService,
+        private readonly WorkflowTransitionService $transitionService
     ) {}
 
     /**
@@ -107,6 +109,7 @@ class WithdrawalController extends Controller
 
     /**
      * Generate a liquidation report for a withdrawal.
+     * Marks the resolution as finalized and archived.
      */
     public function generateReport(Request $request, Withdrawal $withdrawal): RedirectResponse|JsonResponse
     {
@@ -125,6 +128,11 @@ class WithdrawalController extends Controller
                 'status' => 'completed',
                 'completed_at' => now(),
             ]);
+        }
+
+        // Archive the resolution after liquidation report is generated
+        if (in_array($resolution->workflow_status, ['withdrawn'])) {
+            $this->transitionService->transitionToArchived($resolution);
         }
 
         $report = $this->reportService->generate(
@@ -163,6 +171,7 @@ class WithdrawalController extends Controller
                 'resolution' => [
                     'status' => $withdrawal->resolution->fresh()->status,
                     'remaining_balance' => (float) $withdrawal->resolution->remaining_balance,
+                    'workflow_status' => $withdrawal->resolution->workflow_status,
                 ],
             ]);
         }
@@ -170,6 +179,48 @@ class WithdrawalController extends Controller
         return redirect()
             ->route('workflow.resolutions.show', $withdrawal->resolution)
             ->with('status', 'Liquidation report generated and resolution finalized.');
+    }
+
+    /**
+     * Update the liquidation status of a report (draft → submitted → reviewed → approved → returned).
+     */
+    public function updateLiquidationStatus(Request $request, Withdrawal $withdrawal, LiquidationReport $report): RedirectResponse|JsonResponse
+    {
+        $this->ensureReportBelongsToWithdrawal($withdrawal, $report);
+
+        $validated = $request->validate([
+            'liquidation_status' => ['required', 'string', 'in:'.implode(',', LiquidationReport::STATUSES)],
+        ]);
+
+        $report->update(['liquidation_status' => $validated['liquidation_status']]);
+
+        $this->recordAudit(
+            $request,
+            'liquidation_status_updated',
+            "Updated liquidation status to '{$report->liquidation_status}' for report #{$report->id}",
+            'workflow',
+            [
+                'report_id' => $report->id,
+                'withdrawal_id' => $withdrawal->id,
+                'liquidation_status' => $report->liquidation_status,
+            ]
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Liquidation status updated.',
+                'report' => [
+                    'id' => $report->id,
+                    'liquidation_status' => $report->liquidation_status,
+                    'liquidation_status_label' => $report->liquidation_status_label,
+                    'liquidation_status_color' => $report->liquidation_status_color,
+                ],
+            ]);
+        }
+
+        return redirect()
+            ->route('workflow.resolutions.show', $withdrawal->resolution)
+            ->with('status', 'Liquidation status updated.');
     }
 
     /**

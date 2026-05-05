@@ -20,6 +20,8 @@ class WorkflowTransitionService
 
     /**
      * Allowed transitions: from status => [allowed next statuses].
+     * Enforces the full workflow order:
+     * Meeting Minutes → Resolution → 75% Approval → DSWD Approval → Withdrawal → Expense Liquidation
      */
     private const TRANSITIONS = [
         'draft' => ['generated'],
@@ -33,6 +35,16 @@ class WorkflowTransitionService
         'withdrawal_ready' => ['withdrawn'],
         'withdrawn' => ['archived'],
     ];
+
+    /**
+     * Get the allowed transitions map (read-only).
+     *
+     * @return array<string, list<string>>
+     */
+    public function getTransitions(): array
+    {
+        return self::TRANSITIONS;
+    }
 
     /**
      * Transition to "signature_sheet_uploaded" after uploading a signed document.
@@ -172,6 +184,30 @@ class WorkflowTransitionService
                 'dswd_reference' => $data['dswd_reference_number'] ?? null,
             ]);
         });
+    }
+
+    /**
+     * Transition to withdrawal_ready after DSWD approval and authorizations are set up.
+     */
+    public function transitionToWithdrawalReady(Resolution $resolution): void
+    {
+        $this->assertCurrentStatus($resolution, ['dswd_approved']);
+
+        $resolution->update(['workflow_status' => 'withdrawal_ready']);
+
+        $this->logAudit('resolution_withdrawal_ready', $resolution);
+    }
+
+    /**
+     * Transition to archived (final step – liquidation report accepted).
+     */
+    public function transitionToArchived(Resolution $resolution): void
+    {
+        $this->assertCurrentStatus($resolution, ['withdrawn']);
+
+        $resolution->update(['workflow_status' => 'archived']);
+
+        $this->logAudit('resolution_archived', $resolution);
     }
 
     /**

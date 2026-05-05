@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
     members: { type: Array, default: () => [] },
@@ -14,7 +14,57 @@ const form = ref({
     agenda: '',
     minutes_summary: '',
     status: 'draft',
+    meeting_type: 'pig_production',
 })
+
+// Default structured agenda per meeting type
+const defaultAgendas = {
+    pig_production: [
+        'Canvassing Assign Person',
+        'Canvassing Date',
+        'Number of Piglets to Buy',
+        'Number of Sacks of Feeds',
+        'Feed Price',
+        'Medicines for Piglets',
+        'Caretaker / Place of Raising',
+        'Raising Duration',
+        'Group Policy',
+    ],
+    monthly_association: [
+        'Call to Order',
+        'Roll Call / Attendance',
+        'Reading of Previous Minutes',
+        "Treasurer's Report",
+        'Attendance Review & Penalties',
+        'Old Business / Matters Arising',
+        'New Business',
+        'Adjournment',
+    ],
+    general: [
+        'Opening / Call to Order',
+        'Old Business',
+        'New Business',
+        'Other Matters',
+        'Adjournment',
+    ],
+}
+
+// Structured agenda items (sent as agenda_json to backend)
+const agendaItems = ref([...defaultAgendas.pig_production])
+
+// Watch meeting_type change and auto-fill agenda
+watch(() => form.value.meeting_type, (newType) => {
+    if (defaultAgendas[newType]) {
+        agendaItems.value = [...defaultAgendas[newType]]
+    }
+})
+
+function addAgendaItem() {
+    agendaItems.value.push('')
+}
+function removeAgendaItem(index) {
+    if (agendaItems.value.length > 1) agendaItems.value.splice(index, 1)
+}
 
 const showPenaltyPreview = ref(false)
 const applyPenalties = ref(true)
@@ -26,10 +76,16 @@ const attendees = ref(props.members.map(m => ({
 const submitting = ref(false)
 const errors = ref({})
 
+const meetingTypeLabels = {
+    pig_production: 'Pig Production / Purchase',
+    monthly_association: 'Monthly Association Meeting',
+    general: 'General Meeting',
+}
+
 const presentCount = computed(() => attendees.value.filter(a => a.attendance_status === 'present').length)
 
 const absentMembers = computed(() => attendees.value.filter(a => a.attendance_status === 'absent'))
-const penaltyAmount = 50 // Placeholder – in production, fetch from PolicyService
+const penaltyAmount = 50
 const totalPenaltyAmount = computed(() => absentMembers.value.length * penaltyAmount)
 
 function toggleAttendance(a) {
@@ -50,6 +106,9 @@ async function submitForm() {
     const fd = new FormData()
     fd.append('_token', props.csrfToken)
     Object.entries(form.value).forEach(([k,v]) => fd.append(k,v))
+    // Send structured agenda as JSON
+    const nonEmptyAgenda = agendaItems.value.filter(item => item.trim() !== '')
+    fd.append('agenda_json', JSON.stringify(nonEmptyAgenda))
     if (minutesFile.value) fd.append('minutes_file', minutesFile.value)
     attendees.value.forEach((a,i) => { fd.append(`attendees[${i}][user_id]`, a.user_id); fd.append(`attendees[${i}][attendance_status]`, a.attendance_status) })
     try {
@@ -85,13 +144,14 @@ const badge = { present: 'bg-emerald-100 text-emerald-700', absent: 'bg-rose-100
                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                 <input v-model="form.location" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="e.g. Barangay Hall" />
             </div>
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Agenda</label>
-                <textarea v-model="form.agenda" rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="Topics discussed..."></textarea>
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Minutes Summary</label>
-                <textarea v-model="form.minutes_summary" rows="4" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="Summary of discussion and decisions..."></textarea>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Meeting Type</label>
+                <select v-model="form.meeting_type" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]">
+                    <option value="pig_production">{{ meetingTypeLabels.pig_production }}</option>
+                    <option value="monthly_association">{{ meetingTypeLabels.monthly_association }}</option>
+                    <option value="general">{{ meetingTypeLabels.general }}</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Selecting a type will auto-fill the structured agenda below.</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -99,6 +159,29 @@ const badge = { present: 'bg-emerald-100 text-emerald-700', absent: 'bg-rose-100
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
                 </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Items</label>
+                <p class="text-xs text-gray-500 mb-2">Edit the default agenda fields. These match the association's resolution template.</p>
+                <div class="space-y-2">
+                    <div v-for="(item, i) in agendaItems" :key="i" class="flex items-center gap-2">
+                        <input v-model="agendaItems[i]" class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" :placeholder="'Agenda item ' + (i + 1)" />
+                        <button type="button" @click="removeAgendaItem(i)" :disabled="agendaItems.length <= 1" class="p-1.5 text-gray-400 hover:text-rose-600 disabled:opacity-30">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" @click="addAgendaItem" class="mt-2 inline-flex items-center gap-1 text-sm text-[#0c6d57] hover:underline font-medium">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Agenda Item
+                </button>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Agenda Notes (free-text)</label>
+                <textarea v-model="form.agenda" rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="Additional notes or free-text agenda..."></textarea>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Minutes Summary</label>
+                <textarea v-model="form.minutes_summary" rows="4" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="Summary of discussion and decisions..."></textarea>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Attach Minutes (PDF/Image)</label>

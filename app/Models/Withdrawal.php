@@ -27,7 +27,9 @@ class Withdrawal extends Model
         'amount',
         'currency',
         'bank_account',
+        'bank_reference',
         'proof_file_path',
+        'evidence_file_path',
         'status',
         'requested_at',
         'completed_at',
@@ -92,5 +94,17 @@ class Withdrawal extends Model
         }
 
         return asset('storage/' . $this->proof_file_path);
+    }
+
+    /**
+     * Public URL for uploaded evidence file (bank slips, receipts).
+     */
+    public function evidenceFileUrl(): ?string
+    {
+        if (! $this->evidence_file_path) {
+            return null;
+        }
+
+        return asset('storage/' . $this->evidence_file_path);
     }
 }

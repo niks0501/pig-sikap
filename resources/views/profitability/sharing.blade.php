@@ -12,6 +12,7 @@
         $hasDistribution = (float) $profitability['distributable_profit'] > 0;
         $isFinalized = $profitability['is_finalized'] ?? false;
         $receivables = (float) ($profitability['receivables'] ?? 0);
+        $memberShare = (float) $profitability['member_share'];
     @endphp
 
     <div class="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -69,6 +70,26 @@
                     <span class="inline-flex rounded-full bg-blue-200 text-blue-800 px-2 py-0.5 text-xs font-bold">Live Computation</span>
                 </p>
                 <p class="mt-1 text-sm text-gray-600">These values reflect current records and may change until finalized.</p>
+            </section>
+        @endif
+
+        {{-- Correction Mode Banner --}}
+        @if ($isCorrectionMode && isset($isPresident) && $isPresident)
+            <section class="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-amber-900">
+                            <span class="inline-flex rounded-full bg-amber-200 text-amber-800 px-2 py-0.5 text-xs font-bold">Correction Mode Active</span>
+                        </p>
+                        <p class="mt-1 text-sm text-amber-700">Expense and sale records can now be edited. Re-finalize when corrections are complete to lock the cycle again.</p>
+                    </div>
+                    <form method="POST" action="{{ route('profitability.correction-mode.disable', $cycle) }}" class="inline">
+                        @csrf
+                        <button type="submit" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100">
+                            Cancel Correction Mode
+                        </button>
+                    </form>
+                </div>
             </section>
         @endif
 
@@ -157,6 +178,83 @@
             </div>
         </section>
 
+        {{-- Per-Member Distribution Allocation --}}
+        @if ($hasDistribution && ! $isFinalized)
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" id="member-allocation-section">
+                <h3 class="text-lg font-bold text-gray-900">Member Allocation (25% – {{ $money($memberShare) }})</h3>
+                <p class="mt-1 text-sm text-gray-500">Distribute the 25% member share among individual members. Adjust amounts as needed. Total must equal {{ $money($memberShare) }}.</p>
+                <div id="member-share-allocation" class="mt-4"
+                    data-vue-component="member-share-allocation"
+                    data-props='{"members": @json($members), "memberShare": {{ $memberShare }}, "existingDistributions": @json($existingDistributions)}'
+                ></div>
+            </section>
+
+            {{-- Form integration: collect member distribution data on submit --}}
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const form = document.querySelector('form[action*="finalize"]');
+                    const containerId = 'member-distributions-container';
+
+                    if (form) {
+                        form.addEventListener('submit', function () {
+                            const mountEl = document.getElementById('member-share-allocation');
+                            if (!mountEl || !mountEl.__vue_app__) return;
+
+                            const vm = mountEl.__vue_app__._instance?.proxy;
+                            if (!vm || typeof vm.getDistributionData !== 'function') return;
+
+                            const data = vm.getDistributionData();
+                            const container = document.getElementById(containerId);
+                            if (!container) return;
+
+                            // Remove old hidden inputs
+                            container.innerHTML = '';
+
+                            data.forEach((item, index) => {
+                                const userIdInput = document.createElement('input');
+                                userIdInput.type = 'hidden';
+                                userIdInput.name = `member_distributions[${index}][user_id]`;
+                                userIdInput.value = item.user_id;
+                                container.appendChild(userIdInput);
+
+                                const amountInput = document.createElement('input');
+                                amountInput.type = 'hidden';
+                                amountInput.name = `member_distributions[${index}][allocated_amount]`;
+                                amountInput.value = item.allocated_amount;
+                                container.appendChild(amountInput);
+                            });
+
+                            // If no distributions, add empty marker to clear validation
+                            if (data.length === 0) {
+                                const emptyInput = document.createElement('input');
+                                emptyInput.type = 'hidden';
+                                emptyInput.name = 'member_distributions';
+                                emptyInput.value = '';
+                                container.appendChild(emptyInput);
+                            }
+                        });
+                    }
+                });
+            </script>
+        @elseif ($isFinalized && ! empty($profitability['member_breakdown']))
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h3 class="text-lg font-bold text-gray-900">Member Allocation (25% – {{ $money($memberShare) }})</h3>
+                <p class="mt-1 text-sm text-gray-500">Per-member distribution as recorded in this finalized snapshot.</p>
+                <div class="mt-4 space-y-2">
+                    @foreach ($profitability['member_breakdown'] as $mb)
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                            <p class="text-gray-700 font-medium">{{ $mb['name'] }}</p>
+                            <p class="font-bold text-gray-900">{{ $money($mb['allocated_amount']) }}</p>
+                        </div>
+                    @endforeach
+                    <div class="flex items-center justify-between rounded-lg bg-[#0c6d57]/5 px-3 py-2 text-sm border-t border-gray-100 pt-3">
+                        <p class="font-bold text-gray-900">Total Distributed</p>
+                        <p class="font-bold text-[#0c6d57]">{{ $money(collect($profitability['member_breakdown'])->sum('allocated_amount')) }}</p>
+                    </div>
+                </div>
+            </section>
+        @endif
+
         @if (isset($snapshotHistory) && $snapshotHistory->count() > 1)
             <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm print:hidden">
                 <h3 class="text-lg font-bold text-gray-900">Snapshot History</h3>
@@ -195,7 +293,7 @@
                     <p class="mt-2 text-sm text-amber-900">After finalizing, this snapshot is locked as the official profitability basis for reports and approval documents.</p>
                 @endif
 
-                <form method="POST" action="{{ route('profitability.finalize', $cycle) }}" class="mt-4 space-y-3">
+                <form method="POST" action="{{ route('profitability.finalize', $cycle) }}" class="mt-4 space-y-4" x-data="{ lossChecked: {{ $hasLoss ? 'false' : 'true' }}, receivablesChecked: {{ $hasReceivables ? 'false' : 'true' }} }">
                     @csrf
                     @if ($dataChanged)
                         <input type="hidden" name="re_finalize" value="1">
@@ -224,6 +322,41 @@
                         </label>
                     @endif
 
+                    {{-- Loss confirmation checkbox --}}
+                    @if ($hasLoss)
+                        <label class="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 cursor-pointer">
+                            <input type="hidden" name="has_loss" value="1">
+                            <input type="checkbox" name="loss_acknowledged" value="1" x-model="lossChecked" class="mt-0.5 h-5 w-5 rounded border-rose-300 text-rose-600 focus:ring-rose-500">
+                            <span class="text-sm text-rose-800">
+                                <strong>I confirm this cycle has a net loss of {{ $money(abs($net)) }}.</strong>
+                                No profit will be distributed to the caretaker, members, or association fund.
+                                This should be documented in a resolution.
+                            </span>
+                        </label>
+                        @error('loss_acknowledged')
+                            <span class="mt-1 block text-sm font-semibold text-rose-700">{{ $message }}</span>
+                        @enderror
+                    @endif
+
+                    {{-- Receivables confirmation checkbox --}}
+                    @if ($hasReceivables)
+                        <label class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 cursor-pointer">
+                            <input type="hidden" name="has_receivables" value="1">
+                            <input type="checkbox" name="receivables_acknowledged" value="1" x-model="receivablesChecked" class="mt-0.5 h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                            <span class="text-sm text-amber-800">
+                                <strong>I acknowledge {{ $money($receivables) }} in unpaid receivables.</strong>
+                                Profitability is based on total recorded sales regardless of whether payments have been collected.
+                                Receivables remain the responsibility of the association to collect.
+                            </span>
+                        </label>
+                        @error('receivables_acknowledged')
+                            <span class="mt-1 block text-sm font-semibold text-rose-700">{{ $message }}</span>
+                        @enderror
+                    @endif
+
+                    {{-- Member distributions hidden inputs (populated by Vue component) --}}
+                    <div id="member-distributions-container"></div>
+
                     <label class="block">
                         <span class="mb-1 block text-sm font-bold text-gray-700">Finalization Notes (optional)</span>
                         <textarea name="notes" rows="2" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20" placeholder="Example: Approved after reviewing expense and sales records.">{{ old('notes') }}</textarea>
@@ -244,8 +377,25 @@
                         </div>
                     @enderror
 
-                    <button type="submit" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a5a48] sm:w-auto">
+                    @error('member_distributions')
+                        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{{ $message }}</div>
+                    @enderror
+
+                    <button type="submit"
+                        class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#0c6d57] px-4 py-2 text-sm font-semibold text-white transition enabled:hover:bg-[#0a5a48] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                        :disabled="!lossChecked || !receivablesChecked">
                         {{ $dataChanged ? 'Re-finalize Official Snapshot' : 'Finalize Official Snapshot' }}
+                    </button>
+                </form>
+            </section>
+        @elseif ($isFinalized && $snapshot && isset($isPresident) && $isPresident && ! $isCorrectionMode && ! $dataChanged)
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm print:hidden">
+                <h3 class="text-lg font-bold text-gray-900">Need to Make Corrections?</h3>
+                <p class="mt-2 text-sm text-gray-600">This cycle is locked because it has a finalized profitability snapshot. Enable correction mode to temporarily allow editing of expense and sale records.</p>
+                <form method="POST" action="{{ route('profitability.correction-mode.enable', $cycle) }}" class="mt-3">
+                    @csrf
+                    <button type="submit" class="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 sm:w-auto">
+                        Enable Correction Mode
                     </button>
                 </form>
             </section>

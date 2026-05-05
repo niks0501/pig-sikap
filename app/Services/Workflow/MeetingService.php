@@ -15,6 +15,8 @@ class MeetingService
 {
     /**
      * Create a meeting with optional file upload and attendees.
+     * Auto-fills structured agenda from meeting type default template
+     * if agenda_json is not explicitly provided.
      *
      * @param  array<string, mixed>  $data
      */
@@ -27,13 +29,38 @@ class MeetingService
                 $filePath = $data['minutes_file']->store('meetings', 'public');
             }
 
+            $meetingType = $data['meeting_type'] ?? 'pig_production';
+
+            // Auto-fill agenda_json from default template if not provided
+            // Accept both JSON string (from API) and array
+            $agendaJson = null;
+
+            if (array_key_exists('agenda_json', $data) && $data['agenda_json'] !== null) {
+                // Decode JSON string to array if needed
+                $raw = $data['agenda_json'];
+
+                if (is_string($raw)) {
+                    $decoded = json_decode($raw, true);
+
+                    if (is_array($decoded)) {
+                        $agendaJson = $decoded;
+                    }
+                } elseif (is_array($raw)) {
+                    $agendaJson = $raw;
+                }
+            }
+
+            $agendaJson = $agendaJson ?? (Meeting::DEFAULT_AGENDA[$meetingType] ?? Meeting::DEFAULT_AGENDA['general']);
+
             $meeting = Meeting::create([
                 'title' => $data['title'],
                 'date' => $data['date'],
                 'location' => $data['location'] ?? null,
                 'agenda' => $data['agenda'] ?? null,
+                'agenda_json' => $agendaJson,
                 'minutes_summary' => $data['minutes_summary'] ?? null,
                 'minutes_file_path' => $filePath,
+                'meeting_type' => $meetingType,
                 'created_by' => $user->id,
                 'status' => $data['status'] ?? 'draft',
             ]);
@@ -69,7 +96,13 @@ class MeetingService
                 'minutes_summary' => $data['minutes_summary'] ?? $meeting->minutes_summary,
                 'updated_by' => $user->id,
                 'status' => $data['status'] ?? $meeting->status,
+                'meeting_type' => $data['meeting_type'] ?? $meeting->meeting_type,
             ];
+
+            // Update structured agenda if provided
+            if (array_key_exists('agenda_json', $data)) {
+                $updateData['agenda_json'] = $data['agenda_json'];
+            }
 
             if (isset($data['minutes_file']) && $data['minutes_file'] instanceof UploadedFile) {
                 $updateData['minutes_file_path'] = $data['minutes_file']->store('meetings', 'public');

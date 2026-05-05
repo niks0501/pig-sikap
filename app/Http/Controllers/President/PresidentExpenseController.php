@@ -189,6 +189,15 @@ class PresidentExpenseController extends Controller
         RecordPigCycleExpenseService $recordPigCycleExpenseService,
         ExpensePreferenceService $expensePreferenceService
     ): RedirectResponse|JsonResponse {
+        $cycleId = $request->validated('batch_id');
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($cycleId);
+
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'batch_id' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before adding expenses.',
+            ]);
+        }
+
         $expense = $recordPigCycleExpenseService->handle($request->validated(), $request->user());
         $preferences = $expensePreferenceService->rememberExpense($request->user(), $expense);
 
@@ -269,6 +278,16 @@ class PresidentExpenseController extends Controller
                 ]);
         }
 
+        // Check if the cycle is locked from editing (has finalized snapshot without correction mode)
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($expense->batch_id);
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return redirect()
+                ->route('expenses.show', $expense)
+                ->withErrors([
+                    'expense' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before editing expenses.',
+                ]);
+        }
+
         $cycles = PigCycle::query()->activeRecords()->orderByDesc('updated_at')->get(['id', 'batch_code', 'status', 'stage']);
 
         if ($expense->cycle instanceof PigCycle && ! $cycles->contains('id', $expense->cycle->id)) {
@@ -287,6 +306,13 @@ class PresidentExpenseController extends Controller
         PigCycleExpense $expense,
         UpdatePigCycleExpenseService $updatePigCycleExpenseService
     ): RedirectResponse {
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($expense->batch_id);
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'expense' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before updating expenses.',
+            ]);
+        }
+
         $updatedExpense = $updatePigCycleExpenseService->handle($expense, $request->validated(), $request->user());
 
         $this->recordAudit(
@@ -314,6 +340,13 @@ class PresidentExpenseController extends Controller
     ): RedirectResponse {
         if (! $request->user()?->hasRole('president')) {
             abort(403, 'Only the president can delete expense records.');
+        }
+
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($expense->batch_id);
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'expense' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before deleting expenses.',
+            ]);
         }
 
         $expenseId = $expense->id;
@@ -350,6 +383,13 @@ class PresidentExpenseController extends Controller
         PigCycleExpense $expense,
         DuplicateExpenseService $duplicateExpenseService
     ): RedirectResponse|JsonResponse {
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($expense->batch_id);
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'expense' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before duplicating expenses.',
+            ]);
+        }
+
         $newExpense = $duplicateExpenseService->handle(
             $expense,
             $request->validated(),
@@ -391,6 +431,20 @@ class PresidentExpenseController extends Controller
         $expenses = PigCycleExpense::query()
             ->whereIn('id', $ids)
             ->get();
+
+        // Check if any expense belongs to a locked cycle
+        $lockedCycleIds = PigCycle::query()
+            ->whereIn('id', $expenses->pluck('batch_id')->unique())
+            ->with('profitabilitySnapshot')
+            ->get()
+            ->filter(fn (PigCycle $c) => $c->isLockedFromEditing())
+            ->pluck('id');
+
+        if ($lockedCycleIds->isNotEmpty()) {
+            return back()->withErrors([
+                'ids' => 'Some expenses belong to cycles with finalized profitability snapshots. Enable correction mode first.',
+            ]);
+        }
 
         try {
             $deletedCount = $bulkDeleteExpenseService->handle($expenses);

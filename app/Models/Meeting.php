@@ -18,6 +18,43 @@ class Meeting extends Model
 
     public const STATUSES = ['draft', 'confirmed', 'cancelled'];
 
+    public const MEETING_TYPES = ['pig_production', 'monthly_association', 'general'];
+
+    /**
+     * Default structured agenda items keyed by meeting type.
+     * These mirror the association's actual resolution template fields.
+     */
+    public const DEFAULT_AGENDA = [
+        'pig_production' => [
+            'Canvassing Assign Person',
+            'Canvassing Date',
+            'Number of Piglets to Buy',
+            'Number of Sacks of Feeds',
+            'Feed Price',
+            'Medicines for Piglets',
+            'Caretaker / Place of Raising',
+            'Raising Duration',
+            'Group Policy',
+        ],
+        'monthly_association' => [
+            'Call to Order',
+            'Roll Call / Attendance',
+            'Reading of Previous Minutes',
+            "Treasurer's Report",
+            'Attendance Review & Penalties',
+            'Old Business / Matters Arising',
+            'New Business',
+            'Adjournment',
+        ],
+        'general' => [
+            'Opening / Call to Order',
+            'Old Business',
+            'New Business',
+            'Other Matters',
+            'Adjournment',
+        ],
+    ];
+
     /**
      * @var list<string>
      */
@@ -31,6 +68,8 @@ class Meeting extends Model
         'created_by',
         'updated_by',
         'status',
+        'meeting_type',
+        'agenda_json',
     ];
 
     /**
@@ -40,6 +79,7 @@ class Meeting extends Model
     {
         return [
             'date' => 'date',
+            'agenda_json' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -86,11 +126,64 @@ class Meeting extends Model
     // ─── Accessors ────────────────────────────────────────────
 
     /**
-     * Count of present attendees.
+     * Count of present attendees (active members who were present at this meeting).
+     * This is the denominator for the 75% approval threshold calculation.
      */
     public function getPresentCountAttribute(): int
     {
         return $this->signatories->where('attendance_status', 'present')->count();
+    }
+
+    /**
+     * Count of all meeting signatories (present + absent + excused).
+     */
+    public function getSignatoryCountAttribute(): int
+    {
+        return $this->signatories->count();
+    }
+
+    /**
+     * Structured agenda items (from agenda_json, falls back to parsed agenda text).
+     */
+    public function getStructuredAgendaAttribute(): array
+    {
+        if ($this->agenda_json && is_array($this->agenda_json) && count($this->agenda_json) > 0) {
+            return $this->agenda_json;
+        }
+
+        // Fallback: parse free-text agenda into bullet lines
+        if ($this->agenda) {
+            $lines = array_filter(array_map('trim', explode("\n", $this->agenda)));
+            if (count($lines) > 0) {
+                return array_values($lines);
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Get the default agenda for this meeting's type.
+     */
+    public function getDefaultAgendaAttribute(): array
+    {
+        $type = $this->meeting_type ?: 'pig_production';
+
+        return static::DEFAULT_AGENDA[$type] ?? static::DEFAULT_AGENDA['general'];
+    }
+
+    /**
+     * Meeting type label for display.
+     */
+    public function getMeetingTypeLabelAttribute(): string
+    {
+        $labels = [
+            'pig_production' => 'Pig Production / Purchase',
+            'monthly_association' => 'Monthly Association Meeting',
+            'general' => 'General Meeting',
+        ];
+
+        return $labels[$this->meeting_type] ?? 'General Meeting';
     }
 
     /**

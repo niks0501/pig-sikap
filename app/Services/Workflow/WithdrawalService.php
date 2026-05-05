@@ -54,12 +54,17 @@ class WithdrawalService
         }
 
         $filePath = null;
+        $evidencePath = null;
 
         if (isset($data['proof_file']) && $data['proof_file'] instanceof UploadedFile) {
             $filePath = $data['proof_file']->store('withdrawals', 'public');
         }
 
-        $withdrawal = DB::transaction(function () use ($resolution, $data, $user, $filePath) {
+        if (isset($data['evidence_file']) && $data['evidence_file'] instanceof UploadedFile) {
+            $evidencePath = $data['evidence_file']->store('withdrawals/evidence', 'public');
+        }
+
+        $withdrawal = DB::transaction(function () use ($resolution, $data, $user, $filePath, $evidencePath) {
             $withdrawal = Withdrawal::create([
                 'resolution_id' => $resolution->id,
                 'requested_by' => $user->id,
@@ -67,7 +72,9 @@ class WithdrawalService
                 'amount' => $data['amount'],
                 'currency' => 'PHP',
                 'bank_account' => $data['bank_account'] ?? null,
+                'bank_reference' => $data['bank_reference'] ?? null,
                 'proof_file_path' => $filePath,
+                'evidence_file_path' => $evidencePath,
                 'status' => 'pending',
                 'requested_at' => now(),
                 'notes' => $data['notes'] ?? null,

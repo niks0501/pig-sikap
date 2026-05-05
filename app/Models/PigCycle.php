@@ -64,6 +64,9 @@ class PigCycle extends Model
         'reopened_at',
         'reopened_by',
         'created_by',
+        'correction_mode',
+        'correction_mode_enabled_at',
+        'correction_mode_enabled_by',
     ];
 
     /**
@@ -93,6 +96,8 @@ class PigCycle extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'correction_mode' => 'boolean',
+            'correction_mode_enabled_at' => 'datetime',
         ];
     }
 
@@ -164,6 +169,24 @@ class PigCycle extends Model
     public function profitabilitySnapshot(): HasOne
     {
         return $this->hasOne(ProfitabilitySnapshot::class, 'pig_cycle_id')->where('is_current', true);
+    }
+
+    public function correctionModeEnabledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'correction_mode_enabled_by');
+    }
+
+    /**
+     * Check if expense and sale editing is locked because the cycle has a finalized
+     * profitability snapshot and correction mode is not active.
+     */
+    public function isLockedFromEditing(): bool
+    {
+        if ($this->correction_mode) {
+            return false;
+        }
+
+        return $this->profitabilitySnapshot()->exists();
     }
 
     public function healthTasks(): HasMany

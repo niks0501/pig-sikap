@@ -232,8 +232,22 @@ test('recording approvals updates percentage correctly', function () {
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'pending_approval']);
 
-    // Create 10 active members (+ the secretary = 11 total active)
+    // Create 10 active members as meeting attendees + the secretary = 11 total present
     $members = createActiveMembers(10);
+
+    // Add all 11 as meeting attendees (present)
+    foreach ($members as $member) {
+        \App\Models\MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $member->id,
+            'attendance_status' => 'present',
+        ]);
+    }
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
 
     // Approve 8 out of 11 = ~72.7% (still below 75%)
     $approvals = $members->take(8)->map(fn ($m) => [
@@ -249,7 +263,7 @@ test('recording approvals updates percentage correctly', function () {
     $response->assertOk();
 
     $resolution->refresh();
-    // 8 approved out of 11 active = 72.7%, status should still be pending_approval
+    // 8 approved out of 11 present = 72.7%, status should still be pending_approval
     expect($resolution->status)->toBe('pending_approval');
 });
 
@@ -259,8 +273,22 @@ test('resolution auto-advances to approved when 75% threshold is met', function 
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'pending_approval']);
 
-    // Create 9 other active members (total = 10 active users including secretary)
+    // Create 9 other active members (total = 10 attendees including secretary)
     $members = createActiveMembers(9);
+
+    // Add all 10 as meeting attendees (present)
+    foreach ($members as $member) {
+        \App\Models\MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $member->id,
+            'attendance_status' => 'present',
+        ]);
+    }
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
 
     // Approve 8 out of 10 = 80% (above 75%)
     $approvals = $members->take(7)->map(fn ($m) => [
@@ -287,6 +315,13 @@ test('approval data API returns all members with approval status', function () {
     $secretary = makeOfficer('secretary');
     $meeting = seedMeeting($secretary);
     $resolution = seedResolution($meeting, $secretary);
+
+    // Add secretary as meeting attendee so the API returns members
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
 
     $response = $this->actingAs($secretary)->getJson(
         route('workflow.resolutions.approvals.data', $resolution)
@@ -390,6 +425,13 @@ test('successful withdrawal changes resolution status to withdrawn', function ()
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'dswd_submitted']);
 
+    // Add secretary as meeting attendee (denominator for 75% threshold)
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
+
     // Create DSWD approved record
     $resolution->dswdSubmissions()->create([
         'status' => 'approved',
@@ -398,7 +440,7 @@ test('successful withdrawal changes resolution status to withdrawn', function ()
     ]);
 
     // Create enough approvals for 75% threshold
-    // Only secretary is active, so 1/1 = 100%
+    // 1 out of 1 present = 100%
     $resolution->approvals()->create([
         'user_id' => $secretary->id,
         'is_approved' => true,
@@ -427,6 +469,13 @@ test('withdrawal amount cannot exceed remaining balance', function () {
     $meeting = seedMeeting($secretary);
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'dswd_submitted']);
+
+    // Add secretary as meeting attendee
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
 
     $resolution->dswdSubmissions()->create([
         'status' => 'approved',
@@ -459,6 +508,13 @@ test('liquidation report finalizes the resolution', function () {
     $meeting = seedMeeting($secretary);
     $resolution = seedResolution($meeting, $secretary);
     $resolution->update(['status' => 'withdrawn']);
+
+    // Add secretary as meeting attendee (denominator for 75% threshold)
+    \App\Models\MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $secretary->id,
+        'attendance_status' => 'present',
+    ]);
 
     $resolution->approvals()->create([
         'user_id' => $secretary->id,

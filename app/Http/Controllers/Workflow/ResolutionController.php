@@ -128,7 +128,10 @@ class ResolutionController extends Controller
         ]);
 
         $eligibility = $this->eligibilityService->canWithdraw($resolution);
-        $totalMembers = User::where('is_active', true)->count();
+
+        // Denominator: active members who were present at the meeting,
+        // not all user accounts
+        $totalMembers = $resolution->getMeetingPresentCount();
 
         return view('workflow.resolutions-show', [
             'resolution' => $resolution,
@@ -197,13 +200,22 @@ class ResolutionController extends Controller
     {
         $resolution->load('approvals.user:id,name,role_id');
 
-        $members = User::where('is_active', true)
-            ->with('role:id,name,slug')
-            ->orderBy('name')
-            ->get(['id', 'name', 'role_id']);
+        // Denominator: meeting present attendees, not all active users
+        $totalMembers = $resolution->getMeetingPresentCount();
+        $approvedCount = $resolution->approved_count;
 
-        $totalMembers = $members->count();
-        $approvedCount = $resolution->approvals->where('is_approved', true)->count();
+        $members = $totalMembers > 0
+            ? $resolution->meeting->signatories()
+                ->where('attendance_status', 'present')
+                ->with('user.role:id,name,slug')
+                ->get()
+                ->map(fn ($s) => [
+                    'id' => $s->user->id,
+                    'name' => $s->user->name,
+                    'role_id' => $s->user->role_id,
+                    'role' => $s->user->role,
+                ])
+            : collect();
 
         return response()->json([
             'members' => $members,

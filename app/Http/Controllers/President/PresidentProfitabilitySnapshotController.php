@@ -16,6 +16,7 @@ class PresidentProfitabilitySnapshotController extends Controller
             'finalizedBy:id,name',
             'supersedes:id,version_number,finalized_at',
             'supersededBy:id,version_number,finalized_at',
+            'memberShareDistributions.member:id,name',
         ]);
 
         $history = ProfitabilitySnapshot::query()

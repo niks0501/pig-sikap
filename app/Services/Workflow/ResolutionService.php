@@ -32,6 +32,7 @@ class ResolutionService
                 'meeting_id' => $data['meeting_id'],
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
+                'focal_person_name' => $data['focal_person_name'] ?? null,
                 'resolution_file_path' => $filePath,
                 'status' => 'draft',
                 'approval_deadline' => $data['approval_deadline'] ?? null,

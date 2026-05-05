@@ -195,6 +195,8 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
     Route::middleware(['role:president'])->prefix('profitability')->name('profitability.')->group(function () {
         Route::post('/cycles/{cycle}/finalize', [PresidentProfitabilityController::class, 'finalize'])->name('finalize');
+        Route::post('/cycles/{cycle}/correction-mode/enable', [PresidentProfitabilityController::class, 'enableCorrectionMode'])->name('correction-mode.enable');
+        Route::post('/cycles/{cycle}/correction-mode/disable', [PresidentProfitabilityController::class, 'disableCorrectionMode'])->name('correction-mode.disable');
     });
 
     Route::middleware(['role:president,treasurer,secretary'])->get('/profit-sharing/{cycle}', [PresidentProfitabilityController::class, 'sharing'])->name('profit-sharing');
@@ -242,6 +244,9 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
         // Budget vs. Actual expense comparison (REQ-010)
         Route::get('/withdrawals/{withdrawal}/budget-vs-actual', [WithdrawalController::class, 'budgetVsActual'])->name('withdrawals.budget-vs-actual');
+
+        // Liquidation status management
+        Route::patch('/withdrawals/{withdrawal}/report/{report}/status', [WithdrawalController::class, 'updateLiquidationStatus'])->name('withdrawals.report.status');
 
         // Dashboard summary API (REQ-012)
         Route::get('/dashboard/summary', function () {

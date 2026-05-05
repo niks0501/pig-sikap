@@ -27,6 +27,8 @@ class StoreMeetingRequest extends FormRequest
             'date' => ['required', 'date', 'before_or_equal:today'],
             'location' => ['nullable', 'string', 'max:255'],
             'agenda' => ['nullable', 'string', 'max:5000'],
+            'agenda_json' => ['nullable', 'json'],
+            'meeting_type' => ['nullable', 'string', 'in:pig_production,monthly_association,general'],
             'minutes_summary' => ['nullable', 'string', 'max:10000'],
             'minutes_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'status' => ['nullable', 'in:draft,confirmed,cancelled'],

@@ -10,8 +10,9 @@ const props = defineProps({
     csrfToken: { type: String, default: '' },
 })
 
-const form = ref({ amount: '', bank_account: '', notes: '' })
+const form = ref({ amount: '', bank_account: '', bank_reference: '', notes: '' })
 const proofFile = ref(null)
+const evidenceFile = ref(null)
 const submitting = ref(false)
 
 // All validation/server errors stored here
@@ -73,8 +74,10 @@ async function submitForm() {
     fd.append('_token', props.csrfToken)
     fd.append('amount', form.value.amount)
     fd.append('bank_account', form.value.bank_account)
+    fd.append('bank_reference', form.value.bank_reference)
     fd.append('notes', form.value.notes)
     if (proofFile.value) fd.append('proof_file', proofFile.value)
+    if (evidenceFile.value) fd.append('evidence_file', evidenceFile.value)
 
     try {
         const r = await fetch(props.routes.store, {
@@ -188,6 +191,18 @@ async function submitForm() {
                 <p v-if="fieldErrors.bank_account" role="alert" class="text-xs text-rose-600 mt-1">{{ fieldErrors.bank_account[0] }}</p>
             </div>
 
+            <!-- Bank Reference -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Bank Reference / Transaction Number</label>
+                <input
+                    v-model="form.bank_reference"
+                    id="bank-reference"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]"
+                    placeholder="e.g. TXN-2024-00123"
+                />
+                <p class="text-xs text-gray-500 mt-1">Optional bank transaction or confirmation reference number.</p>
+            </div>
+
             <!-- Proof File -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -203,6 +218,22 @@ async function submitForm() {
                 />
                 <p v-if="fieldErrors.proof_file" role="alert" class="text-xs text-rose-600 mt-1">{{ fieldErrors.proof_file[0] }}</p>
                 <p v-if="proofFile" class="text-xs text-emerald-600 mt-1">📎 {{ proofFile.name }}</p>
+            </div>
+
+            <!-- Evidence / Supporting Documents -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Evidence / Supporting Documents
+                    <span class="text-gray-400 font-normal">(bank slip, receipt, etc. — optional)</span>
+                </label>
+                <input
+                    type="file"
+                    id="evidence-file"
+                    @change="evidenceFile = $event.target.files[0]"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#0c6d57]/10 file:text-[#0c6d57] hover:file:bg-[#0c6d57]/20"
+                />
+                <p v-if="evidenceFile" class="text-xs text-emerald-600 mt-1">📎 {{ evidenceFile.name }}</p>
             </div>
 
             <!-- Notes -->

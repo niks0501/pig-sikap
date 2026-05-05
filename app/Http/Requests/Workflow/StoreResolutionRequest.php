@@ -25,6 +25,7 @@ class StoreResolutionRequest extends FormRequest
             'meeting_id' => ['required', 'exists:meetings,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
+            'focal_person_name' => ['nullable', 'string', 'max:255'],
             'resolution_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'approval_deadline' => ['nullable', 'date', 'after:today'],
             'line_items' => ['nullable', 'array'],

@@ -16,6 +16,8 @@ class LiquidationReport extends Model
 
     protected $table = 'liquidation_reports';
 
+    public const STATUSES = ['draft', 'submitted', 'reviewed', 'approved', 'returned'];
+
     /**
      * @var list<string>
      */
@@ -24,6 +26,7 @@ class LiquidationReport extends Model
         'generated_by',
         'report_file_path',
         'summary',
+        'liquidation_status',
         'finalized_at',
     ];
 
@@ -59,5 +62,37 @@ class LiquidationReport extends Model
         }
 
         return asset('storage/' . $this->report_file_path);
+    }
+
+    /**
+     * Human-readable liquidation status label.
+     */
+    public function getLiquidationStatusLabelAttribute(): string
+    {
+        $labels = [
+            'draft' => 'Draft',
+            'submitted' => 'Submitted',
+            'reviewed' => 'Under Review',
+            'approved' => 'Approved',
+            'returned' => 'Returned for Revision',
+        ];
+
+        return $labels[$this->liquidation_status] ?? ucfirst($this->liquidation_status);
+    }
+
+    /**
+     * Color key for liquidation status badge.
+     */
+    public function getLiquidationStatusColorAttribute(): string
+    {
+        $colors = [
+            'draft' => 'gray',
+            'submitted' => 'blue',
+            'reviewed' => 'amber',
+            'approved' => 'emerald',
+            'returned' => 'red',
+        ];
+
+        return $colors[$this->liquidation_status] ?? 'gray';
     }
 }

@@ -90,7 +90,7 @@ class PresidentProfitabilityController extends Controller
 
     public function sharing(PigCycle $cycle): View
     {
-        $cycle->load(['caretaker:id,name', 'profitabilitySnapshot.finalizedBy:id,name']);
+        $cycle->load(['caretaker:id,name', 'profitabilitySnapshot.finalizedBy:id,name', 'profitabilitySnapshot.memberShareDistributions.member:id,name']);
 
         $snapshot = $cycle->profitabilitySnapshot;
         $profitability = $this->profitabilityFor($cycle);
@@ -113,6 +113,29 @@ class PresidentProfitabilityController extends Controller
                 ->get()
             : collect();
 
+        // Load active members for per-member distribution
+        $members = \App\Models\User::query()
+            ->where('is_active', true)
+            ->whereHas('role', fn ($q) => $q->whereIn('slug', ['member', 'officer', 'president', 'treasurer', 'secretary']))
+            ->whereDoesntHave('role', fn ($q) => $q->where('slug', 'system_admin'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        // Load existing member distributions if snapshot exists
+        $existingDistributions = [];
+        if ($snapshot !== null) {
+            $snapshot->load('memberShareDistributions.member:id,name');
+            $existingDistributions = $snapshot->memberShareDistributions
+                ->map(fn ($d) => [
+                    'user_id' => $d->user_id,
+                    'name' => $d->member?->name ?? 'Unknown',
+                    'allocated_amount' => (float) $d->allocated_amount,
+                    'notes' => $d->notes,
+                ])
+                ->values()
+                ->all();
+        }
+
         return view('profitability.sharing', [
             'cycle' => $cycle,
             'profitability' => $profitability,
@@ -121,6 +144,11 @@ class PresidentProfitabilityController extends Controller
             'dataChanged' => $dataChanged,
             'isPresident' => $user?->hasRole('president') ?? false,
             'snapshotHistory' => $history,
+            'members' => $members,
+            'existingDistributions' => $existingDistributions,
+            'hasLoss' => (float) $profitability['net_profit_or_loss'] < 0,
+            'hasReceivables' => (float) ($profitability['receivables'] ?? 0) > 0,
+            'isCorrectionMode' => $cycle->correction_mode ?? false,
         ]);
     }
 
@@ -140,6 +168,9 @@ class PresidentProfitabilityController extends Controller
             $force,
             $validated['re_finalize_reason_code'] ?? null,
             $validated['re_finalize_reason_notes'] ?? null,
+            $validated['loss_acknowledged'] ?? false,
+            $validated['receivables_acknowledged'] ?? false,
+            $validated['member_distributions'] ?? [],
         );
 
         $action = $isReFinalize ? 're-finalized' : 'finalized';
@@ -162,6 +193,70 @@ class PresidentProfitabilityController extends Controller
         return redirect()
             ->route('profitability.sharing', $cycle)
             ->with('status', $message);
+    }
+
+    /**
+     * Enable correction mode on a finalized cycle so expenses and sales can be edited.
+     */
+    public function enableCorrectionMode(Request $request, PigCycle $cycle): RedirectResponse
+    {
+        if (! $request->user()?->hasRole('president')) {
+            abort(403, 'Only the president can enable correction mode.');
+        }
+
+        if (! $cycle->isArchived()) {
+            return back()->withErrors(['cycle' => 'Correction mode can only be enabled on archived cycles.']);
+        }
+
+        if ($cycle->profitabilitySnapshot === null) {
+            return back()->withErrors(['cycle' => 'This cycle has not been finalized yet. Finalize it first before enabling correction mode.']);
+        }
+
+        $cycle->update([
+            'correction_mode' => true,
+            'correction_mode_enabled_at' => now(),
+            'correction_mode_enabled_by' => $request->user()->id,
+        ]);
+
+        $this->recordAudit(
+            $request,
+            'profitability_correction_mode_enabled',
+            "Enabled correction mode for cycle {$cycle->batch_code}. Expense and sale records are now editable.",
+            'profitability',
+            ['cycle_id' => $cycle->id]
+        );
+
+        return redirect()
+            ->route('profitability.sharing', $cycle)
+            ->with('status', 'Correction mode enabled. You can now edit expenses and sales for this cycle. Re-finalize when corrections are complete.');
+    }
+
+    /**
+     * Disable correction mode without re-finalizing (cancel corrections).
+     */
+    public function disableCorrectionMode(Request $request, PigCycle $cycle): RedirectResponse
+    {
+        if (! $request->user()?->hasRole('president')) {
+            abort(403, 'Only the president can disable correction mode.');
+        }
+
+        $cycle->update([
+            'correction_mode' => false,
+            'correction_mode_enabled_at' => null,
+            'correction_mode_enabled_by' => null,
+        ]);
+
+        $this->recordAudit(
+            $request,
+            'profitability_correction_mode_disabled',
+            "Disabled correction mode for cycle {$cycle->batch_code} without re-finalizing.",
+            'profitability',
+            ['cycle_id' => $cycle->id]
+        );
+
+        return redirect()
+            ->route('profitability.sharing', $cycle)
+            ->with('status', 'Correction mode disabled. No corrections were made.');
     }
 
     /**

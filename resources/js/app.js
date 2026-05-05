@@ -83,6 +83,7 @@ import ExportButtons from './components/reports/ExportButtons.vue';
 import SignatureBlock from './components/reports/SignatureBlock.vue';
 import ReportCharts from './components/reports/ReportCharts.vue';
 import ReportHistoryTable from './components/reports/ReportHistoryTable.vue';
+import MemberShareAllocation from './components/profitability/MemberShareAllocation.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -160,6 +161,7 @@ const componentRegistry = {
   'signature-block': SignatureBlock,
   'report-charts': ReportCharts,
   'report-history-table': ReportHistoryTable,
+  'member-share-allocation': MemberShareAllocation,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

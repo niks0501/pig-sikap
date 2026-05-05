@@ -22,6 +22,7 @@ class DswdSubmission extends Model
     protected $fillable = [
         'resolution_id',
         'submitted_at',
+        'dswd_approval_date',
         'submission_file_path',
         'status',
         'notes',
@@ -35,6 +36,7 @@ class DswdSubmission extends Model
     {
         return [
             'submitted_at' => 'datetime',
+            'dswd_approval_date' => 'datetime',
         ];
     }
 

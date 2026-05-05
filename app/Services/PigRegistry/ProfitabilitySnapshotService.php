@@ -15,6 +15,9 @@ class ProfitabilitySnapshotService
         private readonly ProfitabilityValidationService $validationService,
     ) {}
 
+    /**
+     * @param  list<array{user_id: int, allocated_amount: float, notes?: string|null}>  $memberDistributions
+     */
     public function finalize(
         PigCycle $cycle,
         User $actor,
@@ -22,8 +25,14 @@ class ProfitabilitySnapshotService
         bool $force = false,
         ?string $reasonCode = null,
         ?string $reasonNotes = null,
+        bool $lossAcknowledged = false,
+        bool $receivablesAcknowledged = false,
+        array $memberDistributions = [],
     ): ProfitabilitySnapshot {
-        return DB::transaction(function () use ($cycle, $actor, $notes, $force, $reasonCode, $reasonNotes): ProfitabilitySnapshot {
+        return DB::transaction(function () use (
+            $cycle, $actor, $notes, $force, $reasonCode, $reasonNotes,
+            $lossAcknowledged, $receivablesAcknowledged, $memberDistributions,
+        ): ProfitabilitySnapshot {
             $lockedCycle = PigCycle::query()
                 ->whereKey($cycle->id)
                 ->lockForUpdate()
@@ -37,6 +46,22 @@ class ProfitabilitySnapshotService
             if (! $validation['can_finalize']) {
                 throw ValidationException::withMessages([
                     'cycle' => $validation['blocking_errors'],
+                ]);
+            }
+
+            // Require loss acknowledgment when the cycle has a net loss
+            $netProfitOrLoss = (float) $computed['net_profit_or_loss'];
+            if ($netProfitOrLoss < 0 && ! $lossAcknowledged) {
+                throw ValidationException::withMessages([
+                    'loss_acknowledged' => ['You must confirm that this cycle has a net loss and no profit will be distributed.'],
+                ]);
+            }
+
+            // Require receivables acknowledgment when unpaid receivables exist
+            $receivables = (float) $computed['receivables'];
+            if ($receivables > 0 && ! $receivablesAcknowledged) {
+                throw ValidationException::withMessages([
+                    'receivables_acknowledged' => ['You must acknowledge the unpaid receivables before finalizing.'],
                 ]);
             }
 
@@ -103,6 +128,36 @@ class ProfitabilitySnapshotService
                 'supersedes_snapshot_id' => $isReFinalize ? $latestSnapshot->id : null,
                 're_finalize_reason_code' => $isReFinalize ? $reasonCode : null,
                 're_finalize_reason_notes' => $isReFinalize ? $this->normalizeNotes($reasonNotes) : null,
+            ]);
+
+            // Store per-member distributions if provided
+            $memberShare = (float) $computed['member_share'];
+            if ($memberShare > 0 && ! empty($memberDistributions)) {
+                $distributionTotal = round(array_sum(array_column($memberDistributions, 'allocated_amount')), 2);
+
+                if (abs($distributionTotal - $memberShare) > 0.01) {
+                    throw ValidationException::withMessages([
+                        'member_distributions' => ["The total allocated amount ({$distributionTotal}) must equal the member share ({$memberShare})."],
+                    ]);
+                }
+
+                foreach ($memberDistributions as $dist) {
+                    $snapshot->memberShareDistributions()->create([
+                        'user_id' => (int) $dist['user_id'],
+                        'allocated_amount' => round((float) $dist['allocated_amount'], 2),
+                        'allocation_percentage' => $memberShare > 0
+                            ? round(((float) $dist['allocated_amount'] / $memberShare) * 100, 2)
+                            : null,
+                        'notes' => isset($dist['notes']) ? $this->normalizeNotes($dist['notes']) : null,
+                    ]);
+                }
+            }
+
+            // Re-lock the cycle after finalization (disable correction mode)
+            $lockedCycle->update([
+                'correction_mode' => false,
+                'correction_mode_enabled_at' => null,
+                'correction_mode_enabled_by' => null,
             ]);
 
             return $snapshot;

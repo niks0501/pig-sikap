@@ -69,6 +69,7 @@ class ReportService
             [
                 'generated_by' => $user->id,
                 'summary' => $summary,
+                'liquidation_status' => 'submitted',
                 'finalized_at' => now(),
             ]
         );

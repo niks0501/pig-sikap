@@ -55,10 +55,12 @@ class DswdSubmissionController extends Controller
                     'approval_percentage' => (float) $resolution->approval_percentage,
                     'approved_count' => $resolution->approved_count,
                     'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
+                    'total_members' => $resolution->getMeetingPresentCount(),
                     'dswdSubmission' => $resolution->dswdSubmission ? [
                         'id' => $resolution->dswdSubmission->id,
                         'status' => $resolution->dswdSubmission->status,
                         'submitted_at' => $resolution->dswdSubmission->submitted_at?->format('M d, Y'),
+                        'dswd_approval_date' => $resolution->dswdSubmission->dswd_approval_date?->format('M d, Y'),
                         'submission_file_url' => $resolution->dswdSubmission->submissionFileUrl(),
                         'notes' => $resolution->dswdSubmission->notes,
                     ] : null,

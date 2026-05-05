@@ -22,6 +22,7 @@ class ProfitabilityReportPdfService
             'cycle:id,batch_code,status,stage,caretaker_user_id,status',
             'cycle.caretaker:id,name',
             'finalizedBy:id,name',
+            'memberShareDistributions.member:id,name',
         ]);
 
         $cycle = $snapshot->cycle;

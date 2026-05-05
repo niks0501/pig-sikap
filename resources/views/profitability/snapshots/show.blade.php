@@ -108,6 +108,25 @@
             </div>
         </section>
 
+        @if (! empty($profitability['member_breakdown']))
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h3 class="text-lg font-bold text-gray-900">Per-Member Distribution</h3>
+                <p class="mt-1 text-sm text-gray-500">Individual member allocations from the 25% member share.</p>
+                <div class="mt-4 space-y-2">
+                    @foreach ($profitability['member_breakdown'] as $mb)
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm">
+                            <p class="text-gray-700 font-medium">{{ $mb['name'] }}</p>
+                            <p class="font-bold text-gray-900">{{ $money($mb['allocated_amount']) }}</p>
+                        </div>
+                    @endforeach
+                    <div class="flex items-center justify-between rounded-lg bg-[#0c6d57]/5 px-3 py-2 text-sm border-t border-gray-100 pt-3">
+                        <p class="font-bold text-gray-900">Total Distributed</p>
+                        <p class="font-bold text-[#0c6d57]">{{ $money(collect($profitability['member_breakdown'])->sum('allocated_amount')) }}</p>
+                    </div>
+                </div>
+            </section>
+        @endif
+
         <section class="grid gap-6 lg:grid-cols-2">
             <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h3 class="text-lg font-bold text-gray-900">Sales</h3>

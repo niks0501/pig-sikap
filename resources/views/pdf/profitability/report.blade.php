@@ -122,6 +122,23 @@
         <tr><th>Association Fund / Samahan (25%)</th><td class="right">{{ $currencyPrefix }}{{ number_format((float) ($profitability['association_share'] ?? $profitability['association_fund_share'] ?? 0), 2) }}</td></tr>
     </table>
 
+    @if (! empty($profitability['member_breakdown']))
+        <div class="section-title">Per-Member Distribution</div>
+        <p class="muted" style="margin-bottom: 6px;">Individual member allocations from the 25% member share ({{ $currencyPrefix }}{{ number_format((float) $profitability['member_share'], 2) }}).</p>
+        <table>
+            @foreach ($profitability['member_breakdown'] as $mb)
+                <tr>
+                    <td>{{ $mb['name'] ?? 'Unknown Member' }}</td>
+                    <td class="right">{{ $currencyPrefix }}{{ number_format((float) $mb['allocated_amount'], 2) }}</td>
+                </tr>
+            @endforeach
+            <tr class="total-row">
+                <th>Total Distributed to Members</th>
+                <td class="right">{{ $currencyPrefix }}{{ number_format((float) (collect($profitability['member_breakdown'])->sum('allocated_amount')), 2) }}</td>
+            </tr>
+        </table>
+    @endif
+
     @if ((float) $profitability['distributable_profit'] <= 0)
         <div style="margin-top: 10px; font-size: 11px; color: #dc2626;">
             <strong>Note:</strong> Distributable profit is {{ $currencyPrefix }}0.00 because net profit is zero or negative. No amount should be distributed to stakeholders.

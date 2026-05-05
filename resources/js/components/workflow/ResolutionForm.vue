@@ -10,6 +10,7 @@ const form = ref({
     meeting_id: props.meeting?.id || '',
     title: props.meeting ? `Resolution from: ${props.meeting.title}` : '',
     description: props.meeting?.agenda || '',
+    focal_person_name: '',
     approval_deadline: '',
 })
 const lineItems = ref([{ category: '', description: '', quantity: 1, unit: 'pc', unit_cost: 0 }])
@@ -35,6 +36,7 @@ async function submitForm() {
     fd.append('meeting_id', form.value.meeting_id)
     fd.append('title', form.value.title)
     fd.append('description', form.value.description)
+    if (form.value.focal_person_name) fd.append('focal_person_name', form.value.focal_person_name)
     if (form.value.approval_deadline) fd.append('approval_deadline', form.value.approval_deadline)
     if (resFile.value) fd.append('resolution_file', resFile.value)
     lineItems.value.forEach((li, i) => {
@@ -82,6 +84,11 @@ function formatCurrency(v) { return '₱' + Number(v).toLocaleString('en-PH', { 
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea v-model="form.description" rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Focal Person</label>
+                <input v-model="form.focal_person_name" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" placeholder="e.g. Juan Dela Cruz" />
+                <p class="text-xs text-gray-500 mt-1">Designated person responsible for implementing this resolution.</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Approval Deadline</label>

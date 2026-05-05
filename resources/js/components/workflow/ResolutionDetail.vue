@@ -5,6 +5,7 @@
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import AuthorizedWithdrawersPanel from './AuthorizedWithdrawersPanel.vue'
+import WorkflowTimeline from './WorkflowTimeline.vue'
 
 const props = defineProps({
     resolution: { type: Object, required: true },
@@ -335,21 +336,21 @@ onMounted(() => {
             <span :class="statusColors[res.status]" class="px-3 py-1 rounded-full text-xs font-semibold">{{ statusLabels[res.status] }}</span>
         </div>
         <p v-if="res.description" class="text-sm text-gray-600 mb-4 whitespace-pre-line">{{ res.description }}</p>
+        <p v-if="res.focal_person_name" class="text-sm text-gray-700 mb-4">
+            <span class="font-medium">Focal Person:</span> {{ res.focal_person_name }}
+        </p>
 
-        <!-- Workflow Progress Steps -->
-        <div class="flex items-center gap-1 mt-4 mb-2">
-            <template v-for="(step, i) in steps" :key="i">
-                <div class="flex items-center gap-1.5">
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                        :class="step.done ? 'bg-[#0c6d57] text-white' : 'bg-gray-200 text-gray-500'">
-                        <svg v-if="step.done" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        <span v-else>{{ i + 1 }}</span>
-                    </div>
-                    <span class="text-xs font-medium" :class="step.done ? 'text-[#0c6d57]' : 'text-gray-400'">{{ step.label }}</span>
-                </div>
-                <div v-if="i < steps.length - 1" class="flex-1 h-0.5 mx-1" :class="steps[i+1]?.done ? 'bg-[#0c6d57]' : 'bg-gray-200'"></div>
-            </template>
-        </div>
+        <!-- Workflow Timeline -->
+        <WorkflowTimeline
+            :workflow-status="res.workflow_status"
+            :resolution-status="res.status"
+            :dswd-status="dswdData?.status"
+            :has-withdrawals="withdrawalsList.length > 0"
+            :has-liquidation-report="false"
+            :approval-percentage="res.approval_percentage"
+            :total-members="totalMembers"
+            :approved-count="res.approved_count"
+        />
 
         <div class="flex items-center gap-4 text-xs text-gray-400 mt-4">
             <span>Created by {{ res.creator_name }}</span>
@@ -394,6 +395,7 @@ onMounted(() => {
         <!-- Quick-access approval progress in overview -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-3">Approval Progress</h2>
+            <p class="text-xs text-gray-500 mb-2">Based on {{ props.totalMembers }} members who were present at the meeting.</p>
             <div class="flex items-center justify-between text-sm mb-1">
                 <span class="text-gray-600">{{ res.approved_count }} / {{ props.totalMembers }} members signed</span>
                 <span class="font-semibold" :class="res.has_met_threshold ? 'text-emerald-600' : 'text-amber-600'">{{ pct }}%</span>

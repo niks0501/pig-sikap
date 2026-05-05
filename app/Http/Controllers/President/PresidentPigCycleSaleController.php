@@ -77,6 +77,15 @@ class PresidentPigCycleSaleController extends Controller
         StorePigCycleSaleRequest $request,
         RecordPigCycleSaleService $recordPigCycleSaleService
     ): RedirectResponse|JsonResponse {
+        $cycleId = $request->validated('batch_id');
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($cycleId);
+
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'batch_id' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before recording sales.',
+            ]);
+        }
+
         $sale = $recordPigCycleSaleService->handle($request->validated(), $request->user());
 
         $buyerName = $sale->buyer?->name ?? 'buyer';
@@ -137,6 +146,13 @@ class PresidentPigCycleSaleController extends Controller
         PigCycleSale $sale,
         UpdatePigCycleSalePaymentService $updatePigCycleSalePaymentService
     ): RedirectResponse|JsonResponse {
+        $cycle = PigCycle::with('profitabilitySnapshot')->find($sale->batch_id);
+        if ($cycle && $cycle->isLockedFromEditing()) {
+            return back()->withErrors([
+                'sale' => 'This cycle has a finalized profitability snapshot. Enable correction mode first before updating sales.',
+            ]);
+        }
+
         $updatedSale = $updatePigCycleSalePaymentService->handle($sale, $request->validated(), $request->user());
 
         $this->recordAudit(

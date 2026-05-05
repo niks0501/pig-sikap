@@ -35,7 +35,9 @@ class StoreWithdrawalRequest extends FormRequest
         return [
             'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $maxAmount],
             'bank_account' => ['nullable', 'string', 'max:255'],
+            'bank_reference' => ['nullable', 'string', 'max:255'],
             'proof_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'evidence_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
     }

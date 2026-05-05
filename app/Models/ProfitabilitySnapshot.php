@@ -101,6 +101,11 @@ class ProfitabilitySnapshot extends Model
         return $this->hasMany(self::class, 'supersedes_snapshot_id');
     }
 
+    public function memberShareDistributions(): HasMany
+    {
+        return $this->hasMany(MemberShareDistribution::class, 'profitability_snapshot_id');
+    }
+
     public function isLoss(): bool
     {
         return (float) $this->net_profit_or_loss < 0;
@@ -164,7 +169,28 @@ class ProfitabilitySnapshot extends Model
             'share_rule' => $this->share_rule_json ?? [],
             'computation_version' => $this->computation_version,
             'is_finalized' => true,
+            'member_breakdown' => $this->memberBreakdownRows(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function memberBreakdownRows(): array
+    {
+        if (! $this->relationLoaded('memberShareDistributions')) {
+            return [];
+        }
+
+        return $this->memberShareDistributions
+            ->map(fn (MemberShareDistribution $d): array => [
+                'user_id' => $d->user_id,
+                'name' => $d->member?->name ?? 'Unknown Member',
+                'allocated_amount' => (float) $d->allocated_amount,
+                'notes' => $d->notes,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
