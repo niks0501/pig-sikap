@@ -18,7 +18,9 @@ class AssociationExpenseSummaryService
      */
     public function buildFromQuery(Builder $query): array
     {
-        $baseQuery = clone $query;
+        // Clone and strip ORDER BY so MySQL ONLY_FULL_GROUP_BY mode
+        // does not reject aggregates with project-scoped sort orders.
+        $baseQuery = (clone $query)->reorder();
 
         $totalAmount = (float) (clone $baseQuery)->sum('amount');
         $entryCount = (int) (clone $baseQuery)->count();
