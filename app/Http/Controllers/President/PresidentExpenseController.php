@@ -42,10 +42,11 @@ class PresidentExpenseController extends Controller
             'date_to' => trim((string) $request->query('date_to', '')),
         ];
 
-        $query = PigCycleExpense::query()->with([
-            'cycle:id,batch_code,status,stage',
-            'createdBy:id,name',
-        ]);
+            $query = PigCycleExpense::query()->with([
+                'cycle:id,batch_code,status,stage',
+                'createdBy:id,name',
+                'supplier:id,name',
+            ]);
 
         $this->applyFilters($query, $filters);
 
@@ -67,6 +68,10 @@ class PresidentExpenseController extends Controller
                         'id' => $expense->id,
                         'batch_id' => $expense->batch_id,
                         'category' => $expense->category,
+                        'feed_subcategory' => $expense->feed_subcategory,
+                        'item_name' => $expense->item_name,
+                        'supplier_id' => $expense->supplier_id,
+                        'receipt_reference' => $expense->receipt_reference,
                         'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
                         'unit' => $expense->unit,
                         'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
@@ -74,6 +79,10 @@ class PresidentExpenseController extends Controller
                         'expense_date' => $expense->expense_date?->toDateString(),
                         'notes' => $expense->notes,
                         'receipt_url' => $expense->receiptUrl(),
+                        'supplier' => $expense->supplier ? [
+                            'id' => $expense->supplier->id,
+                            'name' => $expense->supplier->name,
+                        ] : null,
                         'cycle' => $expense->cycle ? [
                             'id' => $expense->cycle->id,
                             'batch_code' => $expense->cycle->batch_code,
@@ -82,6 +91,7 @@ class PresidentExpenseController extends Controller
                             'isArchived' => $expense->cycle->isArchived(),
                         ] : null,
                         'created_by_name' => $expense->createdBy?->name,
+                        'expense_scope' => 'cycle',
                     ];
                 })->values(),
                 'summary' => $summary,
@@ -202,6 +212,10 @@ class PresidentExpenseController extends Controller
                     'id' => $expense->id,
                     'batch_id' => $expense->batch_id,
                     'category' => $expense->category,
+                    'feed_subcategory' => $expense->feed_subcategory,
+                    'item_name' => $expense->item_name,
+                    'supplier_id' => $expense->supplier_id,
+                    'receipt_reference' => $expense->receipt_reference,
                     'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
                     'unit' => $expense->unit,
                     'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
@@ -211,6 +225,7 @@ class PresidentExpenseController extends Controller
                     'receipt_url' => $expense->receiptUrl(),
                     'cycle' => $expense->cycle,
                     'created_by_name' => $expense->createdBy?->name,
+                    'expense_scope' => 'cycle',
                 ],
                 'preferences' => $preferences,
                 'redirect_url' => route('expenses.show', $expense),

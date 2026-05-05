@@ -1,15 +1,14 @@
 <?php
 
-namespace App\Http\Requests\PigRegistry;
+namespace App\Http\Requests\Expense;
 
-use App\Models\PigCycle;
-use App\Models\PigCycleExpense;
+use App\Models\AssociationExpense;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
-class StorePigCycleExpenseRequest extends FormRequest
+class UpdateAssociationExpenseRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -28,37 +27,35 @@ class StorePigCycleExpenseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'batch_id' => ['required', 'integer', 'exists:pig_cycles,id'],
-            'category' => ['required', 'string', Rule::in(PigCycleExpense::CATEGORIES)],
+            'item_name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', Rule::in(AssociationExpense::CATEGORIES)],
             'feed_subcategory' => [
                 'nullable',
                 'string',
-                Rule::in(PigCycleExpense::FEED_SUBCATEGORIES),
+                Rule::in(AssociationExpense::FEED_SUBCATEGORIES),
             ],
-            'item_name' => ['nullable', 'string', 'max:255'],
-            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
-            'receipt_reference' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
             'unit' => ['nullable', 'string', 'max:50'],
             'unit_cost' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
             'expense_date' => ['required', 'date', 'before_or_equal:today'],
-            'notes' => ['required', 'string', 'max:1000'],
+            'receipt_reference' => ['nullable', 'string', 'max:255'],
             'receipt' => ['nullable', File::types(['jpg', 'jpeg', 'png', 'webp', 'pdf'])->max(8 * 1024)],
+            'remove_receipt' => ['nullable', 'boolean'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'canvass_id' => ['nullable', 'integer', 'exists:canvasses,id'],
+            'fund_source' => ['nullable', 'string', Rule::in(AssociationExpense::FUND_SOURCES)],
+            'approved_resolution_id' => ['nullable', 'integer', 'exists:resolutions,id'],
+            'withdrawal_id' => ['nullable', 'integer', 'exists:withdrawals,id'],
+            'notes' => ['required', 'string', 'max:1000'],
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $cycleId = (int) $this->input('batch_id');
-
-            if ($cycleId > 0) {
-                $cycle = PigCycle::query()->find($cycleId);
-
-                if ($cycle instanceof PigCycle && $cycle->isArchived()) {
-                    $validator->errors()->add('batch_id', 'Archived cycles cannot accept new expense records.');
-                }
+            if ($this->boolean('remove_receipt') && $this->hasFile('receipt')) {
+                $validator->errors()->add('receipt', 'Choose either remove receipt or upload a new one, not both.');
             }
 
             $this->validateAmountInputs($validator);
@@ -80,22 +77,22 @@ class StorePigCycleExpenseRequest extends FormRequest
         }
 
         if (! $this->filled('quantity')) {
-            $validator->errors()->add('quantity', 'Quantity / Bilang is required when using unit cost.');
+            $validator->errors()->add('quantity', 'Quantity is required when using unit cost.');
         }
 
         if (! $this->filled('unit')) {
-            $validator->errors()->add('unit', 'Unit / Yunit is required when using quantity.');
+            $validator->errors()->add('unit', 'Unit is required when using quantity.');
         }
 
         if (! $this->filled('unit_cost')) {
-            $validator->errors()->add('unit_cost', 'Unit Cost / Halaga kada Yunit is required when using quantity.');
+            $validator->errors()->add('unit_cost', 'Unit Cost is required when using quantity.');
         }
 
         if (is_numeric($this->input('quantity')) && is_numeric($this->input('unit_cost'))) {
             $computedAmount = round((float) $this->input('quantity') * (float) $this->input('unit_cost'), 2);
 
             if ($computedAmount < 0.01 || $computedAmount > 999999.99) {
-                $validator->errors()->add('amount', 'Computed Total Amount / Kabuuang Halaga must be between 0.01 and 999,999.99.');
+                $validator->errors()->add('amount', 'Computed Total Amount must be between 0.01 and 999,999.99.');
             }
         }
     }

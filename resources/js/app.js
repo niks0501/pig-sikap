@@ -48,6 +48,9 @@ import ExpenseFilters from './components/expenses/ExpenseFilters.vue';
 import ExpenseSummaryCards from './components/expenses/ExpenseSummaryCards.vue';
 import ExpenseTableRow from './components/expenses/ExpenseTableRow.vue';
 import ReceiptUpload from './components/expenses/ReceiptUpload.vue';
+import AssociationExpenseForm from './components/expenses/AssociationExpenseForm.vue';
+import AssociationExpenseList from './components/expenses/AssociationExpenseList.vue';
+import AllExpensesList from './components/expenses/AllExpensesList.vue';
 import SalesForm from './components/sales/SalesForm.vue';
 import SalesIndex from './components/sales/SalesIndex.vue';
 import SalesShow from './components/sales/SalesShow.vue';
@@ -122,6 +125,9 @@ const componentRegistry = {
   'expense-summary-cards': ExpenseSummaryCards,
   'expense-table-row': ExpenseTableRow,
   'receipt-upload': ReceiptUpload,
+  'association-expense-form': AssociationExpenseForm,
+  'association-expense-list': AssociationExpenseList,
+  'all-expenses-list': AllExpensesList,
     'sales-form': SalesForm,
     'sales-index': SalesIndex,
     'sales-show': SalesShow,

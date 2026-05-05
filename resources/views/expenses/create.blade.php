@@ -21,6 +21,8 @@
         data-props="{{ json_encode([
             'cycles' => $cycles->map(function($c) { return ['id' => $c->id, 'batch_code' => $c->batch_code, 'isArchived' => $c->isArchived()]; }),
             'categories' => array_keys($categoryOptions),
+            'feedSubcategories' => array_keys(\App\Models\PigCycleExpense::feedSubcategoryLabels()),
+            'suppliers' => \App\Models\Supplier::query()->orderBy('name')->get(['id', 'name'])->toArray(),
             'selectedCycleId' => (int) $selectedCycleId,
             'formMode' => 'create',
             'preferences' => $preferences,

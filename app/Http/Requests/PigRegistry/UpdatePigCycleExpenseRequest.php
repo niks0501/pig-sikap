@@ -30,6 +30,14 @@ class UpdatePigCycleExpenseRequest extends FormRequest
         return [
             'batch_id' => ['required', 'integer', 'exists:pig_cycles,id'],
             'category' => ['required', 'string', Rule::in(PigCycleExpense::CATEGORIES)],
+            'feed_subcategory' => [
+                'nullable',
+                'string',
+                Rule::in(PigCycleExpense::FEED_SUBCATEGORIES),
+            ],
+            'item_name' => ['nullable', 'string', 'max:255'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'receipt_reference' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
             'unit' => ['nullable', 'string', 'max:50'],
             'unit_cost' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],

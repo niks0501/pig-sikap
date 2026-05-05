@@ -2,16 +2,10 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Expense Records</h1>
-            <p class="text-sm text-gray-500 mt-1">Digital expense logbook for pig cycles and association operations.</p>
+            <h1 class="text-2xl font-bold text-gray-900">Association Expenses</h1>
+            <p class="text-sm text-gray-500 mt-1">Expenses not tied to a pig cycle: meeting costs, supplies, bank fees, emergencies.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <a href="{{ route('expenses.summary', request()->query()) }}" class="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-white border border-[#0c6d57] text-[#0c6d57] font-semibold rounded-xl hover:bg-[#0c6d57]/5 transition-colors">
-                View Summary
-            </a>
-            <a href="{{ route('expenses.create', ['cycle_id' => $filters['cycle_id'] ?? '']) }}" class="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-[#0c6d57] text-white font-semibold rounded-xl hover:bg-[#0a5a48] transition-colors">
-                Add Cycle Expense
-            </a>
             <a href="{{ route('expenses.association.create') }}" class="flex-1 sm:flex-none inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-[#0c6d57] text-white font-semibold rounded-xl hover:bg-[#0a5a48] transition-colors">
                 Add Association Expense
             </a>
@@ -51,32 +45,33 @@
     </div>
 
     <div
-        data-vue-component="expense-list"
+        data-vue-component="association-expense-list"
         data-props="{{ json_encode([
             'expenses' => collect($expenses->items())->map(function($expense) {
-                $supplier = $expense->supplier;
                 return [
                     'id' => $expense->id,
-                    'batch_id' => $expense->batch_id,
+                    'item_name' => $expense->item_name,
                     'category' => $expense->category,
                     'feed_subcategory' => $expense->feed_subcategory,
-                    'item_name' => $expense->item_name,
-                    'supplier_id' => $expense->supplier_id,
-                    'receipt_reference' => $expense->receipt_reference,
                     'quantity' => $expense->quantity !== null ? (float) $expense->quantity : null,
                     'unit' => $expense->unit,
                     'unit_cost' => $expense->unit_cost !== null ? (float) $expense->unit_cost : null,
                     'amount' => (float) $expense->amount,
                     'expense_date' => $expense->expense_date?->toDateString(),
-                    'notes' => $expense->notes,
+                    'receipt_reference' => $expense->receipt_reference,
                     'receipt_url' => $expense->receiptUrl(),
-                    'supplier' => $supplier ? ['id' => $supplier->id, 'name' => $supplier->name] : null,
-                    'cycle' => $expense->cycle ? [
-                        'id' => $expense->cycle->id,
-                        'batch_code' => $expense->cycle->batch_code,
-                        'status' => $expense->cycle->status,
-                        'stage' => $expense->cycle->stage,
-                        'isArchived' => $expense->cycle->isArchived(),
+                    'fund_source' => $expense->fund_source,
+                    'notes' => $expense->notes,
+                    'supplier' => $expense->supplier ? ['id' => $expense->supplier->id, 'name' => $expense->supplier->name] : null,
+                    'approved_resolution' => $expense->approvedResolution ? [
+                        'id' => $expense->approvedResolution->id,
+                        'title' => $expense->approvedResolution->title,
+                        'resolution_number' => $expense->approvedResolution->resolution_number,
+                    ] : null,
+                    'withdrawal' => $expense->withdrawal ? [
+                        'id' => $expense->withdrawal->id,
+                        'amount' => (float) $expense->withdrawal->amount,
+                        'status' => $expense->withdrawal->status,
                     ] : null,
                     'created_by_name' => $expense->createdBy?->name,
                 ];
@@ -84,7 +79,10 @@
             'summary' => $summary,
             'filters' => $filters,
             'categories' => array_keys($categoryOptions),
-            'cycles' => $cycles->map(function($c) { return ['id' => $c->id, 'batch_code' => $c->batch_code, 'isArchived' => $c->isArchived()]; }),
+            'feedSubcategories' => array_keys($feedSubcategoryOptions),
+            'fundSources' => array_keys($fundSourceOptions),
+            'suppliers' => $suppliers->toArray(),
+            'resolutions' => $resolutions->toArray(),
             'pagination' => [
                 'current_page' => $expenses->currentPage(),
                 'last_page' => $expenses->lastPage(),
@@ -92,14 +90,15 @@
                 'total' => $expenses->total(),
             ],
             'routes' => [
-                'index' => route('expenses.index'),
-                'create' => route('expenses.create'),
-                'show' => route('expenses.show', ['expense' => '_ID_']),
-                'edit' => route('expenses.edit', ['expense' => '_ID_']),
-                'bulkDelete' => route('expenses.bulk-delete'),
+                'index' => route('expenses.association.index'),
+                'create' => route('expenses.association.create'),
+                'store' => route('expenses.association.store'),
+                'show' => route('expenses.association.show', ['expense' => '_ID_']),
+                'edit' => route('expenses.association.edit', ['expense' => '_ID_']),
+                'update' => route('expenses.association.update', ['expense' => '_ID_']),
+                'destroy' => route('expenses.association.destroy', ['expense' => '_ID_']),
             ],
             'csrfToken' => csrf_token(),
-            'canBulkDelete' => auth()->user()?->hasRole('president') ?? false,
         ]) }}"
     ></div>
 </div>

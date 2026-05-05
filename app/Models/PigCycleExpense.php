@@ -19,12 +19,23 @@ class PigCycleExpense extends Model
         'emergency',
     ];
 
+    public const FEED_SUBCATEGORIES = [
+        'pre_starter',
+        'starter',
+        'grower',
+        'finisher',
+    ];
+
     /**
      * @var list<string>
      */
     protected $fillable = [
         'batch_id',
         'withdrawal_id',
+        'item_name',
+        'supplier_id',
+        'receipt_reference',
+        'feed_subcategory',
         'category',
         'quantity',
         'unit',
@@ -76,6 +87,28 @@ class PigCycleExpense extends Model
         return self::categoryLabels()[$this->category] ?? ucfirst($this->category);
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public static function feedSubcategoryLabels(): array
+    {
+        return [
+            'pre_starter' => 'Pre-Starter',
+            'starter' => 'Starter',
+            'grower' => 'Grower',
+            'finisher' => 'Finisher',
+        ];
+    }
+
+    public function feedSubcategoryLabel(): string
+    {
+        if (! $this->feed_subcategory) {
+            return '';
+        }
+
+        return self::feedSubcategoryLabels()[$this->feed_subcategory] ?? ucfirst((string) $this->feed_subcategory);
+    }
+
     public function receiptUrl(): ?string
     {
         if (! is_string($this->receipt_path) || $this->receipt_path === '') {
@@ -111,5 +144,13 @@ class PigCycleExpense extends Model
     public function withdrawal(): BelongsTo
     {
         return $this->belongsTo(Withdrawal::class);
+    }
+
+    /**
+     * Supplier who provided the goods or services for this expense.
+     */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

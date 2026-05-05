@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\President\PresidentCycleHealthIncidentController;
 use App\Http\Controllers\President\PresidentCycleHealthTaskController;
+use App\Http\Controllers\Expense\AssociationExpenseController;
 use App\Http\Controllers\President\PresidentExpenseController;
 use App\Http\Controllers\President\PresidentHealthController;
 use App\Http\Controllers\President\PresidentPigBreederController;
@@ -150,6 +151,21 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
     // Expense Management Module
     Route::middleware(['role:president,treasurer,secretary'])->prefix('expenses')->name('expenses.')->group(function () {
+        // Association-level expenses (must be before {expense} wildcard routes)
+        Route::prefix('association')->name('association.')->group(function () {
+            Route::get('/', [AssociationExpenseController::class, 'index'])->name('index');
+            Route::get('/create', [AssociationExpenseController::class, 'create'])->name('create');
+            Route::post('/', [AssociationExpenseController::class, 'store'])->name('store');
+            Route::get('/{expense}', [AssociationExpenseController::class, 'show'])->name('show');
+            Route::get('/{expense}/edit', [AssociationExpenseController::class, 'edit'])->name('edit');
+            Route::put('/{expense}', [AssociationExpenseController::class, 'update'])->name('update');
+            Route::delete('/{expense}', [AssociationExpenseController::class, 'destroy'])->name('destroy');
+        });
+
+        // Combined "All Expenses" view
+        Route::get('/all', [AssociationExpenseController::class, 'all'])->name('all');
+
+        // Cycle expenses (existing)
         Route::get('/', [PresidentExpenseController::class, 'index'])->name('index');
         Route::get('/summary', [PresidentExpenseController::class, 'summary'])->name('summary');
         Route::get('/create', [PresidentExpenseController::class, 'create'])->name('create');

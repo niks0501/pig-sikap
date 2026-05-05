@@ -12,6 +12,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    feedSubcategories: {
+        type: Array,
+        default: () => [],
+    },
+    suppliers: {
+        type: Array,
+        default: () => [],
+    },
     selectedCycleId: {
         type: [Number, String],
         default: 0,
@@ -102,6 +110,10 @@ const initialBatchId = computed(() => {
 const form = reactive({
     batch_id: initialBatchId.value,
     category: String(props.oldInput.category ?? props.expense?.category ?? props.preferences.last_category ?? ''),
+    feed_subcategory: String(props.oldInput.feed_subcategory ?? props.expense?.feed_subcategory ?? ''),
+    item_name: String(props.oldInput.item_name ?? props.expense?.item_name ?? ''),
+    supplier_id: String(props.oldInput.supplier_id ?? props.expense?.supplier_id ?? ''),
+    receipt_reference: String(props.oldInput.receipt_reference ?? props.expense?.receipt_reference ?? ''),
     quantity: String(props.oldInput.quantity ?? props.expense?.quantity ?? ''),
     unit: String(props.oldInput.unit ?? props.expense?.unit ?? ''),
     unit_cost: String(props.oldInput.unit_cost ?? props.expense?.unit_cost ?? ''),
@@ -126,6 +138,14 @@ const structuredTotal = computed(() => {
 });
 
 const usesStructuredAmount = computed(() => structuredTotal.value > 0 && form.unit.trim() !== '');
+
+const showFeedSubcategory = computed(() => form.category === 'feed');
+
+watch(() => form.category, () => {
+    if (!showFeedSubcategory.value) {
+        form.feed_subcategory = '';
+    }
+});
 
 watch(structuredTotal, (total) => {
     if (total > 0) {
@@ -543,6 +563,70 @@ const handleToastAction = () => {
                         {{ fieldError('category') }}
                     </p>
                 </label>
+
+                <label v-if="showFeedSubcategory">
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Feed Subcategory *
+                        <span v-if="fieldReady('feed_subcategory')" class="ml-auto text-xs font-bold text-[#0c6d57]">Ready</span>
+                    </span>
+                    <select
+                        v-model="form.feed_subcategory"
+                        name="feed_subcategory"
+                        required
+                        :class="[
+                            'w-full rounded-xl border bg-white px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+                            fieldError('feed_subcategory')
+                                ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
+                                : 'border-gray-200 focus:border-[#0c6d57] focus:ring-[#0c6d57]/20',
+                        ]"
+                    >
+                        <option value="" disabled>Select feed stage...</option>
+                        <option v-for="fs in props.feedSubcategories" :key="fs" :value="fs">{{ fs.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-') }}</option>
+                    </select>
+                    <p v-if="fieldError('feed_subcategory')" class="mt-1.5 text-xs font-semibold text-rose-700">
+                        {{ fieldError('feed_subcategory') }}
+                    </p>
+                </label>
+
+                <label>
+                    <span class="mb-1.5 flex items-center gap-2 text-sm font-bold text-gray-700">
+                        Item Name
+                    </span>
+                    <input
+                        v-model="form.item_name"
+                        type="text"
+                        name="item_name"
+                        maxlength="255"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                        placeholder="e.g. Hog Grower Pellets 50kg"
+                    >
+                </label>
+
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <label>
+                        <span class="mb-1.5 text-sm font-bold text-gray-700">Supplier</span>
+                        <select
+                            v-model="form.supplier_id"
+                            name="supplier_id"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                        >
+                            <option value="">None</option>
+                            <option v-for="s in props.suppliers" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        <span class="mb-1.5 text-sm font-bold text-gray-700">Receipt Reference</span>
+                        <input
+                            v-model="form.receipt_reference"
+                            type="text"
+                            name="receipt_reference"
+                            maxlength="255"
+                            class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium focus:border-[#0c6d57] focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20"
+                            placeholder="Invoice/OR number"
+                        >
+                    </label>
+                </div>
 
                 <div class="sm:col-span-2 rounded-2xl border border-[#0c6d57]/20 bg-[#0c6d57]/5 p-4">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">

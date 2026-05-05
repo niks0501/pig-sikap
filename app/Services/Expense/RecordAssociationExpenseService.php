@@ -1,17 +1,16 @@
 <?php
 
-namespace App\Services\PigRegistry;
+namespace App\Services\Expense;
 
-use App\Models\PigCycle;
-use App\Models\PigCycleExpense;
+use App\Models\AssociationExpense;
 use App\Models\User;
+use App\Services\PigRegistry\ExpenseAmountResolver;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Throwable;
 
-class RecordPigCycleExpenseService
+class RecordAssociationExpenseService
 {
     public function __construct(
         private readonly ExpenseAmountResolver $expenseAmountResolver
@@ -20,49 +19,46 @@ class RecordPigCycleExpenseService
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function handle(array $payload, User $actor): PigCycleExpense
+    public function handle(array $payload, User $actor): AssociationExpense
     {
         $storedReceiptPath = null;
 
         try {
-            return DB::transaction(function () use ($payload, $actor, &$storedReceiptPath): PigCycleExpense {
-                $cycle = PigCycle::query()
-                    ->whereKey((int) $payload['batch_id'])
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                if ($cycle->isArchived()) {
-                    throw ValidationException::withMessages([
-                        'batch_id' => 'Archived cycles are final and cannot accept new expenses.',
-                    ]);
-                }
-
+            return DB::transaction(function () use ($payload, $actor, &$storedReceiptPath): AssociationExpense {
                 $receiptPath = null;
                 $receipt = $payload['receipt'] ?? null;
 
                 if ($receipt instanceof UploadedFile) {
-                    $receiptPath = $receipt->store('uploads/expenses', 'public');
+                    $receiptPath = $receipt->store('uploads/expenses/association', 'public');
                     $storedReceiptPath = $receiptPath;
                 }
 
-                $expense = PigCycleExpense::query()->create([
-                    'batch_id' => $cycle->id,
+                $expense = AssociationExpense::query()->create([
+                    'item_name' => (string) $payload['item_name'],
                     'category' => (string) $payload['category'],
                     'feed_subcategory' => $payload['feed_subcategory'] ?? null,
-                    'item_name' => $payload['item_name'] ?? null,
-                    'supplier_id' => $payload['supplier_id'] ?? null,
-                    'receipt_reference' => $payload['receipt_reference'] ?? null,
                     'quantity' => $payload['quantity'] ?? null,
                     'unit' => $payload['unit'] ?? null,
                     'unit_cost' => $payload['unit_cost'] ?? null,
                     'amount' => $this->expenseAmountResolver->amount($payload),
                     'expense_date' => (string) $payload['expense_date'],
-                    'notes' => (string) $payload['notes'],
+                    'receipt_reference' => $payload['receipt_reference'] ?? null,
                     'receipt_path' => $receiptPath,
+                    'supplier_id' => $payload['supplier_id'] ?? null,
+                    'canvass_id' => $payload['canvass_id'] ?? null,
+                    'fund_source' => $payload['fund_source'] ?? null,
+                    'approved_resolution_id' => $payload['approved_resolution_id'] ?? null,
+                    'withdrawal_id' => $payload['withdrawal_id'] ?? null,
+                    'notes' => (string) $payload['notes'],
                     'created_by' => $actor->id,
                 ]);
 
-                return $expense->load(['cycle:id,batch_code,status,stage', 'createdBy:id,name']);
+                return $expense->load([
+                    'supplier:id,name',
+                    'approvedResolution:id,title,resolution_number',
+                    'withdrawal:id,amount,status',
+                    'createdBy:id,name',
+                ]);
             });
         } catch (Throwable $exception) {
             if (is_string($storedReceiptPath) && $storedReceiptPath !== '') {
