@@ -91,7 +91,7 @@
                 </div>
             </main>
 
-            @if (request()->routeIs('health.*'))
+            @if (request()->routeIs('health.*') || request()->routeIs('reports.*'))
                 <x-health-floating-toast />
             @endif
         </div>

@@ -21,6 +21,7 @@ use App\Http\Controllers\President\PresidentProfitabilityReportController;
 use App\Http\Controllers\President\PresidentProfitabilitySnapshotController;
 use App\Http\Controllers\President\PresidentSaleReceiptController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\Workflow\DswdSubmissionController;
 use App\Http\Controllers\Workflow\MeetingController;
 use App\Http\Controllers\Workflow\ResolutionApprovalController;
@@ -301,17 +302,27 @@ Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::cla
     Route::get('/withdrawals/create', fn () => redirect()->route('workflow.resolutions.index'))->name('withdrawals.create');
 
     // Reports Module
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/', function () {
-            return view('reports.index');
-        })->name('index');
-        Route::get('/generate', function () {
-            return view('reports.generate');
-        })->name('generate');
-        Route::get('/{type}/preview', function ($type) {
-            return view('reports.preview', ['type' => $type]);
-        })->name('preview');
-    });
+    Route::middleware(['role:president,treasurer,secretary'])
+        ->prefix('reports')
+        ->name('reports.')
+        ->whereIn('type', ['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability'])
+        ->group(function () {
+            Route::get('/', [ReportsController::class, 'index'])->name('index');
+            Route::get('/{type}/generate', [ReportsController::class, 'generate'])->name('generate');
+            Route::get('/{type}/preview', [ReportsController::class, 'preview'])->name('preview');
+            Route::get('/{type}/pdf', [ReportsController::class, 'downloadPdf'])->name('pdf');
+            Route::get('/{type}/csv', [ReportsController::class, 'downloadCsv'])->name('csv');
+        });
+
+    Route::middleware(['role:president,treasurer'])
+        ->prefix('reports/schedules')
+        ->name('reports.schedules.')
+        ->group(function () {
+            Route::get('/', [\App\Http\Controllers\ReportSchedulesController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\ReportSchedulesController::class, 'store'])->name('store');
+            Route::put('/{schedule}', [\App\Http\Controllers\ReportSchedulesController::class, 'update'])->name('update');
+            Route::delete('/{schedule}', [\App\Http\Controllers\ReportSchedulesController::class, 'destroy'])->name('destroy');
+        });
 
     // Audit Trail Module
     Route::prefix('audit-trails')->name('audit-trails.')->group(function () {

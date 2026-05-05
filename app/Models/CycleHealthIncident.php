@@ -142,9 +142,13 @@ class CycleHealthIncident extends Model
         return in_array(self::normalizeIncidentType($incidentType), self::RESOLUTION_INCIDENT_TYPES, true);
     }
 
+    public function scopeDeceased($query)
+    {
+        return $query->where('incident_type', self::INCIDENT_TYPE_DECEASED);
+    }
+
     public static function requiresResolutionTarget(string $incidentType): bool
     {
         return self::normalizeIncidentType($incidentType) === self::INCIDENT_TYPE_RECOVERED;
     }
 }
-

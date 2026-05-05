@@ -12,7 +12,7 @@ const props = defineProps({
     },
     presets: {
         type: Array,
-        default: () => ['today', 'this_week', 'this_month'],
+        default: () => ['today', 'this_week', 'this_month', 'last_month', 'this_quarter', 'this_year'],
     },
     disabled: {
         type: Boolean,
@@ -49,6 +49,21 @@ const presetOptions = computed(() => {
         this_month: {
             label: 'This month',
             start: formatInputDate(startOfMonth),
+            end: formatInputDate(today),
+        },
+        last_month: {
+            label: 'Last month',
+            start: formatInputDate(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+            end: formatInputDate(new Date(today.getFullYear(), today.getMonth(), 0)),
+        },
+        this_quarter: {
+            label: 'This quarter',
+            start: formatInputDate(new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1)),
+            end: formatInputDate(today),
+        },
+        this_year: {
+            label: 'This year',
+            start: formatInputDate(new Date(today.getFullYear(), 0, 1)),
             end: formatInputDate(today),
         },
     };

@@ -69,6 +69,15 @@ import PenaltyList from './components/workflow/PenaltyList.vue';
 import PenaltyDetail from './components/workflow/PenaltyDetail.vue';
 import PolicySettingsForm from './components/workflow/PolicySettingsForm.vue';
 import AuthorizedWithdrawersPanel from './components/workflow/AuthorizedWithdrawersPanel.vue';
+import ReportCard from './components/reports/ReportCard.vue';
+import ReportFilterPanel from './components/reports/ReportFilterPanel.vue';
+import ReportGenerator from './components/reports/ReportGenerator.vue';
+import ReportPreviewInteractivity from './components/reports/ReportPreviewInteractivity.vue';
+import ReportSummaryCards from './components/reports/ReportSummaryCards.vue';
+import ReportTable from './components/reports/ReportTable.vue';
+import ExportButtons from './components/reports/ExportButtons.vue';
+import SignatureBlock from './components/reports/SignatureBlock.vue';
+import ReportCharts from './components/reports/ReportCharts.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -131,7 +140,16 @@ const componentRegistry = {
 'penalty-list': PenaltyList,
 'penalty-detail': PenaltyDetail,
 'policy-settings-form': PolicySettingsForm,
-'authorized-withdrawers-panel': AuthorizedWithdrawersPanel,
+  'authorized-withdrawers-panel': AuthorizedWithdrawersPanel,
+  'report-card': ReportCard,
+  'report-filter-panel': ReportFilterPanel,
+  'report-generator': ReportGenerator,
+  'report-preview-interactivity': ReportPreviewInteractivity,
+  'report-summary-cards': ReportSummaryCards,
+  'report-table': ReportTable,
+  'export-buttons': ExportButtons,
+  'signature-block': SignatureBlock,
+  'report-charts': ReportCharts,
 };
 
 document.addEventListener('DOMContentLoaded', () => {
