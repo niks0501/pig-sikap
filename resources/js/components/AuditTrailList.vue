@@ -130,7 +130,6 @@ const getActionIcon = (action) => {
                     <option value="all">All Roles</option>
                     <option value="Caretaker">Caretaker</option>
                     <option value="Manager">Manager</option>
-                    <option value="System Admin">System Admin</option>
                 </select>
             </div>
         </div>

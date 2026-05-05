@@ -87,4 +87,16 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasRole('system_admin');
     }
+
+    /**
+     * Scope to filter users available as caretakers.
+     * Excludes inactive users and system administrators.
+     */
+    public function scopeAvailableAsCaretaker($query): void
+    {
+        $query->where('is_active', true)
+            ->whereDoesntHave('role', function ($q): void {
+                $q->where('slug', 'system_admin');
+            });
+    }
 }

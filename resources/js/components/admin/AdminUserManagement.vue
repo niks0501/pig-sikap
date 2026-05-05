@@ -55,7 +55,7 @@ const form = reactive({
     generate_password: true,
 });
 
-const formattedRoles = computed(() => props.roles.map((role) => ({
+const formattedRoles = computed(() => props.roles.filter(role => role.slug !== 'system_admin').map((role) => ({
     id: role.id,
     name: role.name,
     slug: role.slug,

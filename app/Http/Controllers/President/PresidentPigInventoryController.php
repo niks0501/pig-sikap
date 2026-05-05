@@ -99,7 +99,7 @@ class PresidentPigInventoryController extends Controller
             'recentUpdates' => $recentUpdates,
             'stages' => PigCycle::STAGES,
             'statuses' => PigCycle::STATUSES,
-            'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'caretakers' => User::availableAsCaretaker()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -109,7 +109,7 @@ class PresidentPigInventoryController extends Controller
             'cycleCode' => $this->nextCycleCode(),
             'stages' => PigCycle::STAGES,
             'statuses' => PigCycle::STATUSES,
-            'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'caretakers' => User::availableAsCaretaker()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -168,7 +168,7 @@ class PresidentPigInventoryController extends Controller
             'cycle' => $cycle,
             'stages' => PigCycle::STAGES,
             'statuses' => PigCycle::STATUSES,
-            'caretakers' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'caretakers' => User::availableAsCaretaker()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
