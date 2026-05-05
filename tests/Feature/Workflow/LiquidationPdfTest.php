@@ -2,6 +2,7 @@
 
 use App\Models\LiquidationReport;
 use App\Models\Meeting;
+use App\Models\MeetingSignatory;
 use App\Models\Resolution;
 use App\Models\User;
 use App\Models\Withdrawal;
@@ -41,6 +42,13 @@ function makeLiquidationPdfWithdrawal(User $officer): Withdrawal
         'minutes_summary' => 'Members approved feed purchase.',
         'status' => 'confirmed',
         'created_by' => $officer->id,
+    ]);
+
+    // Add officer as present attendee (denominator for 75% threshold)
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $officer->id,
+        'attendance_status' => 'present',
     ]);
 
     $resolution = Resolution::create([

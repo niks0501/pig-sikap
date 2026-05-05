@@ -241,7 +241,24 @@ test('MemberSnapshotService takes snapshot', function () {
     $user2 = govMakeTestUser('member');
     $user3 = govMakeTestUser('member');
 
+    $meeting = Meeting::create([
+        'title' => 'Snapshot Test Meeting',
+        'date' => now()->subDay()->toDateString(),
+        'status' => 'confirmed',
+        'created_by' => $user1->id,
+    ]);
+
+    // Add 4 users as present attendees (denominator)
+    foreach ([$user1, $user2, $user3] as $u) {
+        MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $u->id,
+            'attendance_status' => 'present',
+        ]);
+    }
+
     $resolution = Resolution::factory()->create([
+        'meeting_id' => $meeting->id,
         'created_by' => $user1->id,
         'title' => 'Test Resolution',
     ]);
@@ -249,15 +266,34 @@ test('MemberSnapshotService takes snapshot', function () {
     $snapshot = app(MemberSnapshotService::class)->takeSnapshot($resolution);
 
     expect($snapshot)->toBeInstanceOf(ResolutionMemberSnapshot::class);
-    expect($snapshot->eligible_count)->toBe(4);
-    expect($snapshot->required_approvals)->toBe(3); // ceil(4 * 0.75) = 3
+    expect($snapshot->eligible_count)->toBe(3);
+    expect($snapshot->required_approvals)->toBe(3); // ceil(3 * 0.75) = 3
 });
 
 test('MemberSnapshotService is idempotent', function () {
     $user1 = govMakeTestUser('member');
     $user2 = govMakeTestUser('member');
 
+    $meeting = Meeting::create([
+        'title' => 'Idempotent Snapshot Meeting',
+        'date' => now()->subDay()->toDateString(),
+        'status' => 'confirmed',
+        'created_by' => $user1->id,
+    ]);
+
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $user1->id,
+        'attendance_status' => 'present',
+    ]);
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $user2->id,
+        'attendance_status' => 'present',
+    ]);
+
     $resolution = Resolution::factory()->create([
+        'meeting_id' => $meeting->id,
         'created_by' => $user1->id,
         'title' => 'Test Resolution',
     ]);

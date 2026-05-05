@@ -39,6 +39,8 @@ class ResolutionDocumentController extends Controller
                     'message' => 'Resolution PDF generated successfully.',
                     'file_path' => $result['file_path'],
                     'version' => $result['version'],
+                    'workflow_status' => $resolution->fresh()->workflow_status,
+                    'resolution_number' => $resolution->fresh()->resolution_number,
                     'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
                         'id' => $dv->id,
                         'version_number' => $dv->version_number,
@@ -87,6 +89,8 @@ class ResolutionDocumentController extends Controller
                     'message' => 'Editable DOCX draft created successfully.',
                     'file_path' => $result['file_path'],
                     'version' => $result['version'],
+                    'workflow_status' => $resolution->fresh()->workflow_status,
+                    'resolution_number' => $resolution->fresh()->resolution_number,
                     'documentVersions' => $resolution->documentVersions->map(fn ($dv) => [
                         'id' => $dv->id,
                         'version_number' => $dv->version_number,

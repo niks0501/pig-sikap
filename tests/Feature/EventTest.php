@@ -12,6 +12,7 @@ use App\Events\Workflow\ResolutionApproved;
 use App\Events\Workflow\ResolutionCreated;
 use App\Events\Workflow\WithdrawalCreated;
 use App\Models\Meeting;
+use App\Models\MeetingSignatory;
 use App\Models\Resolution;
 use App\Models\User;
 use App\Services\Workflow\ApprovalService;
@@ -46,12 +47,21 @@ function makeEventUser(string $roleSlug = 'secretary'): User
 
 function makeEventMeeting(User $user): Meeting
 {
-    return Meeting::create([
+    $meeting = Meeting::create([
         'title' => 'Event Test Meeting',
         'date' => now()->subDay()->toDateString(),
         'status' => 'confirmed',
         'created_by' => $user->id,
     ]);
+
+    // Add creator as present attendee
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $user->id,
+        'attendance_status' => 'present',
+    ]);
+
+    return $meeting;
 }
 
 // ── Tests ──
@@ -110,10 +120,17 @@ test('ResolutionApproved event does NOT fire when below threshold', function () 
         'created_by' => $user->id,
     ]);
 
-    // Create many users to dilute approval percentage
-    User::factory()->count(10)->create(['is_active' => true]);
+    // Create many users as meeting attendees to dilute approval percentage
+    $extraUsers = User::factory()->count(10)->create(['is_active' => true]);
+    foreach ($extraUsers as $eu) {
+        MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $eu->id,
+            'attendance_status' => 'present',
+        ]);
+    }
 
-    // Only 1 approved out of 11+ = well below 75%
+    // Only 1 approved out of 11 = well below 75%
     app(ApprovalService::class)->record($resolution, $user, true);
 
     Event::assertNotDispatched(ResolutionApproved::class);

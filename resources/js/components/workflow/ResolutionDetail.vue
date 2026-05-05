@@ -133,8 +133,11 @@ async function genPdf() {
     try {
         const r = await fetch(props.routes.generatePdf, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': props.csrfToken } })
         const d = await r.json()
-        if (r.ok) { docsList.value = d.documentVersions }
-        else { docError.value = d.message || 'Failed to generate PDF.' }
+        if (r.ok) {
+            docsList.value = d.documentVersions
+            if (d.workflow_status) res.workflow_status = d.workflow_status
+            if (d.resolution_number) res.resolution_number = d.resolution_number
+        } else { docError.value = d.message || 'Failed to generate PDF.' }
     } catch { docError.value = 'Network error while generating PDF.' }
     finally { generatingPdf.value = false }
 }
@@ -144,8 +147,11 @@ async function genDocx() {
     try {
         const r = await fetch(props.routes.generateDocx, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': props.csrfToken } })
         const d = await r.json()
-        if (r.ok) { docsList.value = d.documentVersions }
-        else { docError.value = d.message || 'Failed to generate DOCX.' }
+        if (r.ok) {
+            docsList.value = d.documentVersions
+            if (d.workflow_status) res.workflow_status = d.workflow_status
+            if (d.resolution_number) res.resolution_number = d.resolution_number
+        } else { docError.value = d.message || 'Failed to generate DOCX.' }
     } catch { docError.value = 'Network error while generating DOCX.' }
     finally { generatingDocx.value = false }
 }
@@ -162,6 +168,7 @@ async function uploadSigned() {
         const d = await r.json()
         if (r.ok) {
             docsList.value = d.documentVersions
+            if (d.workflow_status) res.workflow_status = d.workflow_status
             uploadSuccess.value = true
             signingFile.value = null
             sigSheetFile.value = null
@@ -346,10 +353,11 @@ onMounted(() => {
             :resolution-status="res.status"
             :dswd-status="dswdData?.status"
             :has-withdrawals="withdrawalsList.length > 0"
-            :has-liquidation-report="false"
+            :has-liquidation-report="withdrawalsList.some(w => w.has_report)"
             :approval-percentage="res.approval_percentage"
-            :total-members="totalMembers"
+            :total-members="props.totalMembers"
             :approved-count="res.approved_count"
+            :has-met-threshold="res.has_met_threshold"
         />
 
         <div class="flex items-center gap-4 text-xs text-gray-400 mt-4">

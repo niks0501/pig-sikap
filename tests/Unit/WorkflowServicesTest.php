@@ -8,6 +8,7 @@
 
 use App\Models\DswdSubmission;
 use App\Models\Meeting;
+use App\Models\MeetingSignatory;
 use App\Models\Resolution;
 use App\Models\ResolutionApproval;
 use App\Models\User;
@@ -52,12 +53,21 @@ function makeTestUser(string $roleSlug = 'secretary'): User
 
 function makeTestMeeting(User $user): Meeting
 {
-    return Meeting::create([
+    $meeting = Meeting::create([
         'title' => 'Test Meeting',
         'date' => now()->subDay()->toDateString(),
         'status' => 'confirmed',
         'created_by' => $user->id,
     ]);
+
+    // Add creator as a present attendee (denominator for 75% approval threshold)
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $user->id,
+        'attendance_status' => 'present',
+    ]);
+
+    return $meeting;
 }
 
 function makeTestResolution(Meeting $meeting, User $user): Resolution
@@ -173,10 +183,17 @@ test('ApprovalService does not advance if below threshold', function () {
     $resolution = makeTestResolution($meeting, $user);
     $resolution->update(['status' => 'pending_approval']);
 
-    // Create more users to dilute the percentage
-    User::factory()->count(5)->create(['is_active' => true]);
+    // Create more users as meeting attendees to dilute the percentage
+    $extraUsers = User::factory()->count(5)->create(['is_active' => true]);
+    foreach ($extraUsers as $eu) {
+        MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $eu->id,
+            'attendance_status' => 'present',
+        ]);
+    }
 
-    // Approve only 1 out of 6+ total = well below 75%
+    // Approve only 1 out of 6 present = well below 75%
     $service = app(ApprovalService::class);
     $service->record($resolution, $user, true);
 

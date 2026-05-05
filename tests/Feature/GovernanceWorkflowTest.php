@@ -190,14 +190,37 @@ test('Non-president cannot designate withdrawers', function () {
 test('Snapshot created and used for threshold', function () {
     $user = govFeatureLogin('president');
 
+    $members = collect();
     for ($i = 0; $i < 10; $i++) {
-        User::factory()->create([
+        $members->push(User::factory()->create([
             'role_id' => govFeatureMakeRole('member'),
             'is_active' => true,
+        ]));
+    }
+
+    $meeting = Meeting::create([
+        'title' => 'Snapshot Test Meeting',
+        'date' => now()->subDay()->toDateString(),
+        'status' => 'confirmed',
+        'created_by' => $user->id,
+    ]);
+
+    // Add all 11 (user + 10 members) as present attendees
+    MeetingSignatory::create([
+        'meeting_id' => $meeting->id,
+        'user_id' => $user->id,
+        'attendance_status' => 'present',
+    ]);
+    foreach ($members as $m) {
+        MeetingSignatory::create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $m->id,
+            'attendance_status' => 'present',
         ]);
     }
 
     $resolution = Resolution::factory()->create([
+        'meeting_id' => $meeting->id,
         'created_by' => $user->id,
         'title' => 'Snapshot Test',
     ]);
@@ -210,8 +233,8 @@ test('Snapshot created and used for threshold', function () {
 
     // Create enough approvals to meet the threshold
     $needed = $snapshot->required_approvals;
-    $members = User::where('is_active', true)->where('id', '!=', $user->id)->take($needed)->get();
-    foreach ($members as $member) {
+    $approvalCandidates = $members->take($needed);
+    foreach ($approvalCandidates as $member) {
         ResolutionApproval::create([
             'resolution_id' => $resolution->id,
             'user_id' => $member->id,
