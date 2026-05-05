@@ -107,7 +107,7 @@ class ReportSchedulesController extends Controller
     private function nextRunAt(array $payload): ?\Illuminate\Support\Carbon
     {
         $runAt = $payload['run_at'] ?? '08:00:00';
-        $day = $payload['day_of_month'] ?? 1;
+        $day = (int) ($payload['day_of_month'] ?? 1);
         $frequency = $payload['frequency'] ?? 'monthly';
 
         if ($frequency === 'monthly') {
