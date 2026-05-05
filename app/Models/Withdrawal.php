@@ -23,6 +23,7 @@ class Withdrawal extends Model
     protected $fillable = [
         'resolution_id',
         'requested_by',
+        'authorized_withdrawer_id',
         'amount',
         'currency',
         'bank_account',
@@ -55,6 +56,14 @@ class Withdrawal extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /**
+     * The authorized withdrawer who executed this withdrawal (if any).
+     */
+    public function authorizedWithdrawer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'authorized_withdrawer_id');
     }
 
     /**

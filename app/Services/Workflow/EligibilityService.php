@@ -3,10 +3,13 @@
 namespace App\Services\Workflow;
 
 use App\Models\Resolution;
+use App\Models\ResolutionWithdrawalAuthorization;
+use App\Models\User;
 
 /**
  * Checks whether a resolution is eligible for withdrawal.
- * Enforces both the 75% approval threshold and DSWD approval.
+ * Enforces the 75% approval threshold, DSWD approval, and
+ * authorized withdrawer rules.
  */
 class EligibilityService
 {
@@ -46,5 +49,38 @@ class EligibilityService
             'eligible' => empty($reasons),
             'reasons' => $reasons,
         ];
+    }
+
+    /**
+     * Check if a user is authorized to withdraw for this resolution.
+     *
+     * @return array{authorized: bool, reason: ?string}
+     */
+    public function canUserWithdraw(Resolution $resolution, User $user): array
+    {
+        // Check if any authorizations exist for this resolution
+        $authorizationsExist = ResolutionWithdrawalAuthorization::where('resolution_id', $resolution->id)
+            ->whereNull('revoked_at')
+            ->exists();
+
+        // If no authorizations, fallback to existing behavior
+        if (! $authorizationsExist) {
+            return ['authorized' => true, 'reason' => null];
+        }
+
+        // Check if this user is in the authorized list (and not revoked)
+        $authorization = ResolutionWithdrawalAuthorization::where('resolution_id', $resolution->id)
+            ->where('user_id', $user->id)
+            ->whereNull('revoked_at')
+            ->first();
+
+        if (! $authorization) {
+            return [
+                'authorized' => false,
+                'reason' => 'You are not authorized to withdraw for this resolution. Only designated members can withdraw.',
+            ];
+        }
+
+        return ['authorized' => true, 'reason' => null];
     }
 }

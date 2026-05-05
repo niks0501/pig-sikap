@@ -96,4 +96,35 @@ class ResolutionPolicy
             in_array($user->role->slug, ['treasurer', 'president', 'system_admin']) &&
             $resolution->workflow_status === 'dswd_approved';
     }
+
+    /**
+     * Can manage canvass records for this resolution.
+     */
+    public function manageCanvass(User $user, Resolution $resolution): bool
+    {
+        return $user->is_active &&
+            in_array($user->role->slug, ['president', 'secretary', 'treasurer', 'system_admin']);
+    }
+
+    /**
+     * Can designate withdrawers for this resolution (president/admin only).
+     */
+    public function designateWithdrawers(User $user, Resolution $resolution): bool
+    {
+        return $user->is_active &&
+            in_array($user->role->slug, ['president', 'system_admin']);
+    }
+
+    /**
+     * Can record approvals (must not be locked).
+     */
+    public function recordApproval(User $user, Resolution $resolution): bool
+    {
+        if ($resolution->is_approval_locked) {
+            return false;
+        }
+
+        return $user->is_active &&
+            in_array($user->role->slug, ['president', 'secretary', 'system_admin']);
+    }
 }

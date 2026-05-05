@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Resolution model – represents a formal resolution
@@ -63,6 +64,7 @@ class Resolution extends Model
         'resolution_number_assigned_at',
         'status',
         'approval_deadline',
+        'is_approval_locked',
         'created_by',
         'updated_by',
     ];
@@ -76,6 +78,7 @@ class Resolution extends Model
             'approval_deadline' => 'date',
             'signature_verified_at' => 'datetime',
             'resolution_number_assigned_at' => 'datetime',
+            'is_approval_locked' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -86,6 +89,39 @@ class Resolution extends Model
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);
+    }
+
+    /**
+     * Immutable member snapshot at approval time.
+     */
+    public function memberSnapshot(): HasOne
+    {
+        return $this->hasOne(ResolutionMemberSnapshot::class);
+    }
+
+    /**
+     * Authorized withdrawers designated by the president.
+     */
+    public function withdrawalAuthorizations(): HasMany
+    {
+        return $this->hasMany(ResolutionWithdrawalAuthorization::class);
+    }
+
+    /**
+     * Active (non-revoked) authorized withdrawers.
+     */
+    public function activeWithdrawalAuthorizations(): HasMany
+    {
+        return $this->hasMany(ResolutionWithdrawalAuthorization::class)
+            ->whereNull('revoked_at');
+    }
+
+    /**
+     * Canvass records linked to this resolution.
+     */
+    public function canvasses(): HasMany
+    {
+        return $this->hasMany(Canvass::class);
     }
 
     public function creator(): BelongsTo
@@ -173,11 +209,17 @@ class Resolution extends Model
     }
 
     /**
-     * Compute approval percentage (signed / total active members × 100).
+     * Compute approval percentage (approved / eligible members × 100).
+     * Uses the member snapshot if available, otherwise falls back
+     * to live User::count() for backward compatibility.
      */
     public function getApprovalPercentageAttribute(): float
     {
-        $totalMembers = User::where('is_active', true)->count();
+        $snapshot = $this->relationLoaded('memberSnapshot')
+            ? $this->memberSnapshot
+            : $this->memberSnapshot()->first();
+
+        $totalMembers = $snapshot ? $snapshot->eligible_count : User::where('is_active', true)->count();
 
         if ($totalMembers === 0) {
             return 0;
@@ -198,9 +240,18 @@ class Resolution extends Model
 
     /**
      * Whether approval threshold has been met.
+     * Checks from snapshot if available, otherwise uses live threshold.
      */
     public function hasMetApprovalThreshold(): bool
     {
+        $snapshot = $this->relationLoaded('memberSnapshot')
+            ? $this->memberSnapshot
+            : $this->memberSnapshot()->first();
+
+        if ($snapshot) {
+            return $this->approved_count >= $snapshot->required_approvals;
+        }
+
         return $this->approval_percentage >= self::APPROVAL_THRESHOLD;
     }
 

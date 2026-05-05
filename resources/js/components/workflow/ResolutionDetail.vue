@@ -4,6 +4,7 @@
  * All mutations update local reactive state (no page reloads).
  */
 import { ref, reactive, computed, onMounted } from 'vue'
+import AuthorizedWithdrawersPanel from './AuthorizedWithdrawersPanel.vue'
 
 const props = defineProps({
     resolution: { type: Object, required: true },
@@ -19,6 +20,9 @@ const props = defineProps({
     csrfToken: { type: String, default: '' },
     documentVersions: { type: Array, default: () => [] },
     permissions: { type: Object, default: () => ({}) },
+    memberSnapshot: { type: Object, default: null },
+    authorizedWithdrawers: { type: Array, default: () => [] },
+    availableMembers: { type: Array, default: () => [] },
 })
 
 // ── Reactive state (initialized from props, updated after mutations) ──
@@ -37,6 +41,7 @@ const tabs = [
     { id: 'approvals', label: 'Approvals', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
     { id: 'dswd', label: 'DSWD', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { id: 'withdrawals', label: 'Withdrawals', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' },
+    { id: 'authorized', label: 'Authorized', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
 ]
 
 // ── Approval state ──
@@ -421,7 +426,11 @@ onMounted(() => {
                     <div v-if="latestPdf" class="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-gray-100">
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="text-red-500 shrink-0">📕</span>
-                            <div class="min-w-0"><p class="text-sm font-medium text-gray-900 truncate">Resolution PDF (v{{ latestPdf.version_number }})</p><p class="text-xs text-gray-400">{{ latestPdf.formatted_file_size }} · {{ latestPdf.generated_at }}</p></div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Resolution PDF (v{{ latestPdf.version_number }})</p>
+                                <p class="text-xs text-gray-400">{{ latestPdf.formatted_file_size }} · {{ latestPdf.generated_at }}</p>
+                            </div>
+                            <span v-if="latestPdf.document_type === 'dswd_approval' || latestPdf.document_type === 'signed_resolution'" class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border border-gray-200 shrink-0">🔒 Private</span>
                         </div>
                         <a v-if="latestPdf.file_url" :href="latestPdf.file_url" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-[#0c6d57] bg-emerald-50 rounded-lg hover:bg-emerald-100 min-h-[36px]">View</a>
                     </div>
@@ -451,7 +460,11 @@ onMounted(() => {
                     <div v-for="doc in signedVersions" :key="doc.id" class="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-gray-100">
                         <div class="flex items-center gap-2 min-w-0">
                             <span class="text-emerald-500 shrink-0">✅</span>
-                            <div class="min-w-0"><p class="text-sm font-medium text-gray-900 truncate">Signed Resolution (v{{ doc.version_number }})</p><p class="text-xs text-gray-400">{{ doc.formatted_file_size }} · {{ doc.generated_at }}</p></div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Signed Resolution (v{{ doc.version_number }})</p>
+                                <p class="text-xs text-gray-400">{{ doc.formatted_file_size }} · {{ doc.generated_at }}</p>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 border border-gray-200 shrink-0">🔒 Private</span>
                         </div>
                         <a v-if="doc.file_url" :href="doc.file_url" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-[#0c6d57] bg-emerald-50 rounded-lg hover:bg-emerald-100 min-h-[36px]">View</a>
                     </div>
@@ -496,9 +509,33 @@ onMounted(() => {
 
     <!-- Tab: Approvals -->
     <div v-show="activeTab === 'approvals'" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <!-- Snapshot info card -->
+        <div v-if="memberSnapshot" class="mb-6 rounded-xl border px-4 py-3"
+            :class="res.is_approval_locked ? 'border-gray-200 bg-gray-50' : 'border-blue-200 bg-blue-50'">
+            <div class="flex items-center gap-2">
+                <span>📸</span>
+                <div>
+                    <p class="text-sm font-semibold" :class="res.is_approval_locked ? 'text-gray-700' : 'text-blue-800'">
+                        Member Snapshot
+                        <span v-if="res.is_approval_locked" class="text-xs text-gray-500">(Frozen)</span>
+                    </p>
+                    <p class="text-xs" :class="res.is_approval_locked ? 'text-gray-500' : 'text-blue-600'">
+                        {{ memberSnapshot.eligible_count }} eligible members · {{ memberSnapshot.required_approvals }} required approvals (75%)
+                    </p>
+                    <p class="text-xs" :class="res.is_approval_locked ? 'text-gray-400' : 'text-blue-400'">
+                        Taken {{ memberSnapshot.snapshot_taken_at }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="res.is_approval_locked" class="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 flex items-center gap-2">
+            <span>🔒</span> Approval changes are locked. This resolution has DSWD approval or has withdrawals.
+        </div>
+
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Member Approval</h2>
-            <button v-if="!['finalized','withdrawn'].includes(res.status)" @click="showApprovalPanel = !showApprovalPanel; if(showApprovalPanel && members.length === 0) loadApprovalData()"
+            <button v-if="!['finalized','withdrawn'].includes(res.status) && !res.is_approval_locked" @click="showApprovalPanel = !showApprovalPanel; if(showApprovalPanel && members.length === 0) loadApprovalData()"
                 class="px-4 py-2 bg-[#0c6d57] text-white text-sm font-semibold rounded-xl hover:bg-[#0a5a48] transition-colors min-h-[44px]">
                 {{ showApprovalPanel ? 'Close' : 'Record Signatures' }}
             </button>
@@ -585,6 +622,10 @@ onMounted(() => {
         </div>
 
         <!-- DSWD document versions -->
+        <div v-if="res.is_approval_locked" class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 flex items-center gap-2">
+            <span>🔒</span> Document workflow is frozen. Approvals and document changes are locked.
+        </div>
+
         <div v-if="dswdDocVersions.length > 0" class="mt-4 border-t border-gray-200 pt-4">
             <h3 class="text-sm font-semibold text-gray-900 mb-2">🏛️ DSWD Approval Documents</h3>
             <div v-for="doc in dswdDocVersions" :key="doc.id" class="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-gray-100 mb-2">
@@ -595,6 +636,24 @@ onMounted(() => {
                 <a v-if="doc.file_url" :href="doc.file_url" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-[#0c6d57] bg-emerald-50 rounded-lg hover:bg-emerald-100 min-h-[36px]">View</a>
             </div>
         </div>
+    </div>
+
+    <!-- Tab: Authorized -->
+    <div v-show="activeTab === 'authorized'" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Authorized Withdrawers</h2>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">Designate members who can execute withdrawals for this resolution. If no one is designated, existing behavior applies (treasurer/president).</p>
+        <div v-if="permissions.canDesignateWithdrawers">
+            <AuthorizedWithdrawersPanel
+                :authorizedWithdrawers="authorizedWithdrawers"
+                :availableMembers="availableMembers"
+                :routes="{ authorizedWithdrawersStore: routes.authorizedWithdrawersStore, authorizedWithdrawersRevoke: routes.authorizedWithdrawersRevoke }"
+                :csrfToken="csrfToken"
+                @updated="() => {}"
+            />
+        </div>
+        <div v-else class="text-sm text-gray-500">Only the president can manage authorized withdrawers.</div>
     </div>
 
     <!-- Tab: Withdrawals -->

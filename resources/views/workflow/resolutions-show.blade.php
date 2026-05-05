@@ -25,7 +25,17 @@
             'canUploadSigned' => $user->can('uploadSignedDocument', $resolution),
             'canVerifyApproval' => $user->can('verifyApprovalThreshold', $resolution),
             'canUploadDswd' => $user->can('uploadDswdApproval', $resolution),
+            'canDesignateWithdrawers' => $user->can('designateWithdrawers', $resolution),
+            'canManageCanvass' => $user->can('manageCanvass', $resolution),
+            'canRecordApproval' => $user->can('recordApproval', $resolution),
         ];
+
+        $memberSnapshot = $resolution->memberSnapshot;
+        $authorizations = $resolution->activeWithdrawalAuthorizations()->with('user')->get();
+        $availableMembers = \App\Models\User::where('is_active', true)
+            ->whereNotIn('id', $authorizations->pluck('user_id'))
+            ->orderBy('name')
+            ->get();
     @endphp
 
     <div
@@ -50,6 +60,7 @@
                 'total_members' => $totalMembers,
                 'creator_name' => $resolution->creator?->name,
                 'created_at' => $resolution->created_at?->format('M d, Y h:i A'),
+                'is_approval_locked' => $resolution->is_approval_locked,
             ],
             'meeting' => $resolution->meeting ? [
                 'id' => $resolution->meeting->id,
@@ -108,6 +119,21 @@
                 'generated_by' => $dv->generatedBy?->name,
                 'description' => $dv->description,
             ])->values(),
+            'memberSnapshot' => $memberSnapshot ? [
+                'eligible_count' => $memberSnapshot->eligible_count,
+                'required_approvals' => $memberSnapshot->required_approvals,
+                'snapshot_taken_at' => $memberSnapshot->snapshot_taken_at->format('M d, Y h:i A'),
+            ] : null,
+            'authorizedWithdrawers' => $authorizations->map(fn ($a) => [
+                'id' => $a->id,
+                'user_id' => $a->user_id,
+                'user_name' => $a->user?->name,
+                'designated_at' => $a->designated_at->format('M d, Y'),
+            ])->values(),
+            'availableMembers' => $availableMembers->map(fn ($m) => [
+                'id' => $m->id,
+                'name' => $m->name,
+            ])->values(),
             'permissions' => $permissions,
             'totalMembers' => $totalMembers,
             'eligibility' => $eligibility,
@@ -124,6 +150,9 @@
                 'uploadSigned' => route('workflow.resolutions.upload-signed', $resolution),
                 'verifyApprovals' => route('workflow.resolutions.verify-approvals', $resolution),
                 'uploadDswd' => route('workflow.resolutions.upload-dswd-approval', $resolution),
+                'authorizedWithdrawersData' => route('workflow.resolutions.authorized-withdrawers.index', $resolution),
+                'authorizedWithdrawersStore' => route('workflow.resolutions.authorized-withdrawers.store', $resolution),
+                'authorizedWithdrawersRevoke' => route('workflow.resolutions.authorized-withdrawers.revoke', ['resolution' => $resolution, 'authorization' => '__AUTH__']),
             ],
             'csrfToken' => csrf_token(),
         ]) }}"

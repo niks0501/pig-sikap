@@ -9,11 +9,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * Manages workflow state transitions for resolutions,
  * enforcing sequential steps and validation rules.
+ * Enhanced with member snapshot creation and approval locking.
  */
 class WorkflowTransitionService
 {
     public function __construct(
-        private readonly DocumentStorageService $storageService
+        private readonly DocumentStorageService $storageService,
+        private readonly MemberSnapshotService $snapshotService
     ) {}
 
     /**
@@ -84,6 +86,25 @@ class WorkflowTransitionService
     }
 
     /**
+     * Transition to pending_member_approval – takes a member snapshot.
+     */
+    public function transitionToPendingApproval(Resolution $resolution): void
+    {
+        $this->assertCurrentStatus($resolution, ['signature_sheet_uploaded']);
+
+        DB::transaction(function () use ($resolution) {
+            // Take immutable snapshot of active members
+            $this->snapshotService->takeSnapshot($resolution);
+
+            $resolution->update(['workflow_status' => 'pending_member_approval']);
+
+            $this->logAudit('resolution_pending_member_approval', $resolution, [
+                'snapshot_taken' => true,
+            ]);
+        });
+    }
+
+    /**
      * Verify that the 75% approval threshold has been met.
      *
      * @throws \RuntimeException
@@ -123,7 +144,7 @@ class WorkflowTransitionService
     }
 
     /**
-     * Upload DSWD approval document.
+     * Upload DSWD approval document and lock approvals.
      *
      * @param  array<string, mixed>  $data
      */
@@ -139,9 +160,11 @@ class WorkflowTransitionService
                 $data['approval_notes'] ?? null
             );
 
+            // Lock approval changes when DSWD approves
             $resolution->update([
                 'dswd_approval_file_path' => $filePath,
                 'workflow_status' => 'dswd_approved',
+                'is_approval_locked' => true,
             ]);
 
             $this->logAudit('dswd_approval_uploaded', $resolution, [

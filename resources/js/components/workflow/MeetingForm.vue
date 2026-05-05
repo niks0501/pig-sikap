@@ -16,6 +16,9 @@ const form = ref({
     status: 'draft',
 })
 
+const showPenaltyPreview = ref(false)
+const applyPenalties = ref(true)
+
 const minutesFile = ref(null)
 const attendees = ref(props.members.map(m => ({
     user_id: m.id, name: m.name, role: m.role, attendance_status: 'present',
@@ -24,6 +27,10 @@ const submitting = ref(false)
 const errors = ref({})
 
 const presentCount = computed(() => attendees.value.filter(a => a.attendance_status === 'present').length)
+
+const absentMembers = computed(() => attendees.value.filter(a => a.attendance_status === 'absent'))
+const penaltyAmount = 50 // Placeholder – in production, fetch from PolicyService
+const totalPenaltyAmount = computed(() => absentMembers.value.length * penaltyAmount)
 
 function toggleAttendance(a) {
     const s = ['present', 'absent', 'excused']
@@ -130,6 +137,27 @@ const badge = { present: 'bg-emerald-100 text-emerald-700', absent: 'bg-rose-100
             <svg v-if="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             {{ submitting ? 'Saving...' : 'Save Meeting' }}
         </button>
+    </div>
+
+    <!-- Penalty Preview Panel -->
+    <div v-if="form.status === 'confirmed' && absentMembers.length > 0" class="rounded-xl border-2 border-amber-300 bg-amber-50/50 p-6">
+        <h3 class="text-sm font-semibold text-amber-800 mb-2">⚠️ Attendance Penalty Preview</h3>
+        <p class="text-xs text-amber-700 mb-3">{{ absentMembers.length }} absent member(s) will receive a penalty of ₱{{ penaltyAmount }} each (₱{{ totalPenaltyAmount }} total).</p>
+        <div class="space-y-1 mb-4">
+            <div v-for="a in absentMembers" :key="a.user_id" class="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-lg">
+                <span class="text-xs font-medium text-gray-900">{{ a.name }}</span>
+                <span class="text-xs text-amber-600">₱{{ penaltyAmount }}</span>
+            </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" v-model="applyPenalties" class="rounded border-gray-300" />
+            Auto-apply penalties on save
+        </label>
+        <div class="flex gap-2 mt-3">
+            <button type="submit" :disabled="submitting" class="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700 min-h-[44px]">
+                {{ submitting ? 'Saving...' : 'Confirm & Apply Penalties' }}
+            </button>
+        </div>
     </div>
 </form>
 </template>

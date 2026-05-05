@@ -8,7 +8,9 @@ const props = defineProps({
         validator: (value) => [
             'default', 'success', 'warning', 'danger', 'info',
             'paid', 'partial', 'pending', 'active', 'archived',
-            'sick', 'isolated', 'recovered', 'deceased'
+            'sick', 'isolated', 'recovered', 'deceased',
+            'draft', 'in_progress', 'awarded', 'cancelled',
+            'waived',
         ].includes(value),
     },
     size: {

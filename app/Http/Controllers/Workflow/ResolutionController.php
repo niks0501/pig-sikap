@@ -123,6 +123,8 @@ class ResolutionController extends Controller
             'withdrawals.requester:id,name',
             'withdrawals.liquidationReport',
             'documentVersions.generatedBy:id,name',
+            'memberSnapshot',
+            'activeWithdrawalAuthorizations.user:id,name',
         ]);
 
         $eligibility = $this->eligibilityService->canWithdraw($resolution);

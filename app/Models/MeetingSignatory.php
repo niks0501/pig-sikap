@@ -22,7 +22,15 @@ class MeetingSignatory extends Model
         'meeting_id',
         'user_id',
         'attendance_status',
+        'penalty_applied',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'penalty_applied' => 'boolean',
+        ];
+    }
 
     // ─── Relationships ────────────────────────────────────────
 

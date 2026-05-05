@@ -61,6 +61,14 @@ import FileUpload from './components/workflow/FileUpload.vue';
 import WithdrawalForm from './components/workflow/WithdrawalForm.vue';
 import DocumentUploadForm from './components/documents/DocumentUploadForm.vue';
 import DocumentReviewList from './components/documents/DocumentReviewList.vue';
+import CanvassList from './components/workflow/CanvassList.vue';
+import CanvassForm from './components/workflow/CanvassForm.vue';
+import CanvassDetail from './components/workflow/CanvassDetail.vue';
+import SupplierList from './components/workflow/SupplierList.vue';
+import PenaltyList from './components/workflow/PenaltyList.vue';
+import PenaltyDetail from './components/workflow/PenaltyDetail.vue';
+import PolicySettingsForm from './components/workflow/PolicySettingsForm.vue';
+import AuthorizedWithdrawersPanel from './components/workflow/AuthorizedWithdrawersPanel.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -116,6 +124,14 @@ const componentRegistry = {
     'withdrawal-form': WithdrawalForm,
 'document-upload-form': DocumentUploadForm,
 'document-review-list': DocumentReviewList,
+'canvass-list': CanvassList,
+'canvass-form': CanvassForm,
+'canvass-detail': CanvassDetail,
+'supplier-list': SupplierList,
+'penalty-list': PenaltyList,
+'penalty-detail': PenaltyDetail,
+'policy-settings-form': PolicySettingsForm,
+'authorized-withdrawers-panel': AuthorizedWithdrawersPanel,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

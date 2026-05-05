@@ -233,14 +233,49 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
             return response()->json($summary);
 })->name('dashboard.summary');
 
+// ── Governance Improvements: Canvassing, Suppliers, Penalties ───────
+        Route::prefix('canvasses')->name('canvasses.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Workflow\CanvassController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'store'])->name('store');
+            Route::get('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'show'])->name('show');
+            Route::get('/{canvass}/edit', [\App\Http\Controllers\Workflow\CanvassController::class, 'edit'])->name('edit');
+            Route::put('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'update'])->name('update');
+            Route::delete('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'destroy'])->name('destroy');
+            Route::patch('/{canvass}/items/{item}/select', [\App\Http\Controllers\Workflow\CanvassController::class, 'selectItem'])->name('items.select');
+        });
+
+        Route::prefix('suppliers')->name('suppliers.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'store'])->name('store');
+            Route::put('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'update'])->name('update');
+            Route::delete('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('penalties')->name('penalties.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Workflow\PenaltyController::class, 'index'])->name('index');
+            Route::get('/member/{user}', [\App\Http\Controllers\Workflow\PenaltyController::class, 'byMember'])->name('by-member');
+            Route::patch('/{penalty}/waive', [\App\Http\Controllers\Workflow\PenaltyController::class, 'waive'])->name('waive');
+            Route::patch('/{penalty}/pay', [\App\Http\Controllers\Workflow\PenaltyController::class, 'markPaid'])->name('pay');
+        });
+
+        // Authorized Withdrawers
+        Route::post('/resolutions/{resolution}/authorized-withdrawers', [\App\Http\Controllers\Workflow\WithdrawalAuthorizationController::class, 'store'])->name('resolutions.authorized-withdrawers.store');
+        Route::delete('/resolutions/{resolution}/authorized-withdrawers/{authorization}', [\App\Http\Controllers\Workflow\WithdrawalAuthorizationController::class, 'revoke'])->name('resolutions.authorized-withdrawers.revoke');
+        Route::get('/resolutions/{resolution}/authorized-withdrawers', [\App\Http\Controllers\Workflow\WithdrawalAuthorizationController::class, 'index'])->name('resolutions.authorized-withdrawers.index');
+
+        // Policy Settings (president/admin only)
+        Route::middleware(['role:president,system_admin'])->group(function () {
+            Route::get('/association-settings', [\App\Http\Controllers\Workflow\AssociationPolicyController::class, 'index'])->name('settings.index');
+            Route::put('/association-settings', [\App\Http\Controllers\Workflow\AssociationPolicyController::class, 'update'])->name('settings.update');
+        });
+
 // Document management routes
 Route::middleware(['role:president,secretary,treasurer'])->prefix('documents')->name('documents.')->group(function () {
-    // Page routes must be defined before the catch-all {documentUpload} route
     Route::get('/upload', [DocumentPageController::class, 'upload'])->name('page.upload');
     Route::get('/review', [DocumentPageController::class, 'review'])->name('page.review');
     Route::get('/types', [DocumentPageController::class, 'manageTypes'])->name('page.types');
 
-    // API routes
     Route::get('/', [DocumentUploadController::class, 'index'])->name('index');
     Route::get('/summary', [DocumentUploadController::class, 'summary'])->name('summary');
     Route::post('/upload', [DocumentUploadController::class, 'store'])->name('upload');
@@ -260,7 +295,7 @@ Route::middleware(['role:president,system_admin'])->prefix('admin/document-types
 Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.list');
 });
 
-    // Legacy route redirects for sidebar compatibility
+        // Legacy route redirects for sidebar compatibility
     Route::get('/resolutions', fn () => redirect()->route('workflow.resolutions.index'))->name('resolutions.index');
     Route::get('/minutes', fn () => redirect()->route('workflow.meetings.index'))->name('minutes.index');
     Route::get('/withdrawals/create', fn () => redirect()->route('workflow.resolutions.index'))->name('withdrawals.create');
