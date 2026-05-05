@@ -38,6 +38,10 @@ class MortalityReportService
 
         $byCause = $incidents->groupBy('suspected_cause')->map(fn ($items) => (int) $items->sum('affected_count'));
 
+        $causeCount = $byCause->count();
+        $redPalette = ['#dc2626', '#f87171', '#fca5a5', '#fecaca', '#ef4444', '#b91c1c', '#e04444', '#f58282', '#fdb0b0', '#feded4'];
+        $pieColors = array_slice($redPalette, 0, max($causeCount, 1));
+
         return [
             'summary' => [
                 'total_cases' => $incidents->count(),
@@ -49,7 +53,7 @@ class MortalityReportService
                     'labels' => $byCause->keys()->map(fn ($c) => $c ?: 'Unknown')->values()->all(),
                     'datasets' => [[
                         'data' => $byCause->values()->all(),
-                        'backgroundColor' => ['#dc2626', '#f87171', '#fca5a5', '#fecaca', '#ef4444'],
+                        'backgroundColor' => $pieColors,
                     ]],
                 ],
             ],

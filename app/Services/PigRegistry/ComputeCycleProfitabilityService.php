@@ -20,10 +20,10 @@ class ComputeCycleProfitabilityService
      *
      * @return array<string, mixed>
      */
-    public function compute(PigCycle $cycle): array
+    public function compute(PigCycle $cycle, ?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $salesData = $this->salesSummary($cycle);
-        $expenseBreakdown = $this->expenseBreakdown($cycle);
+        $salesData = $this->salesSummary($cycle, $dateFrom, $dateTo);
+        $expenseBreakdown = $this->expenseBreakdown($cycle, $dateFrom, $dateTo);
         $totalExpenses = round(array_sum($expenseBreakdown), 2);
         $totalSales = $salesData['total_sales'];
         $totalCollected = $salesData['total_collected'];
@@ -68,9 +68,15 @@ class ComputeCycleProfitabilityService
     /**
      * @return array<string, mixed>
      */
-    public function salesSummary(PigCycle $cycle): array
+    public function salesSummary(PigCycle $cycle, ?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $sales = $cycle->sales()->get();
+        $salesQuery = $cycle->sales();
+
+        if ($dateFrom && $dateTo) {
+            $salesQuery->whereBetween('sale_date', [$dateFrom, $dateTo]);
+        }
+
+        $sales = $salesQuery->get();
 
         $totalSales = round((float) $sales->sum('amount'), 2);
         $totalCollected = round((float) $sales->sum('amount_paid'), 2);
@@ -121,9 +127,15 @@ class ComputeCycleProfitabilityService
     /**
      * @return array<string, float>
      */
-    public function expenseBreakdown(PigCycle $cycle): array
+    public function expenseBreakdown(PigCycle $cycle, ?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $grouped = $cycle->expenses()
+        $query = $cycle->expenses();
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('expense_date', [$dateFrom, $dateTo]);
+        }
+
+        $grouped = $query
             ->select('category', DB::raw('SUM(amount) as total'))
             ->groupBy('category')
             ->pluck('total', 'category');

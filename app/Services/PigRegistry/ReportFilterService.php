@@ -3,6 +3,7 @@
 namespace App\Services\PigRegistry;
 
 use Illuminate\Support\Carbon;
+use Throwable;
 
 class ReportFilterService
 {
@@ -10,6 +11,7 @@ class ReportFilterService
         'this_month',
         'last_month',
         'this_quarter',
+        'previous_quarter',
         'this_year',
         'custom',
     ];
@@ -46,11 +48,19 @@ class ReportFilterService
         }
 
         if (! empty($filters['start_date'])) {
-            $filters['start_date'] = Carbon::parse((string) $filters['start_date'])->toDateString();
+            try {
+                $filters['start_date'] = Carbon::parse((string) $filters['start_date'])->toDateString();
+            } catch (Throwable) {
+                $filters['start_date'] = null;
+            }
         }
 
         if (! empty($filters['end_date'])) {
-            $filters['end_date'] = Carbon::parse((string) $filters['end_date'])->toDateString();
+            try {
+                $filters['end_date'] = Carbon::parse((string) $filters['end_date'])->toDateString();
+            } catch (Throwable) {
+                $filters['end_date'] = null;
+            }
         }
 
         return $filters;
@@ -71,12 +81,29 @@ class ReportFilterService
                 $today->copy()->subMonthNoOverflow()->endOfMonth(),
             ],
             'this_quarter' => [$today->copy()->firstOfQuarter(), $today->copy()->lastOfQuarter()],
+            'previous_quarter' => [
+                $today->copy()->subQuarter()->firstOfQuarter(),
+                $today->copy()->subQuarter()->lastOfQuarter(),
+            ],
             'this_year' => [$today->copy()->startOfYear(), $today->copy()->endOfYear()],
             default => [
-                isset($filters['start_date']) ? Carbon::parse((string) $filters['start_date']) : null,
-                isset($filters['end_date']) ? Carbon::parse((string) $filters['end_date']) : null,
+                $this->safeParse($filters['start_date'] ?? null),
+                $this->safeParse($filters['end_date'] ?? null),
             ],
         };
+    }
+
+    private function safeParse(mixed $value): ?Carbon
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function toNullableInt(mixed $value): ?int

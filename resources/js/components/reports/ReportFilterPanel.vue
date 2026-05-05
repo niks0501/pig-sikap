@@ -11,14 +11,18 @@ const props = defineProps({
     actionUrl: { type: String, required: true },
 });
 
+const now = new Date();
+
+const defaultDateRange = props.type === 'quarterly' ? 'this_quarter' : 'this_month';
+
 const filters = reactive({
     cycle_id: props.initialFilters.cycle_id || '',
-    date_range: props.initialFilters.date_range || 'this_month',
+    date_range: props.initialFilters.date_range || defaultDateRange,
     start_date: props.initialFilters.start_date || '',
     end_date: props.initialFilters.end_date || '',
     month: props.initialFilters.month || '',
     quarter: props.initialFilters.quarter || '',
-    year: props.initialFilters.year || new Date().getFullYear(),
+    year: props.initialFilters.year || now.getFullYear(),
     category: props.initialFilters.category || '',
     payment_status: props.initialFilters.payment_status || '',
     include_details: props.initialFilters.include_details ?? true,
@@ -41,13 +45,24 @@ const submittableParams = computed(() => {
     return params.toString();
 });
 
-const dateRangePresets = [
+const allDatePresets = [
     { label: 'This month', value: 'this_month' },
     { label: 'Last month', value: 'last_month' },
     { label: 'This quarter', value: 'this_quarter' },
+    { label: 'Previous quarter', value: 'previous_quarter' },
     { label: 'This year', value: 'this_year' },
     { label: 'Custom', value: 'custom' },
 ];
+
+const dateRangePresets = computed(() => {
+    if (props.type === 'monthly') {
+        return allDatePresets.filter(p => ['this_month', 'last_month', 'custom'].includes(p.value));
+    }
+    if (props.type === 'quarterly') {
+        return allDatePresets.filter(p => ['this_quarter', 'previous_quarter', 'custom'].includes(p.value));
+    }
+    return allDatePresets.filter(p => p.value !== 'previous_quarter');
+});
 
 const showMonthQuarter = computed(() => ['monthly', 'quarterly'].includes(props.type));
 const showExpenseCategory = computed(() => props.type === 'expense');
@@ -60,6 +75,10 @@ const submitDisabled = computed(() => {
         return !filters.year || (props.type === 'monthly' && !filters.month) || (props.type === 'quarterly' && !filters.quarter);
     }
 
+    if (filters.date_range === 'custom') {
+        return !filters.start_date || !filters.end_date;
+    }
+
     return !filters.cycle_id && !filters.date_range;
 });
 
@@ -68,6 +87,33 @@ const onDateRangeChange = (value) => {
     if (value !== 'custom') {
         filters.start_date = '';
         filters.end_date = '';
+    }
+
+    if (props.type === 'monthly') {
+        if (value === 'this_month') {
+            filters.month = now.getMonth() + 1;
+            filters.year = now.getFullYear();
+        } else if (value === 'last_month') {
+            const prev = new Date(now.getFullYear(), now.getMonth() - 1);
+            filters.month = prev.getMonth() + 1;
+            filters.year = prev.getFullYear();
+        }
+    }
+
+    if (props.type === 'quarterly') {
+        if (value === 'this_quarter') {
+            filters.quarter = Math.ceil((now.getMonth() + 1) / 3);
+            filters.year = now.getFullYear();
+        } else if (value === 'previous_quarter') {
+            const prevQuarter = Math.ceil((now.getMonth() + 1) / 3) - 1;
+            if (prevQuarter <= 0) {
+                filters.quarter = 4;
+                filters.year = now.getFullYear() - 1;
+            } else {
+                filters.quarter = prevQuarter;
+                filters.year = now.getFullYear();
+            }
+        }
     }
 };
 

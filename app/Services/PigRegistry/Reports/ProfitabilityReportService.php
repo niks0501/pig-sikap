@@ -17,18 +17,29 @@ class ProfitabilityReportService
      */
     public function generate(array $filters): array
     {
-        $cycleQuery = PigCycle::query()->with(['profitabilitySnapshot', 'caretaker:id,name']);
+        $cycleQuery = PigCycle::query()->with(['profitabilitySnapshot', 'caretaker:id,name', 'sales', 'expenses']);
 
         if (! empty($filters['cycle_id'])) {
             $cycleQuery->where('id', $filters['cycle_id']);
         }
+
+        $hasCustomRange = ! empty($filters['start_date']) && ! empty($filters['end_date']);
 
         $cycles = $cycleQuery->get();
         $rows = [];
 
         foreach ($cycles as $cycle) {
             $snapshot = $cycle->profitabilitySnapshot;
-            $profitability = $snapshot?->toProfitabilitySummary() ?? $this->computeService->compute($cycle);
+
+            if ($snapshot?->toProfitabilitySummary()) {
+                $profitability = $snapshot->toProfitabilitySummary();
+            } else {
+                if ($hasCustomRange) {
+                    $profitability = $this->computeService->compute($cycle, $filters['start_date'], $filters['end_date']);
+                } else {
+                    $profitability = $this->computeService->compute($cycle);
+                }
+            }
 
             $rows[] = [
                 'cycle_code' => $cycle->batch_code,

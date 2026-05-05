@@ -32,6 +32,7 @@
                 'pdfUrl' => $pdfUrl,
                 'csvUrl' => $csvUrl,
                 'report' => $report,
+                'cycles' => $cycles ?? [],
             ]);
             @endphp
             <div data-vue-component="report-preview-interactivity" data-props="{{ $interactivityProps }}"></div>
@@ -42,12 +43,25 @@
 
                     <div class="mt-6 grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
                         <div>
-                            <p><span class="font-semibold text-gray-700">Generated:</span> {{ now()->format('M d, Y h:i A') }}</p>
+                            <p><span class="font-semibold text-gray-700">Generated:</span> {{ ($generatedAt ?? now())->format('M d, Y h:i A') }}</p>
                             <p><span class="font-semibold text-gray-700">Prepared By:</span> {{ auth()->user()?->name ?? 'System' }}</p>
                         </div>
                         <div>
-                            <p><span class="font-semibold text-gray-700">Cycle:</span> {{ $filters['cycle_id'] ?? 'All Active' }}</p>
-                            <p><span class="font-semibold text-gray-700">Period:</span> {{ $filters['date_range'] ?? 'Custom' }}</p>
+                            <p><span class="font-semibold text-gray-700">Cycle:</span> {{ $cycleName ?? 'All Active' }}</p>
+                            <p><span class="font-semibold text-gray-700">Period:</span>
+                                @php
+                                $periodDisplay = match ($filters['date_range'] ?? null) {
+                                    'this_month' => 'This Month ('.now()->format('F Y').')',
+                                    'last_month' => 'Last Month ('.now()->subMonth()->format('F Y').')',
+                                    'this_quarter' => 'This Quarter (Q'.now()->quarter.' '.now()->year.')',
+                                    'previous_quarter' => 'Previous Quarter',
+                                    'this_year' => 'This Year ('.now()->year.')',
+                                    'custom' => ($filters['start_date'] ?? '').' - '.($filters['end_date'] ?? ''),
+                                    default => $report['summary']['period'] ?? 'N/A',
+                                };
+                                @endphp
+                                {{ $periodDisplay }}
+                            </p>
                         </div>
                     </div>
 
@@ -56,18 +70,22 @@
                         <div data-vue-component="report-summary-cards" data-props="{{ $summaryProps }}"></div>
                     </div>
 
+                    @if (($filters['include_details'] ?? true) && !empty($report['rows']))
                     <div class="mt-8">
                         @php($tableProps = json_encode(['type' => $type, 'rows' => $report['rows'] ?? [], 'summary' => $report['summary'] ?? []]))
                         <div data-vue-component="report-table" data-props="{{ $tableProps }}"></div>
                     </div>
+                    @endif
 
+                    @if ($filters['include_charts'] ?? false)
                     <div class="mt-10">
-                        @php($chartProps = json_encode(['charts' => $report['charts'] ?? []]))
+                        @php($chartProps = json_encode(['charts' => $report['charts'] ?? [], 'periodLabel' => $report['summary']['period'] ?? '']))
                         <div data-vue-component="report-charts" data-props="{{ $chartProps }}"></div>
                     </div>
+                    @endif
 
                     <div class="mt-10">
-                        @php($sigProps = json_encode(['preparedBy' => auth()->user()?->name, 'notedBy' => 'Association President']))
+                        @php($sigProps = json_encode(['preparedBy' => auth()->user()?->name, 'notedBy' => $presidentName ?? 'Association President']))
                         <div data-vue-component="signature-block" data-props="{{ $sigProps }}"></div>
                     </div>
                 </div>

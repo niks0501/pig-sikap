@@ -40,5 +40,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-report-schedules', function (User $user): bool {
             return in_array($user->role?->slug, ['system_admin', 'president', 'treasurer'], true);
         });
+
+        Gate::define('view-reports-history', function (User $user): bool {
+            return in_array($user->role?->slug, ['system_admin', 'president', 'treasurer', 'secretary'], true);
+        });
     }
 }

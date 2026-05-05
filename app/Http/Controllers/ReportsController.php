@@ -18,9 +18,11 @@ use App\Services\PigRegistry\Reports\MortalityReportService;
 use App\Services\PigRegistry\Reports\ProfitabilityReportService;
 use App\Services\PigRegistry\Reports\QuarterlyReportService;
 use App\Services\PigRegistry\Reports\SalesReportService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ReportsController extends Controller
@@ -83,10 +85,19 @@ class ReportsController extends Controller
 
             session()->flash('status', ucfirst($type).' report generated successfully.');
 
+            $cycleName = null;
+            if (! empty($filters['cycle_id'])) {
+                $cycleName = PigCycle::where('id', $filters['cycle_id'])->value('batch_code');
+            }
+
             return view('reports.preview', [
                 'type' => $type,
                 'filters' => $filters,
                 'report' => $reportData,
+                'cycleName' => $cycleName,
+                'cycles' => PigCycle::activeRecords()->orderByDesc('created_at')->get(['id', 'batch_code', 'stage', 'status']),
+                'generatedAt' => now(),
+                'presidentName' => $this->presidentName(),
                 'previewUrl' => route('reports.preview', ['type' => $type]),
                 'pdfUrl' => route('reports.pdf', ['type' => $type]).'?'.http_build_query($filters),
                 'csvUrl' => route('reports.csv', ['type' => $type]).'?'.http_build_query($filters),
@@ -98,7 +109,7 @@ class ReportsController extends Controller
         }
     }
 
-    public function downloadPdf(GenerateReportRequest $request, string $type): Response
+    public function downloadPdf(GenerateReportRequest $request, string $type): Response|RedirectResponse
     {
         $this->authorizeType($type);
 
@@ -113,8 +124,11 @@ class ReportsController extends Controller
                     'filters' => $filters,
                     'report' => $reportData,
                     'generatedAt' => now(),
+                    'preparedBy' => $request->user()?->name ?? 'System',
+                    'presidentName' => $this->presidentName(),
                 ],
-                "{$type}-report"
+                "{$type}-report",
+                $reportData['charts'] ?? []
             );
 
             $generated = GeneratedReport::create([
@@ -154,7 +168,7 @@ class ReportsController extends Controller
         }
     }
 
-    public function downloadCsv(GenerateReportRequest $request, string $type): Response
+    public function downloadCsv(GenerateReportRequest $request, string $type): Response|RedirectResponse
     {
         $this->authorizeType($type);
 
@@ -203,9 +217,77 @@ class ReportsController extends Controller
         }
     }
 
+    public function history(Request $request): View
+    {
+        Gate::authorize('view-reports-history');
+
+        $query = GeneratedReport::query()
+            ->with(['generator:id,name', 'cycle:id,batch_code'])
+            ->whereNot('status', 'archived');
+
+        if ($request->filled('type')) {
+            $query->where('report_type', $request->get('type'));
+        }
+
+        if ($request->filled('format')) {
+            $query->where('format', $request->get('format'));
+        }
+
+        if ($request->filled('from') && $request->filled('to')) {
+            $query->whereBetween('generated_at', [
+                $request->get('from'),
+                $request->get('to').' 23:59:59',
+            ]);
+        }
+
+        $reports = $query->orderByDesc('generated_at')->paginate(20);
+
+        return view('reports.history', [
+            'reports' => $reports,
+            'filters' => $request->only(['type', 'format', 'from', 'to']),
+        ]);
+    }
+
+    public function downloadGenerated(Request $request, GeneratedReport $generatedReport): Response
+    {
+        Gate::authorize('view-reports-history');
+
+        if (! $generatedReport->file_path) {
+            abort(404, 'Report file not found.');
+        }
+
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($generatedReport->file_path)) {
+            abort(404, 'Report file no longer available on disk.');
+        }
+
+        $content = $disk->get($generatedReport->file_path);
+        $contentType = $generatedReport->format === 'pdf' ? 'application/pdf' : 'text/csv';
+        $filename = sprintf(
+            '%s-report-%s.%s',
+            $generatedReport->report_type,
+            $generatedReport->generated_at?->format('YmdHis') ?? 'download',
+            $generatedReport->format
+        );
+
+        return response($content, 200, [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
     private function authorizeType(string $type): void
     {
         Gate::authorize('generate-report', $type);
+    }
+
+    private function presidentName(): string
+    {
+        return \App\Models\User::query()
+            ->whereHas('role', fn ($q) => $q->where('slug', 'president'))
+            ->where('is_active', true)
+            ->value('name') ?? 'Association President';
     }
 
     /**
@@ -307,6 +389,16 @@ class ReportsController extends Controller
                     $row['net_profit_or_loss'] ?? 0,
                     ($row['is_finalized'] ?? false) ? 'Yes' : 'No',
                 ])->all(),
+            ],
+            'monthly', 'quarterly' => [
+                ['Period', 'Total Sales', 'Total Collected', 'Total Expenses', 'Net Result'],
+                ! empty($reportData['summary'] ?? null) ? [[
+                    $reportData['summary']['period'] ?? '',
+                    $reportData['summary']['total_sales'] ?? 0,
+                    $reportData['summary']['total_collected'] ?? 0,
+                    $reportData['summary']['total_expenses'] ?? 0,
+                    $reportData['summary']['net_result'] ?? 0,
+                ]] : [],
             ],
             default => [
                 ['Metric', 'Value'],

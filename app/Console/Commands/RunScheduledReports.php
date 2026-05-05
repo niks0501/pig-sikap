@@ -109,10 +109,11 @@ class RunScheduledReports extends Command
                     'report' => $reportData,
                     'generatedAt' => now(),
                 ],
-                "{$schedule->report_type}-report"
+                "{$schedule->report_type}-report",
+                $reportData['charts'] ?? []
             );
 
-            return GeneratedReport::create([
+            $generated = GeneratedReport::create([
                 'report_type' => $schedule->report_type,
                 'format' => 'pdf',
                 'cycle_id' => $filters['cycle_id'] ?? null,
@@ -124,6 +125,8 @@ class RunScheduledReports extends Command
                 'file_size' => strlen($pdf['content']),
                 'generated_at' => now(),
             ]);
+
+            return $generated;
         }
 
         [$headers, $rows] = $this->csvPayload($schedule->report_type, $reportData);
@@ -258,6 +261,16 @@ class RunScheduledReports extends Command
                     $row['net_profit_or_loss'] ?? 0,
                     ($row['is_finalized'] ?? false) ? 'Yes' : 'No',
                 ])->all(),
+            ],
+            'monthly', 'quarterly' => [
+                ['Period', 'Total Sales', 'Total Collected', 'Total Expenses', 'Net Result'],
+                ! empty($reportData['summary'] ?? null) ? [[
+                    $reportData['summary']['period'] ?? '',
+                    $reportData['summary']['total_sales'] ?? 0,
+                    $reportData['summary']['total_collected'] ?? 0,
+                    $reportData['summary']['total_expenses'] ?? 0,
+                    $reportData['summary']['net_result'] ?? 0,
+                ]] : [],
             ],
             default => [
                 ['Metric', 'Value'],

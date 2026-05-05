@@ -30,9 +30,12 @@ ChartJS.register(
 
 const props = defineProps({
     charts: { type: Object, default: () => ({}) },
+    periodLabel: { type: String, default: '' },
 });
 
 const hasCharts = computed(() => Object.keys(props.charts).length > 0);
+
+const periodSuffix = computed(() => props.periodLabel ? ` — ${props.periodLabel}` : '');
 
 const chartOptions = {
     responsive: true,
@@ -53,42 +56,56 @@ const barOptions = {
 <template>
     <div v-if="hasCharts" class="grid gap-6 mt-6 sm:grid-cols-2">
         <div v-if="charts.expensePie" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Expense Breakdown</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Expense Breakdown{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Pie :data="charts.expensePie" :options="chartOptions" />
             </div>
         </div>
 
         <div v-if="charts.salesVsExpenses" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Sales vs Expenses</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Sales vs Expenses{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Bar :data="charts.salesVsExpenses" :options="barOptions" />
             </div>
         </div>
 
         <div v-if="charts.monthlyNet" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Monthly Net</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Monthly Net{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Bar :data="charts.monthlyNet" :options="barOptions" />
             </div>
         </div>
 
+        <div v-if="charts.quarterlyNet" class="rounded-2xl border border-gray-200 bg-white p-5">
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Quarterly Financial Summary{{ periodSuffix }}</h4>
+            <div style="height: 260px;">
+                <Bar :data="charts.quarterlyNet" :options="barOptions" />
+            </div>
+        </div>
+
         <div v-if="charts.mortalityByCause" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Mortality by Cause</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Mortality by Cause{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Pie :data="charts.mortalityByCause" :options="chartOptions" />
             </div>
         </div>
 
         <div v-if="charts.inventoryByStage" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Inventory by Stage</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Inventory by Stage{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Bar :data="charts.inventoryByStage" :options="barOptions" />
             </div>
         </div>
 
+        <div v-if="charts.healthStatus" class="rounded-2xl border border-gray-200 bg-white p-5">
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Health Status Overview{{ periodSuffix }}</h4>
+            <div style="height: 260px;">
+                <Bar :data="charts.healthStatus" :options="barOptions" />
+            </div>
+        </div>
+
         <div v-if="charts.profitabilityPerCycle" class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h4 class="mb-3 text-sm font-bold text-gray-700">Profitability per Cycle</h4>
+            <h4 class="mb-3 text-sm font-bold text-gray-700">Profitability per Cycle{{ periodSuffix }}</h4>
             <div style="height: 260px;">
                 <Bar :data="charts.profitabilityPerCycle" :options="barOptions" />
             </div>

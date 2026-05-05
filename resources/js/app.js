@@ -78,6 +78,7 @@ import ReportTable from './components/reports/ReportTable.vue';
 import ExportButtons from './components/reports/ExportButtons.vue';
 import SignatureBlock from './components/reports/SignatureBlock.vue';
 import ReportCharts from './components/reports/ReportCharts.vue';
+import ReportHistoryTable from './components/reports/ReportHistoryTable.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -150,6 +151,7 @@ const componentRegistry = {
   'export-buttons': ExportButtons,
   'signature-block': SignatureBlock,
   'report-charts': ReportCharts,
+  'report-history-table': ReportHistoryTable,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

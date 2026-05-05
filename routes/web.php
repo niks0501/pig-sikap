@@ -314,6 +314,14 @@ Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::cla
             Route::get('/{type}/csv', [ReportsController::class, 'downloadCsv'])->name('csv');
         });
 
+    Route::middleware(['role:president,treasurer,secretary'])
+        ->prefix('reports')
+        ->name('reports.')
+        ->group(function () {
+            Route::get('/history', [ReportsController::class, 'history'])->name('history');
+            Route::get('/download/{generatedReport}', [ReportsController::class, 'downloadGenerated'])->name('download');
+        });
+
     Route::middleware(['role:president,treasurer'])
         ->prefix('reports/schedules')
         ->name('reports.schedules.')

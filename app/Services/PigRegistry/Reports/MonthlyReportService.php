@@ -14,10 +14,15 @@ class MonthlyReportService
      */
     public function generate(array $filters): array
     {
-        $year = (int) ($filters['year'] ?? now()->year);
-        $month = (int) ($filters['month'] ?? now()->month);
-        $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $end = $start->copy()->endOfMonth();
+        if (! empty($filters['start_date']) && ! empty($filters['end_date'])) {
+            $start = Carbon::parse((string) $filters['start_date']);
+            $end = Carbon::parse((string) $filters['end_date']);
+        } else {
+            $year = (int) ($filters['year'] ?? now()->year);
+            $month = (int) ($filters['month'] ?? now()->month);
+            $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $end = $start->copy()->endOfMonth();
+        }
 
         $expenseQuery = PigCycleExpense::query()->whereBetween('expense_date', [$start, $end]);
         $salesQuery = PigCycleSale::query()->whereBetween('sale_date', [$start, $end]);
@@ -32,15 +37,59 @@ class MonthlyReportService
         $totalCollected = round((float) $salesQuery->sum('amount_paid'), 2);
         $net = round($totalSales - $totalExpenses, 2);
 
+        $periodLabel = $start->eq($end) || $start->format('M Y') === $end->format('M Y')
+            ? $start->format('F Y')
+            : $start->format('M d, Y').' - '.$end->format('M d, Y');
+
+        $perCycleRows = PigCycleSale::query()
+            ->selectRaw('batch_id, SUM(amount) as total_sales, SUM(amount_paid) as total_collected, SUM(pigs_sold) as pigs_sold')
+            ->whereBetween('sale_date', [$start, $end])
+            ->when(! empty($filters['cycle_id']), fn ($q) => $q->where('batch_id', $filters['cycle_id']))
+            ->groupBy('batch_id')
+            ->with('cycle:id,batch_code')
+            ->get()
+            ->map(function ($saleRow) use ($start, $end) {
+                $cycleExpenses = PigCycleExpense::query()
+                    ->where('batch_id', $saleRow->batch_id)
+                    ->whereBetween('expense_date', [$start, $end])
+                    ->sum('amount');
+
+                return [
+                    'cycle_code' => $saleRow->cycle?->batch_code ?? 'Cycle #'.$saleRow->batch_id,
+                    'total_sales' => round((float) $saleRow->total_sales, 2),
+                    'total_collected' => round((float) $saleRow->total_collected, 2),
+                    'total_expenses' => round((float) $cycleExpenses, 2),
+                    'net_result' => round((float) ($saleRow->total_sales - $cycleExpenses), 2),
+                    'pigs_sold' => (int) $saleRow->pigs_sold,
+                ];
+            })->values()->all();
+
+        $categoryBreakdown = PigCycleExpense::query()
+            ->whereBetween('expense_date', [$start, $end])
+            ->when(! empty($filters['cycle_id']), fn ($q) => $q->where('batch_id', $filters['cycle_id']))
+            ->get()
+            ->groupBy('category')
+            ->map(function ($items) use ($totalExpenses) {
+                $catTotal = round((float) $items->sum('amount'), 2);
+                $pct = $totalExpenses > 0 ? round(($catTotal / $totalExpenses) * 100, 1) : 0;
+
+                return [
+                    'category' => \App\Models\PigCycleExpense::categoryLabels()[$items->first()->category] ?? ucfirst((string) $items->first()->category),
+                    'amount' => $catTotal,
+                    'percent' => $pct,
+                ];
+            })->values()->all();
+
         return [
             'summary' => [
-                'period' => $start->format('F Y'),
+                'period' => $periodLabel,
                 'total_sales' => $totalSales,
                 'total_collected' => $totalCollected,
                 'total_expenses' => $totalExpenses,
                 'net_result' => $net,
             ],
-            'rows' => [],
+            'rows' => $perCycleRows,
+            'category_breakdown' => $categoryBreakdown,
             'charts' => [
                 'monthlyNet' => [
                     'labels' => ['Sales', 'Expenses', 'Net'],

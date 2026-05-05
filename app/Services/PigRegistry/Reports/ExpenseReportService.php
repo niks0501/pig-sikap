@@ -36,6 +36,10 @@ class ExpenseReportService
 
         $byCategory = $rows->groupBy('category')->map(fn ($items) => round((float) $items->sum('amount'), 2));
 
+        $categoryCount = $byCategory->count();
+        $greenPalette = ['#0c6d57', '#1e8a6d', '#3ca88d', '#5dc6a2', '#8edcbc', '#0a5a48', '#156e4e', '#2d8a6e', '#4bb892', '#6edcb2'];
+        $pieColors = array_slice($greenPalette, 0, max($categoryCount, 1));
+
         return [
             'summary' => $summary,
             'rows' => $rows->map(fn (PigCycleExpense $expense): array => [
@@ -51,7 +55,7 @@ class ExpenseReportService
                     'labels' => $byCategory->keys()->map(fn ($c) => \App\Models\PigCycleExpense::categoryLabels()[$c] ?? ucfirst((string) $c))->values()->all(),
                     'datasets' => [[
                         'data' => $byCategory->values()->all(),
-                        'backgroundColor' => ['#0c6d57', '#1e8a6d', '#3ca88d', '#5dc6a2', '#8edcbc'],
+                        'backgroundColor' => $pieColors,
                     ]],
                 ],
             ],

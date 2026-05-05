@@ -25,6 +25,7 @@ class ReportCsvService
                 return;
             }
 
+            fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $headers);
 
             foreach ($rows as $row) {
@@ -33,7 +34,7 @@ class ReportCsvService
 
             fclose($handle);
         }, $fileName, [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -49,6 +50,7 @@ class ReportCsvService
 
         $stream = fopen('php://temp', 'r+');
 
+        fwrite($stream, "\xEF\xBB\xBF");
         fputcsv($stream, $headers);
         foreach ($rows as $row) {
             fputcsv($stream, $row);

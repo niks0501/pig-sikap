@@ -24,6 +24,12 @@ class HealthReportService
             $cycleQuery->where('id', $filters['cycle_id']);
         }
 
+        if (! empty($filters['start_date']) && ! empty($filters['end_date'])) {
+            $cycleQuery->whereHas('healthIncidents', fn ($q) =>
+                $q->whereBetween('date_reported', [$filters['start_date'], $filters['end_date']])
+            );
+        }
+
         $cycles = $cycleQuery->get();
         $rows = [];
 
@@ -53,6 +59,21 @@ class HealthReportService
         return [
             'summary' => $summaryTotals,
             'rows' => $rows,
+            'charts' => [
+                'healthStatus' => [
+                    'labels' => ['Due Today', 'Overdue', 'Completed', 'Affected', 'Mortality'],
+                    'datasets' => [[
+                        'data' => [
+                            (int) $summaryTotals['total_due_today'],
+                            (int) $summaryTotals['total_overdue'],
+                            (int) collect($rows)->sum('completed_recently'),
+                            (int) $summaryTotals['total_currently_affected'],
+                            (int) $summaryTotals['total_mortality'],
+                        ],
+                        'backgroundColor' => ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#6b7280'],
+                    ]],
+                ],
+            ],
             'empty' => $cycles->isEmpty(),
         ];
     }

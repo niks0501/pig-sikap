@@ -20,6 +20,10 @@ class InventoryReportService
             $cycleQuery->where('id', $filters['cycle_id']);
         }
 
+        if (! empty($filters['start_date']) && ! empty($filters['end_date'])) {
+            $cycleQuery->whereBetween('date_of_purchase', [$filters['start_date'], $filters['end_date']]);
+        }
+
         $cycles = $cycleQuery->withCount([
             'pigs as active_pigs_count' => fn (Builder $query) => $query->whereNotIn('status', Pig::OUT_OF_COUNT_STATUSES),
             'pigs as deceased_pigs_count' => fn (Builder $query) => $query->where('status', 'Deceased'),
@@ -58,7 +62,7 @@ class InventoryReportService
                     'datasets' => [[
                         'label' => 'Pig Count',
                         'data' => $byStage->values()->all(),
-                        'backgroundColor' => '#0c6d57',
+                        'backgroundColor' => ['#0c6d57', '#1e8a6d', '#3ca88d', '#5dc6a2', '#8edcbc', '#0a5a48'],
                     ]],
                 ],
             ],

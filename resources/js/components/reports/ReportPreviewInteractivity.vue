@@ -10,6 +10,7 @@ const props = defineProps({
     pdfUrl: { type: String, required: true },
     csvUrl: { type: String, required: true },
     report: { type: Object, default: () => ({}) },
+    cycles: { type: Array, default: () => [] },
 });
 
 const openFilters = ref(false);
@@ -36,7 +37,7 @@ const openFilters = ref(false);
         <div v-if="openFilters" class="mt-4">
             <report-filter-panel
                 :type="type"
-                :cycles="[]"
+                :cycles="cycles"
                 :initial-filters="filters"
                 :action-url="previewUrl"
                 submit-label="Update Preview"
