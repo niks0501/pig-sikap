@@ -107,21 +107,19 @@ class DashboardDataController extends Controller
         $saleQuery = \App\Models\PigCycleSale::query();
 
         if ($cycleId) {
-            $expenseQuery->where('pig_cycle_id', $cycleId);
-            $saleQuery->where('pig_cycle_id', $cycleId);
+            $expenseQuery->where('batch_id', $cycleId);
+            $saleQuery->where('batch_id', $cycleId);
         }
 
         $totalExpenses = (clone $expenseQuery)->sum('amount')
             + \App\Models\AssociationExpense::sum('amount');
 
         $totalSales = (clone $saleQuery)->sum('amount');
-        $collectedRevenue = (clone $saleQuery)->where('payment_received', true)->sum('amount');
+        $collectedRevenue = (clone $saleQuery)->sum('amount_paid');
 
-        $pendingWithdrawals = \App\Models\Withdrawal::whereHas('resolution', function ($q) {
-            $q->where('workflow_status', 'dswd_approved');
-        })->count();
+        $pendingWithdrawals = \App\Models\Withdrawal::where('status', 'pending')->count();
 
-        $recentExpenses = (clone $expenseQuery)->with('pigCycle:id,name')
+        $recentExpenses = (clone $expenseQuery)->with('cycle:id,batch_code')
             ->latest()
             ->limit(5)
             ->get()
@@ -129,18 +127,18 @@ class DashboardDataController extends Controller
                 'id' => $e->id,
                 'amount' => $e->amount,
                 'category' => $e->category,
-                'cycle_name' => $e->pigCycle?->name,
+                'cycle_name' => $e->cycle?->batch_code,
                 'created_at' => $e->created_at?->toISOString(),
             ]);
 
-        $recentSales = (clone $saleQuery)->with('pigCycle:id,name')
+        $recentSales = (clone $saleQuery)->with('cycle:id,batch_code')
             ->latest()
             ->limit(5)
             ->get()
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'amount' => $s->amount,
-                'cycle_name' => $s->pigCycle?->name,
+                'cycle_name' => $s->cycle?->batch_code,
                 'created_at' => $s->created_at?->toISOString(),
             ]);
 
@@ -164,7 +162,7 @@ class DashboardDataController extends Controller
      */
     private function canvasserData(Request $request): JsonResponse
     {
-        $openCanvasses = \App\Models\Canvass::whereNull('selected_item_id')->count();
+        $openCanvasses = \App\Models\Canvass::whereDoesntHave('items', fn ($q) => $q->where('is_selected', true))->count();
         $totalCanvasses = \App\Models\Canvass::count();
         $totalSuppliers = \App\Models\Supplier::count();
 
@@ -177,7 +175,7 @@ class DashboardDataController extends Controller
                 'title' => $c->title,
                 'resolution_title' => $c->resolution?->title,
                 'items_count' => $c->items->count(),
-                'has_selected' => $c->selected_item_id !== null,
+                'has_selected' => $c->items->contains(fn ($i) => $i->is_selected),
                 'created_at' => $c->created_at?->toISOString(),
             ]);
 
@@ -199,30 +197,30 @@ class DashboardDataController extends Controller
     private function caretakerData(Request $request): JsonResponse
     {
         $totalPigs = \App\Models\Pig::count();
-        $sickPigs = \App\Models\Pig::where('status', 'sick')->count();
-        $deceasedPigs = \App\Models\Pig::where('status', 'deceased')->count();
-        $healthyPigs = \App\Models\Pig::where('status', 'healthy')->count();
+        $sickPigs = \App\Models\Pig::whereIn('status', ['Sick', 'Isolated'])->count();
+        $deceasedPigs = \App\Models\Pig::where('status', 'Deceased')->count();
+        $healthyPigs = $totalPigs - $sickPigs - $deceasedPigs;
 
-        $upcomingTreatments = \App\Models\CycleHealthTask::where('completed', false)
-            ->with('pigCycle:id,name')
-            ->latest('scheduled_at')
+        $upcomingTreatments = \App\Models\CycleHealthTask::where('status', '!=', 'completed')
+            ->with('cycle:id,batch_code')
+            ->orderBy('planned_start_date')
             ->limit(5)
             ->get()
             ->map(fn ($t) => [
                 'id' => $t->id,
-                'description' => $t->description,
-                'cycle_name' => $t->pigCycle?->name,
-                'scheduled_at' => $t->scheduled_at?->toISOString(),
+                'description' => $t->task_name,
+                'cycle_name' => $t->cycle?->batch_code,
+                'scheduled_at' => $t->planned_start_date,
             ]);
 
-        $activeCycles = \App\Models\PigCycle::where('is_archived', false)
+        $activeCycles = \App\Models\PigCycle::whereNull('archived_at')
             ->withCount('pigs')
             ->latest()
             ->limit(5)
             ->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
-                'name' => $c->name,
+                'name' => $c->batch_code,
                 'pigs_count' => $c->pigs_count,
                 'status' => $c->status,
             ]);
@@ -246,7 +244,7 @@ class DashboardDataController extends Controller
      */
     private function memberData(Request $request): JsonResponse
     {
-        $activeCycles = \App\Models\PigCycle::where('is_archived', false)->count();
+        $activeCycles = \App\Models\PigCycle::whereNull('archived_at')->count();
         $totalPigs = \App\Models\Pig::count();
         $totalMembers = \App\Models\User::where('is_active', true)->count();
 

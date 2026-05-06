@@ -187,7 +187,7 @@ class OverallDashboardService
             'piglets' => $pigCounts['Active'] ?? 0,
             'sick_pigs' => ($pigCounts['Sick'] ?? 0) + ($pigCounts['Isolated'] ?? 0),
             'deceased_pigs' => $pigCounts['Deceased'] ?? 0,
-            'sold_pigs' => $pigCounts['Sold'] ?? 0,
+            'sold_pigs' => (int) (clone $saleQuery)->sum('pigs_sold'),
             'total_expenses' => round($totalExpenses, 2),
             'total_sales' => round((float) $totalSales, 2),
             'collected_revenue' => round((float) $totalCollected, 2),
@@ -197,11 +197,11 @@ class OverallDashboardService
                 ->count(),
             'pending_withdrawals' => (clone $withdrawalQuery)->where('status', 'pending')->count(),
             'upcoming_treatments' => (clone $healthTaskQuery)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'in_progress'])
                 ->where('planned_start_date', '>=', today()->toDateString())
                 ->count(),
             'overdue_treatments' => (clone $healthTaskQuery)
-                ->where('status', 'pending')
+                ->whereIn('status', ['pending', 'in_progress'])
                 ->where('planned_start_date', '<', today()->toDateString())
                 ->count(),
         ];
@@ -382,7 +382,7 @@ class OverallDashboardService
             $endOfMonth = $date->copy()->endOfMonth();
 
             $count = (clone $healthIncidentQuery)
-                ->where('incident_type', 'Death')
+                ->where('incident_type', CycleHealthIncident::INCIDENT_TYPE_DECEASED)
                 ->whereBetween('date_reported', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                 ->sum('affected_count') ?? 0;
 
@@ -400,15 +400,15 @@ class OverallDashboardService
     {
         $total = (clone $healthTaskQuery)->count();
         $completed = (clone $healthTaskQuery)->where('status', 'completed')->count();
-        $pending = (clone $healthTaskQuery)->where('status', 'pending')->count();
+        $inProgress = (clone $healthTaskQuery)->whereIn('status', ['pending', 'in_progress'])->count();
         $overdue = (clone $healthTaskQuery)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'in_progress'])
             ->where('planned_start_date', '<', today()->toDateString())
             ->count();
 
         return [
-            'labels' => ['Completed', 'Pending (On Track)', 'Overdue'],
-            'data' => [$completed, max(0, $pending - $overdue), $overdue],
+            'labels' => ['Completed', 'In Progress', 'Overdue'],
+            'data' => [$completed, max(0, $inProgress - $overdue), $overdue],
             'colors' => ['#10b981', '#f59e0b', '#ef4444'],
         ];
     }
@@ -471,7 +471,7 @@ class OverallDashboardService
             ->toArray();
 
         $upcomingTreatments = (clone $healthTaskQuery)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'in_progress'])
             ->where('planned_start_date', '>=', today()->toDateString())
             ->with('cycle:id,batch_code')
             ->orderBy('planned_start_date')
@@ -527,7 +527,7 @@ class OverallDashboardService
         }
 
         $overdueCount = (clone $healthTaskQuery)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'in_progress'])
             ->where('planned_start_date', '<', today()->toDateString())
             ->count();
 

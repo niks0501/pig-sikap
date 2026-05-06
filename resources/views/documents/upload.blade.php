@@ -5,6 +5,14 @@
             <p class="text-sm text-gray-500 mt-1">Select a required document type and upload the file for review.</p>
         </div>
 
+        <div class="mb-6 flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+            <a href="{{ route('workflow.documents.page.upload') }}" class="px-4 py-1.5 rounded-md text-sm font-medium bg-white text-[#0c6d57] shadow-sm">Upload</a>
+            @if (Auth::user()->isSystemAdmin() || Auth::user()->hasRole('president'))
+            <a href="{{ route('workflow.documents.page.types') }}" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white/50">Types</a>
+            @endif
+            <a href="{{ route('workflow.documents.page.review') }}" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white/50">Review</a>
+        </div>
+
         @if (session('status'))
             <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('status') }}

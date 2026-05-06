@@ -5,6 +5,12 @@
             <p class="text-sm text-gray-500 mt-1">Define required document types and their upload constraints.</p>
         </div>
 
+        <div class="mb-6 flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+            <a href="{{ route('workflow.documents.page.upload') }}" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white/50">Upload</a>
+            <a href="{{ route('workflow.documents.page.types') }}" class="px-4 py-1.5 rounded-md text-sm font-medium bg-white text-[#0c6d57] shadow-sm">Types</a>
+            <a href="{{ route('workflow.documents.page.review') }}" class="px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white/50">Review</a>
+        </div>
+
         @if (session('success'))
             <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('success') }}
@@ -19,7 +25,7 @@
 
         <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Add New Document Type</h2>
-            <form method="POST" action="{{ route('admin.document-types.store') }}">
+            <form method="POST" action="{{ route('workflow.admin.document-types.store') }}">
                 @csrf
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
@@ -73,7 +79,7 @@
                             <td class="px-4 py-3 text-sm text-gray-600">{{ implode(', ', $type->allowed_file_types) }}</td>
                             <td class="px-4 py-3 text-sm text-gray-600">{{ $type->max_size_kb }} KB</td>
                             <td class="px-4 py-3 text-right">
-                                <form method="POST" action="{{ route('admin.document-types.destroy', $type->id) }}" onsubmit="return confirm('Are you sure?');">
+                                <form method="POST" action="{{ route('workflow.admin.document-types.destroy', $type->id) }}" onsubmit="return confirm('Are you sure?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-rose-600 hover:text-rose-800 text-sm font-medium">Delete</button>
