@@ -10,11 +10,13 @@ use App\Models\ReportSchedule;
 use App\Services\PigRegistry\ReportCsvService;
 use App\Services\PigRegistry\ReportFilterService;
 use App\Services\PigRegistry\ReportPdfService;
+use App\Services\PigRegistry\Reports\DswdSummaryReportService;
 use App\Services\PigRegistry\Reports\ExpenseReportService;
 use App\Services\PigRegistry\Reports\HealthReportService;
 use App\Services\PigRegistry\Reports\InventoryReportService;
 use App\Services\PigRegistry\Reports\MonthlyReportService;
 use App\Services\PigRegistry\Reports\MortalityReportService;
+use App\Services\PigRegistry\Reports\PerCycleReportService;
 use App\Services\PigRegistry\Reports\ProfitabilityReportService;
 use App\Services\PigRegistry\Reports\QuarterlyReportService;
 use App\Services\PigRegistry\Reports\SalesReportService;
@@ -39,13 +41,22 @@ class ReportsController extends Controller
         private readonly MonthlyReportService $monthlyReport,
         private readonly QuarterlyReportService $quarterlyReport,
         private readonly ProfitabilityReportService $profitabilityReport,
+        private readonly PerCycleReportService $perCycleReport,
+        private readonly DswdSummaryReportService $dswdSummaryReport,
         private readonly ReportPdfService $pdfService,
         private readonly ReportCsvService $csvService,
     ) {}
 
     public function index(Request $request): View
     {
-        return view('reports.index');
+        $cycles = PigCycle::query()
+            ->activeRecords()
+            ->orderByDesc('created_at')
+            ->get(['id', 'batch_code', 'stage', 'status', 'initial_count']);
+
+        return view('reports.index', [
+            'cycles' => $cycles,
+        ]);
     }
 
     public function generate(Request $request, string $type): View
@@ -62,6 +73,45 @@ class ReportsController extends Controller
             'cycles' => $cycles,
             'actionUrl' => route('reports.preview', ['type' => $type]),
         ]);
+    }
+
+    /**
+     * One-tap quick generate: auto-fills sensible defaults and redirects
+     * directly to the preview page skipping the filter form.
+     */
+    public function quickGenerate(Request $request, string $type): RedirectResponse
+    {
+        $this->authorizeType($type);
+
+        $params = match ($type) {
+            'monthly' => [
+                'date_range' => 'this_month',
+                'month' => now()->month,
+                'year' => now()->year,
+                'include_details' => '1',
+            ],
+            'quarterly' => [
+                'date_range' => 'this_quarter',
+                'quarter' => ceil(now()->month / 3),
+                'year' => now()->year,
+                'include_details' => '1',
+            ],
+            'per-cycle' => [
+                'cycle_id' => $request->get('cycle_id'),
+                'include_details' => '1',
+            ],
+            'dswd-summary' => [
+                'include_details' => '1',
+            ],
+            default => [
+                'date_range' => 'this_month',
+                'include_details' => '1',
+            ],
+        };
+
+        $query = http_build_query(array_filter($params, fn ($v) => $v !== null && $v !== ''));
+
+        return redirect()->to(route('reports.preview', ['type' => $type]).($query ? '?'.$query : ''));
     }
 
     public function preview(GenerateReportRequest $request, string $type): View
@@ -98,6 +148,8 @@ class ReportsController extends Controller
                 'cycles' => PigCycle::activeRecords()->orderByDesc('created_at')->get(['id', 'batch_code', 'stage', 'status']),
                 'generatedAt' => now(),
                 'presidentName' => $this->presidentName(),
+                'treasurerName' => $this->treasurerName(),
+                'secretaryName' => $this->secretaryName(),
                 'previewUrl' => route('reports.preview', ['type' => $type]),
                 'pdfUrl' => route('reports.pdf', ['type' => $type]).'?'.http_build_query($filters),
                 'csvUrl' => route('reports.csv', ['type' => $type]).'?'.http_build_query($filters),
@@ -117,6 +169,11 @@ class ReportsController extends Controller
             $filters = $this->filterService->normalize($request->validated());
             $reportData = $this->buildReportData($type, $filters);
 
+            $cycleName = null;
+            if (! empty($filters['cycle_id'])) {
+                $cycleName = PigCycle::where('id', $filters['cycle_id'])->value('batch_code');
+            }
+
             $pdf = $this->pdfService->build(
                 "reports.pdf.{$type}",
                 [
@@ -126,6 +183,9 @@ class ReportsController extends Controller
                     'generatedAt' => now(),
                     'preparedBy' => $request->user()?->name ?? 'System',
                     'presidentName' => $this->presidentName(),
+                    'treasurerName' => $this->treasurerName(),
+                    'secretaryName' => $this->secretaryName(),
+                    'cycleName' => $cycleName,
                 ],
                 "{$type}-report",
                 $reportData['charts'] ?? []
@@ -290,6 +350,22 @@ class ReportsController extends Controller
             ->value('name') ?? 'Association President';
     }
 
+    private function treasurerName(): string
+    {
+        return \App\Models\User::query()
+            ->whereHas('role', fn ($q) => $q->where('slug', 'treasurer'))
+            ->where('is_active', true)
+            ->value('name') ?? 'Association Treasurer';
+    }
+
+    private function secretaryName(): string
+    {
+        return \App\Models\User::query()
+            ->whereHas('role', fn ($q) => $q->where('slug', 'secretary'))
+            ->where('is_active', true)
+            ->value('name') ?? 'Association Secretary';
+    }
+
     /**
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
@@ -305,6 +381,8 @@ class ReportsController extends Controller
             'monthly' => $this->monthlyReport->generate($filters),
             'quarterly' => $this->quarterlyReport->generate($filters),
             'profitability' => $this->profitabilityReport->generate($filters),
+            'per-cycle' => $this->perCycleReport->generate($filters),
+            'dswd-summary' => $this->dswdSummaryReport->generate($filters),
             default => [],
         };
     }
@@ -399,6 +477,22 @@ class ReportsController extends Controller
                     $reportData['summary']['total_expenses'] ?? 0,
                     $reportData['summary']['net_result'] ?? 0,
                 ]] : [],
+            ],
+            'per-cycle' => [
+                ['Expense Date', 'Category', 'Item', 'Quantity', 'Unit Cost', 'Amount', 'Notes'],
+                collect($reportData['expense_rows'] ?? [])->map(fn (array $row) => [
+                    $row['expense_date'] ?? '',
+                    $row['category'] ?? '',
+                    $row['item_name'] ?? '',
+                    $row['quantity'] ?? 0,
+                    $row['unit_cost'] ?? 0,
+                    $row['amount'] ?? 0,
+                    $row['notes'] ?? '',
+                ])->all(),
+            ],
+            'dswd-summary' => [
+                ['Metric', 'Value'],
+                collect($reportData['summary'] ?? [])->map(fn ($value, $key) => [$key, $value])->values()->all(),
             ],
             default => [
                 ['Metric', 'Value'],

@@ -83,6 +83,8 @@ import ExportButtons from './components/reports/ExportButtons.vue';
 import SignatureBlock from './components/reports/SignatureBlock.vue';
 import ReportCharts from './components/reports/ReportCharts.vue';
 import ReportHistoryTable from './components/reports/ReportHistoryTable.vue';
+import QuickReportButtons from './components/reports/QuickReportButtons.vue';
+import CyclePickerModal from './components/reports/CyclePickerModal.vue';
 import MemberShareAllocation from './components/profitability/MemberShareAllocation.vue';
 
 const componentRegistry = {
@@ -161,6 +163,8 @@ const componentRegistry = {
   'signature-block': SignatureBlock,
   'report-charts': ReportCharts,
   'report-history-table': ReportHistoryTable,
+  'quick-report-buttons': QuickReportButtons,
+  'cycle-picker-modal': CyclePickerModal,
   'member-share-allocation': MemberShareAllocation,
 };
 

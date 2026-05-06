@@ -26,11 +26,11 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
 
-            if ($user->hasRole('treasurer') && in_array($type, ['expense', 'sales', 'monthly', 'quarterly', 'profitability'], true)) {
+            if ($user->hasRole('treasurer') && in_array($type, ['expense', 'sales', 'monthly', 'quarterly', 'profitability', 'per-cycle', 'dswd-summary'], true)) {
                 return true;
             }
 
-            if ($user->hasRole('secretary') && in_array($type, ['inventory', 'health', 'mortality'], true)) {
+            if ($user->hasRole('secretary') && in_array($type, ['inventory', 'health', 'mortality', 'per-cycle', 'dswd-summary'], true)) {
                 return true;
             }
 

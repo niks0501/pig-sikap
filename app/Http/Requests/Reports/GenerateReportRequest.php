@@ -25,7 +25,7 @@ class GenerateReportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability'])],
+            'type' => ['required', Rule::in(['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability', 'per-cycle', 'dswd-summary'])],
             'cycle_id' => ['nullable', 'integer', 'exists:pig_cycles,id'],
             'date_range' => ['nullable', Rule::in(['this_month', 'last_month', 'this_quarter', 'this_year', 'custom'])],
             'start_date' => ['required_if:date_range,custom', 'date'],

@@ -326,10 +326,11 @@ Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::cla
     Route::middleware(['role:president,treasurer,secretary'])
         ->prefix('reports')
         ->name('reports.')
-        ->whereIn('type', ['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability'])
+        ->whereIn('type', ['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability', 'per-cycle', 'dswd-summary'])
         ->group(function () {
             Route::get('/', [ReportsController::class, 'index'])->name('index');
             Route::get('/{type}/generate', [ReportsController::class, 'generate'])->name('generate');
+            Route::get('/{type}/quick', [ReportsController::class, 'quickGenerate'])->name('quick');
             Route::get('/{type}/preview', [ReportsController::class, 'preview'])->name('preview');
             Route::get('/{type}/pdf', [ReportsController::class, 'downloadPdf'])->name('pdf');
             Route::get('/{type}/csv', [ReportsController::class, 'downloadCsv'])->name('csv');

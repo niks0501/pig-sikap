@@ -1,21 +1,30 @@
 <script setup>
 const props = defineProps({
-    preparedBy: { type: String, default: 'Prepared By' },
-    notedBy: { type: String, default: 'Noted By' },
+    preparedBy: { type: String, default: '' },
+    treasurerName: { type: String, default: '' },
+    presidentName: { type: String, default: '' },
 });
 </script>
 
 <template>
-    <div class="grid gap-8 border-t pt-6 text-center sm:grid-cols-2">
-        <div>
-            <div class="mx-auto mb-2 h-10 w-full max-w-[220px] border-b-2 border-gray-700"></div>
-            <p class="text-sm font-semibold text-gray-900">{{ preparedBy }}</p>
-            <p class="text-xs uppercase tracking-widest text-gray-500">Prepared By</p>
-        </div>
-        <div>
-            <div class="mx-auto mb-2 h-10 w-full max-w-[220px] border-b-2 border-gray-700"></div>
-            <p class="text-sm font-semibold text-gray-900">{{ notedBy }}</p>
-            <p class="text-xs uppercase tracking-widest text-gray-500">Noted By</p>
+    <div class="border-t pt-6">
+        <p class="mb-5 text-xs font-semibold uppercase tracking-wider text-gray-400">Signatures</p>
+        <div class="grid gap-8 text-center sm:grid-cols-3">
+            <div>
+                <div class="mx-auto mb-2 h-10 w-full max-w-[180px] border-b-2 border-gray-700"></div>
+                <p class="text-sm font-semibold text-gray-900">{{ preparedBy || '&mdash;' }}</p>
+                <p class="text-xs uppercase tracking-widest text-gray-500">Prepared By</p>
+            </div>
+            <div>
+                <div class="mx-auto mb-2 h-10 w-full max-w-[180px] border-b-2 border-gray-700"></div>
+                <p class="text-sm font-semibold text-gray-900">{{ treasurerName || '&mdash;' }}</p>
+                <p class="text-xs uppercase tracking-widest text-gray-500">Treasurer</p>
+            </div>
+            <div>
+                <div class="mx-auto mb-2 h-10 w-full max-w-[180px] border-b-2 border-gray-700"></div>
+                <p class="text-sm font-semibold text-gray-900">{{ presidentName || '&mdash;' }}</p>
+                <p class="text-xs uppercase tracking-widest text-gray-500">President</p>
+            </div>
         </div>
     </div>
 </template>

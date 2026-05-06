@@ -17,7 +17,8 @@
         .right { text-align: right; }
         .total-row { font-weight: bold; background: #f0fdf4; }
         .signatures { margin-top: 30px; width: 100%; }
-        .signatures td { border: none; padding: 8px 0; width: 50%; vertical-align: top; }
+        .signatures td { border: none; padding: 8px 0; width: 33%; vertical-align: top; }
+        .sig-name { font-size: 10px; font-weight: bold; color: #1f2937; margin-top: 4px; }
         .sig-line { border-bottom: 1px solid #374151; margin-top: 30px; width: 70%; }
         .sig-label { font-size: 10px; color: #6b7280; }
     </style>
@@ -78,13 +79,18 @@
         <tr>
             <td>
                 <div class="sig-line"></div>
-                <div class="sig-label">{{ $preparedBy ?? '' }}</div>
+                <div class="sig-name">{{ $preparedBy ?? '' }}</div>
                 <div class="sig-label">Prepared By</div>
             </td>
             <td>
                 <div class="sig-line"></div>
-                <div class="sig-label">{{ $presidentName ?? 'Association President' }}</div>
-                <div class="sig-label">Noted By</div>
+                <div class="sig-name">{{ $treasurerName ?? 'Association Treasurer' }}</div>
+                <div class="sig-label">Treasurer</div>
+            </td>
+            <td>
+                <div class="sig-line"></div>
+                <div class="sig-name">{{ $presidentName ?? 'Association President' }}</div>
+                <div class="sig-label">President</div>
             </td>
         </tr>
     </table>

@@ -38,7 +38,7 @@ test('reports index is forbidden for members', function () {
 test('president can access all report types', function () {
     $president = reportsUser('president');
 
-    foreach (['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability'] as $type) {
+    foreach (['inventory', 'health', 'mortality', 'expense', 'sales', 'monthly', 'quarterly', 'profitability', 'per-cycle', 'dswd-summary'] as $type) {
         actingAs($president)->get(route('reports.generate', ['type' => $type]))->assertOk();
     }
 });
@@ -46,7 +46,7 @@ test('president can access all report types', function () {
 test('treasurer can access financial report types only', function () {
     $treasurer = reportsUser('treasurer');
 
-    foreach (['expense', 'sales', 'monthly', 'quarterly', 'profitability'] as $type) {
+    foreach (['expense', 'sales', 'monthly', 'quarterly', 'profitability', 'per-cycle', 'dswd-summary'] as $type) {
         actingAs($treasurer)->get(route('reports.generate', ['type' => $type]))->assertOk();
     }
 
@@ -58,7 +58,7 @@ test('treasurer can access financial report types only', function () {
 test('secretary can access livestock report types only', function () {
     $secretary = reportsUser('secretary');
 
-    foreach (['inventory', 'health', 'mortality'] as $type) {
+    foreach (['inventory', 'health', 'mortality', 'per-cycle', 'dswd-summary'] as $type) {
         actingAs($secretary)->get(route('reports.generate', ['type' => $type]))->assertOk();
     }
 
