@@ -20,13 +20,17 @@ class DatabaseSeeder extends Seeder
             HealthTemplateSeeder::class,
             AssociationPolicySettingsSeeder::class,
             DemoUserSeeder::class,
+            DemoBulkUsersSeeder::class,
             DemoCycleSeeder::class,
             PigSikapOwnerRecordSeeder::class,
+            DemoBulkCyclesSeeder::class,
             DemoExpenseSeeder::class,
             DemoSaleSeeder::class,
             DemoHealthSeeder::class,
             DemoWorkflowSeeder::class,
+            DemoBulkWorkflowSeeder::class,
             DemoCanvassingSeeder::class,
+            DemoBulkOperationsSeeder::class,
             DemoReportsSeeder::class,
         ]);
     }
