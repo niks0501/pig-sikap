@@ -37,7 +37,7 @@ test('navigation service returns sections for any user', function () {
 });
 
 test('wildcard items appear for all roles', function () {
-    $wildcardItems = ['Dashboard', 'Members'];
+    $wildcardItems = ['Dashboard'];
 
     foreach (['president', 'secretary', 'treasurer', 'canvasser', 'caretaker', 'member'] as $slug) {
         $user = navUser($slug);
@@ -79,7 +79,6 @@ test('secretary sees only secretary-relevant items', function () {
     expect($labels)->toContain('Resolutions');
     expect($labels)->toContain('Reports');
     expect($labels)->toContain('Documents');
-    expect($labels)->toContain('Members');
     expect($labels)->toContain('Dashboard');
 
     // Should NOT see these
@@ -117,7 +116,6 @@ test('canvasser sees canvassing and supplier items', function () {
     expect($labels)->toContain('Canvassing');
     expect($labels)->toContain('Suppliers');
     expect($labels)->toContain('Dashboard');
-    expect($labels)->toContain('Members');
 
     expect($labels)->not->toContain('Cycles');
     expect($labels)->not->toContain('Expenses');
@@ -132,7 +130,6 @@ test('caretaker sees health and members items', function () {
 
     expect($labels)->toContain('Health & Treatments');
     expect($labels)->toContain('Dashboard');
-    expect($labels)->toContain('Members');
 
     expect($labels)->not->toContain('Cycles');
     expect($labels)->not->toContain('Sales Log');
@@ -146,10 +143,9 @@ test('member sees minimal items only', function () {
     $labels = collect($nav['sections']['main']['items'])->pluck('label')->toArray();
 
     expect($labels)->toContain('Dashboard');
-    expect($labels)->toContain('Members');
 
     // Should NOT see anything beyond wildcard items
-    expect(count($labels))->toBe(2);
+    expect(count($labels))->toBe(1);
 });
 
 // ── Quick Actions ──

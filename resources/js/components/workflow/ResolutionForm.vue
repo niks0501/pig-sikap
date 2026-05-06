@@ -14,7 +14,6 @@ const form = ref({
     approval_deadline: '',
 })
 const lineItems = ref([{ category: '', description: '', quantity: 1, unit: 'pc', unit_cost: 0 }])
-const resFile = ref(null)
 const submitting = ref(false)
 const errors = ref({})
 
@@ -27,7 +26,6 @@ function selectMeeting(id) {
     const m = props.meetings.find(x => x.id === id)
     if (m) form.value.title = `Resolution from: ${m.title}`
 }
-function handleFile(e) { resFile.value = e.target.files[0] || null }
 
 async function submitForm() {
     submitting.value = true; errors.value = {}
@@ -38,7 +36,6 @@ async function submitForm() {
     fd.append('description', form.value.description)
     if (form.value.focal_person_name) fd.append('focal_person_name', form.value.focal_person_name)
     if (form.value.approval_deadline) fd.append('approval_deadline', form.value.approval_deadline)
-    if (resFile.value) fd.append('resolution_file', resFile.value)
     lineItems.value.forEach((li, i) => {
         if (li.category || li.description) {
             fd.append(`line_items[${i}][category]`, li.category)
@@ -93,10 +90,6 @@ function formatCurrency(v) { return '₱' + Number(v).toLocaleString('en-PH', { 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Approval Deadline</label>
                 <input v-model="form.approval_deadline" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[#0c6d57] focus:ring-[#0c6d57]" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Signed Resolution (PDF/Image)</label>
-                <input type="file" @change="handleFile" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#0c6d57]/10 file:text-[#0c6d57]" />
             </div>
         </div>
     </div>

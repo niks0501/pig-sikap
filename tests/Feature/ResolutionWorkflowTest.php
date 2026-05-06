@@ -311,17 +311,21 @@ test('resolution auto-advances to approved when 75% threshold is met', function 
     expect($resolution->hasMetApprovalThreshold())->toBeTrue();
 });
 
-test('approval data API returns all members with approval status', function () {
+test('approval data API returns all eligible members', function () {
     $secretary = makeOfficer('secretary');
     $meeting = seedMeeting($secretary);
     $resolution = seedResolution($meeting, $secretary);
 
-    // Add secretary as meeting attendee so the API returns members
+    // Add secretary as meeting attendee so the meeting has at least one present
     \App\Models\MeetingSignatory::create([
         'meeting_id' => $meeting->id,
         'user_id' => $secretary->id,
         'attendance_status' => 'present',
     ]);
+
+    // Create 3 extra active members who are NOT meeting attendees
+    // They should still appear in the API response as eligible members
+    $extraMembers = createActiveMembers(3);
 
     $response = $this->actingAs($secretary)->getJson(
         route('workflow.resolutions.approvals.data', $resolution)
@@ -337,6 +341,11 @@ test('approval data API returns all members with approval status', function () {
         'threshold',
         'has_met_threshold',
     ]);
+
+    // All eligible members (secretary + 3 extra = 4) should appear, not just present attendees
+    $data = $response->json();
+    expect($data['total_members'])->toBe(4);
+    expect(count($data['members']))->toBe(4);
 });
 
 // ╔══════════════════════════════════════════════════════════════╗

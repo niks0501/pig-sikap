@@ -210,21 +210,20 @@ class Resolution extends Model
     }
 
     /**
-     * Compute approval percentage (approved / meeting present attendees × 100).
-     * Denominator is active members who were present at the meeting,
-     * not all user accounts.
+     * Compute approval percentage (approved / all eligible members × 100).
+     * Denominator is all active non-system-admin members of the association.
      */
     public function getApprovalPercentageAttribute(): float
     {
-        $presentAttendees = $this->getMeetingPresentCount();
+        $eligibleCount = $this->getEligibleMembersCount();
 
-        if ($presentAttendees === 0) {
+        if ($eligibleCount === 0) {
             return 0;
         }
 
         $approvedCount = $this->approved_count;
 
-        return round(($approvedCount / $presentAttendees) * 100, 1);
+        return round(($approvedCount / $eligibleCount) * 100, 1);
     }
 
     /**
@@ -237,14 +236,12 @@ class Resolution extends Model
 
     /**
      * Whether approval threshold has been met.
-     * Denominator is meeting present attendees (not all active users).
-     * The snapshot stores required_approvals which is ceil(present * 0.75).
+     * Denominator is all eligible (active, non-system-admin) members.
+     * The snapshot stores required_approvals which is ceil(eligible_count * 0.75).
      */
     public function hasMetApprovalThreshold(): bool
     {
-        $presentAttendees = $this->getMeetingPresentCount();
-
-        // Also check snapshot if available (for backward compatibility)
+        // Also check snapshot if available
         $snapshot = $this->relationLoaded('memberSnapshot')
             ? $this->memberSnapshot
             : $this->memberSnapshot()->first();
@@ -253,18 +250,32 @@ class Resolution extends Model
             return $this->approved_count >= $snapshot->required_approvals;
         }
 
-        // Guard: no present attendees means threshold cannot be met
-        if ($presentAttendees === 0) {
+        // Fallback: compute from all eligible members
+        $eligibleCount = $this->getEligibleMembersCount();
+
+        if ($eligibleCount === 0) {
             return false;
         }
 
-        $required = (int) ceil($presentAttendees * (self::APPROVAL_THRESHOLD / 100));
+        $required = (int) ceil($eligibleCount * (self::APPROVAL_THRESHOLD / 100));
 
         return $this->approved_count >= $required;
     }
 
     /**
+     * Get the number of eligible members for the approval denominator.
+     * All active, non-system-admin users in the association.
+     */
+    public function getEligibleMembersCount(): int
+    {
+        return User::where('is_active', true)
+            ->whereDoesntHave('role', fn ($q) => $q->where('slug', 'system_admin'))
+            ->count();
+    }
+
+    /**
      * Get the number of members who were present at the associated meeting.
+     * Kept for meeting attendance display purposes.
      */
     public function getMeetingPresentCount(): int
     {

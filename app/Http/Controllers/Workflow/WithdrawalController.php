@@ -91,12 +91,23 @@ class WithdrawalController extends Controller
 
             return response()->json([
                 'message' => 'Withdrawal request created successfully.',
-                'withdrawal' => $withdrawal->load('requester'),
+                'withdrawal' => [
+                    'id' => $withdrawal->id,
+                    'amount' => (float) $withdrawal->amount,
+                    'status' => $withdrawal->status,
+                    'requested_at' => $withdrawal->requested_at?->format('M d, Y'),
+                    'requester' => $withdrawal->requester ? ['name' => $withdrawal->requester->name] : null,
+                    'notes' => $withdrawal->notes,
+                    'generate_report_url' => route('workflow.withdrawals.report', $withdrawal),
+                    'proof_file_url' => $withdrawal->proofFileUrl(),
+                    'bank_reference' => $withdrawal->bank_reference,
+                ],
                 'resolution' => [
                     'grand_total' => (float) $resolution->grand_total,
                     'total_withdrawn' => (float) $resolution->total_withdrawn,
                     'remaining_balance' => (float) $resolution->remaining_balance,
                     'status' => $resolution->status,
+                    'workflow_status' => $resolution->workflow_status,
                 ],
                 'redirect_url' => route('workflow.resolutions.show', $resolution),
             ], 201);

@@ -129,14 +129,15 @@ class ResolutionController extends Controller
 
         $eligibility = $this->eligibilityService->canWithdraw($resolution);
 
-        // Denominator: active members who were present at the meeting,
-        // not all user accounts
-        $totalMembers = $resolution->getMeetingPresentCount();
+        // Denominator: all eligible (active, non-system-admin) members
+        $totalMembers = $resolution->getEligibleMembersCount();
+        $presentCount = $resolution->getMeetingPresentCount();
 
         return view('workflow.resolutions-show', [
             'resolution' => $resolution,
             'eligibility' => $eligibility,
             'totalMembers' => $totalMembers,
+            'presentCount' => $presentCount,
         ]);
     }
 
@@ -200,22 +201,22 @@ class ResolutionController extends Controller
     {
         $resolution->load('approvals.user:id,name,role_id');
 
-        // Denominator: meeting present attendees, not all active users
-        $totalMembers = $resolution->getMeetingPresentCount();
+        // Denominator: all eligible (active, non-system-admin) members
+        $eligibleMembers = User::where('is_active', true)
+            ->whereDoesntHave('role', fn ($q) => $q->where('slug', 'system_admin'))
+            ->with('role:id,name,slug')
+            ->orderBy('name')
+            ->get();
+
+        $totalMembers = $eligibleMembers->count();
         $approvedCount = $resolution->approved_count;
 
-        $members = $totalMembers > 0
-            ? $resolution->meeting->signatories()
-                ->where('attendance_status', 'present')
-                ->with('user.role:id,name,slug')
-                ->get()
-                ->map(fn ($s) => [
-                    'id' => $s->user->id,
-                    'name' => $s->user->name,
-                    'role_id' => $s->user->role_id,
-                    'role' => $s->user->role,
-                ])
-            : collect();
+        $members = $eligibleMembers->map(fn ($u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'role_id' => $u->role_id,
+            'role' => $u->role,
+        ]);
 
         return response()->json([
             'members' => $members,

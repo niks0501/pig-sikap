@@ -58,7 +58,7 @@
                 'approval_percentage' => (float) $resolution->approval_percentage,
                 'approved_count' => $resolution->approved_count,
                 'has_met_threshold' => $resolution->hasMetApprovalThreshold(),
-                'total_members' => $totalMembers,
+                'present_count' => $presentCount,
                 'creator_name' => $resolution->creator?->name,
                 'created_at' => $resolution->created_at?->format('M d, Y h:i A'),
                 'is_approval_locked' => $resolution->is_approval_locked,
@@ -145,6 +145,7 @@
             ])->values(),
             'permissions' => $permissions,
             'totalMembers' => $totalMembers,
+            'presentCount' => $presentCount,
             'eligibility' => $eligibility,
             'threshold' => \App\Models\Resolution::APPROVAL_THRESHOLD,
             'routes' => [

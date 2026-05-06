@@ -31,7 +31,12 @@ class DocumentTypeController extends Controller
 
         $documentType = DocumentType::create($validated);
 
-        return response()->json($documentType, 201);
+        if ($request->expectsJson()) {
+            return response()->json($documentType, 201);
+        }
+
+        return redirect()->route('workflow.documents.page.types')
+            ->with('success', 'Document type "' . $documentType->name . '" added successfully.');
     }
 
     public function show(DocumentType $documentType)
@@ -64,6 +69,11 @@ class DocumentTypeController extends Controller
 
         $documentType->delete();
 
-        return response()->json(['message' => 'Document type deleted successfully']);
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'Document type deleted successfully']);
+        }
+
+        return redirect()->route('workflow.documents.page.types')
+            ->with('success', 'Document type "' . $documentType->name . '" deleted successfully.');
     }
 }

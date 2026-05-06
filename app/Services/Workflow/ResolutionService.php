@@ -6,7 +6,6 @@ use App\Models\Meeting;
 use App\Models\Resolution;
 use App\Models\ResolutionLineItem;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,18 +21,11 @@ class ResolutionService
     public function create(array $data, User $user): Resolution
     {
         return DB::transaction(function () use ($data, $user) {
-            $filePath = null;
-
-            if (isset($data['resolution_file']) && $data['resolution_file'] instanceof UploadedFile) {
-                $filePath = $data['resolution_file']->store('resolutions', 'public');
-            }
-
             $resolution = Resolution::create([
                 'meeting_id' => $data['meeting_id'],
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'focal_person_name' => $data['focal_person_name'] ?? null,
-                'resolution_file_path' => $filePath,
                 'status' => 'draft',
                 'approval_deadline' => $data['approval_deadline'] ?? null,
                 'created_by' => $user->id,

@@ -20,32 +20,32 @@ class ResolutionPolicy
     }
 
     /**
-     * Secretary, President, and Admin can create resolutions.
+     * Secretary and President can create resolutions.
      */
     public function create(User $user): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['secretary', 'president', 'system_admin']);
+            in_array($user->role->slug, ['secretary', 'president']);
     }
 
     /**
-     * Secretary, President, and Admin can generate documents (PDF/DOCX)
+     * Secretary and President can generate documents (PDF/DOCX)
      * when the resolution is in draft or generated status.
      */
     public function generateDocuments(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['secretary', 'president', 'system_admin']) &&
+            in_array($user->role->slug, ['secretary', 'president']) &&
             in_array($resolution->workflow_status, ['draft', 'generated']);
     }
 
     /**
-     * Secretary, Treasurer, President, and Admin can upload signed documents
+     * Secretary, Treasurer, and President can upload signed documents
      * when the resolution has been generated.
      */
     public function uploadSignedDocument(User $user, Resolution $resolution): bool
     {
-        $allowedRoles = ['secretary', 'treasurer', 'president', 'system_admin'];
+        $allowedRoles = ['secretary', 'treasurer', 'president'];
 
         return $user->is_active &&
             in_array($user->role->slug, $allowedRoles) &&
@@ -53,33 +53,33 @@ class ResolutionPolicy
     }
 
     /**
-     * Only President and Admin can verify the 75% approval threshold.
+     * Only President can verify the 75% approval threshold.
      */
     public function verifyApprovalThreshold(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['president', 'system_admin']) &&
+            in_array($user->role->slug, ['president']) &&
             in_array($resolution->workflow_status, ['signature_sheet_uploaded', 'pending_member_approval']);
     }
 
     /**
-     * Secretary, President, and Admin can submit to DSWD
+     * Secretary and President can submit to DSWD
      * after member approval is reached.
      */
     public function submitToDswd(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['secretary', 'president', 'system_admin']) &&
+            in_array($user->role->slug, ['secretary', 'president']) &&
             $resolution->workflow_status === 'member_approved';
     }
 
     /**
-     * Secretary, Treasurer, President, and Admin can upload DSWD approval
+     * Secretary, Treasurer, and President can upload DSWD approval
      * when the resolution is pending DSWD approval.
      */
     public function uploadDswdApproval(User $user, Resolution $resolution): bool
     {
-        $allowedRoles = ['secretary', 'treasurer', 'president', 'system_admin'];
+        $allowedRoles = ['secretary', 'treasurer', 'president'];
 
         return $user->is_active &&
             in_array($user->role->slug, $allowedRoles) &&
@@ -87,13 +87,13 @@ class ResolutionPolicy
     }
 
     /**
-     * Treasurer, President, and Admin can create a withdrawal
+     * Treasurer and President can create a withdrawal
      * after DSWD approval is received.
      */
     public function createWithdrawal(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['treasurer', 'president', 'system_admin']) &&
+            in_array($user->role->slug, ['treasurer', 'president']) &&
             $resolution->workflow_status === 'dswd_approved';
     }
 
@@ -103,16 +103,16 @@ class ResolutionPolicy
     public function manageCanvass(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['president', 'secretary', 'treasurer', 'canvasser', 'system_admin']);
+            in_array($user->role->slug, ['president', 'secretary', 'treasurer', 'canvasser']);
     }
 
     /**
-     * Can designate withdrawers for this resolution (president/admin only).
+     * Can designate withdrawers for this resolution (president only).
      */
     public function designateWithdrawers(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['president', 'system_admin']);
+            in_array($user->role->slug, ['president']);
     }
 
     /**
@@ -125,6 +125,6 @@ class ResolutionPolicy
         }
 
         return $user->is_active &&
-            in_array($user->role->slug, ['president', 'secretary', 'system_admin']);
+            in_array($user->role->slug, ['president', 'secretary']);
     }
 }

@@ -3,7 +3,7 @@
 /**
  * ResolutionEnhancementTest – Tests for the Meeting Resolutions &
  * Withdrawal workflow enhancements:
- * - 75% denominator uses meeting present attendees
+ * - 75% denominator uses all eligible (active, non-system-admin) members
  * - Meeting type default agenda auto-fill
  * - focal_person_name, bank_reference, evidence_file, dswd_approval_date
  * - Liquidation status tracking
@@ -56,15 +56,16 @@ function erCreateActiveMember(string $slug = 'member'): User
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  75% APPROVAL DENOMINATOR = MEETING PRESENT ATTENDEES      ║
+// ║  75% APPROVAL DENOMINATOR = ALL ELIGIBLE MEMBERS            ║
 // ╚══════════════════════════════════════════════════════════════╝
 
-test('snapshot uses meeting present attendees not all active users', function () {
+test('snapshot uses all eligible members not just present attendees', function () {
     $secretary = erMakeOfficer('secretary');
     $president = erMakeOfficer('president');
 
     // Create 3 additional active members who will NOT attend the meeting
-    User::factory()->count(3)->create(['is_active' => true]);
+    // These still count toward the approval denominator
+    $extraMembers = User::factory()->count(3)->create(['is_active' => true]);
 
     // Create meeting with only 2 present attendees
     $meeting = Meeting::create([
@@ -88,14 +89,19 @@ test('snapshot uses meeting present attendees not all active users', function ()
     $service = app(MemberSnapshotService::class);
     $snapshot = $service->takeSnapshot($resolution);
 
-    // Denominator should be 2 (present attendees), not 5 (all active users)
-    expect($snapshot->eligible_count)->toBe(2);
-    // 75% of 2 = ceil(1.5) = 2
-    expect($snapshot->required_approvals)->toBe(2);
+    // Denominator should be 5 (all active non-system-admin users), not just 2 present attendees
+    // secretary(1) + president(1) + 3 extra members = 5 active users
+    expect($snapshot->eligible_count)->toBe(5);
+    // 75% of 5 = ceil(3.75) = 4
+    expect($snapshot->required_approvals)->toBe(4);
 });
 
-test('snapshot throws when no present attendees', function () {
-    $secretary = erMakeOfficer('secretary');
+test('snapshot throws when no eligible members exist', function () {
+    // Create inactive secretary — not counted as eligible
+    $secretary = User::factory()->create([
+        'role_id' => DB::table('roles')->where('slug', 'secretary')->first()?->id ?? erCreateRole('Secretary', 'secretary'),
+        'is_active' => false,
+    ]);
 
     $meeting = Meeting::create([
         'title' => 'Empty Meeting',
@@ -103,8 +109,6 @@ test('snapshot throws when no present attendees', function () {
         'status' => 'confirmed',
         'created_by' => $secretary->id,
     ]);
-
-    // No signatories created
 
     $resolution = Resolution::create([
         'meeting_id' => $meeting->id,
@@ -116,14 +120,14 @@ test('snapshot throws when no present attendees', function () {
     $service = app(MemberSnapshotService::class);
 
     expect(fn () => $service->takeSnapshot($resolution))
-        ->toThrow(RuntimeException::class, 'no present attendees');
+        ->toThrow(RuntimeException::class, 'no eligible members');
 });
 
-test('approval percentage uses meeting present count as denominator', function () {
+test('approval percentage uses all eligible members as denominator', function () {
     $secretary = erMakeOfficer('secretary');
     $president = erMakeOfficer('president');
 
-    // Create 8 more active members (10 total active) but only 2 present
+    // Create 8 more active members (10 total eligible) but only 2 present at meeting
     User::factory()->count(8)->create(['is_active' => true]);
 
     $meeting = Meeting::create([
@@ -143,7 +147,7 @@ test('approval percentage uses meeting present count as denominator', function (
         'created_by' => $secretary->id,
     ]);
 
-    // Approve 1 out of 2 present members
+    // Approve 1 out of 10 eligible members
     $resolution->approvals()->create([
         'user_id' => $secretary->id,
         'is_approved' => true,
@@ -153,9 +157,10 @@ test('approval percentage uses meeting present count as denominator', function (
     // Fresh load to compute
     $resolution = $resolution->fresh(['meeting.signatories']);
 
-    // 1/2 = 50%, NOT 1/10 = 10%
-    expect($resolution->approval_percentage)->toBe(50.0);
+    // 1/10 = 10% (uses all eligible members, not just 2 present)
+    expect($resolution->approval_percentage)->toBe(10.0);
     expect($resolution->hasMetApprovalThreshold())->toBeFalse();
+    expect($resolution->getEligibleMembersCount())->toBe(10);
     expect($resolution->getMeetingPresentCount())->toBe(2);
 });
 

@@ -15,6 +15,7 @@ const props = defineProps({
     dswdSubmission: { type: Object, default: null },
     withdrawals: { type: Array, default: () => [] },
     totalMembers: { type: Number, default: 0 },
+    presentCount: { type: Number, default: 0 },
     eligibility: { type: Object, default: () => ({ eligible: false, reasons: [] }) },
     threshold: { type: Number, default: 75 },
     routes: { type: Object, default: () => ({}) },
@@ -51,6 +52,11 @@ const members = ref([])
 const loadingMembers = ref(false)
 const savingApprovals = ref(false)
 
+const selectedCount = computed(() => members.value.filter(m => m.is_approved).length)
+const selectionPct = computed(() => members.value.length > 0 ? Math.round((selectedCount.value / members.value.length) * 100) : 0)
+const selectionNeeded = computed(() => Math.ceil(members.value.length * (props.threshold / 100)))
+const selectionColor = computed(() => selectionPct.value >= props.threshold ? 'text-emerald-600' : 'text-amber-600')
+
 async function loadApprovalData() {
     loadingMembers.value = true
     try {
@@ -85,6 +91,8 @@ async function saveApprovals() {
             res.has_met_threshold = d.resolution.has_met_threshold
             approvalsList.value = d.approvals
             showApprovalPanel.value = false
+            // Auto-switch to Documents tab for next workflow step (verify/upload)
+            activeTab.value = 'documents'
         }
     } catch { /* silent */ }
     finally { savingApprovals.value = false }
@@ -113,6 +121,13 @@ async function saveDswd() {
             res.has_met_threshold = d.resolution.has_met_threshold
             dswdData.value = d.resolution.dswdSubmission
             showDswdPanel.value = false
+            // Recompute withdrawal eligibility reactively
+            if (dswdForm.value.status === 'approved' && res.has_met_threshold && res.remaining_balance > 0) {
+                eligState.eligible = true
+                eligState.reasons = []
+            }
+            // Auto-switch to Withdrawals tab after DSWD approval
+            activeTab.value = 'withdrawals'
         }
     } catch { /* silent */ }
     finally { savingDswd.value = false }
@@ -172,6 +187,8 @@ async function uploadSigned() {
             uploadSuccess.value = true
             signingFile.value = null
             sigSheetFile.value = null
+            // Auto-switch to Approvals tab to record signatures
+            activeTab.value = 'approvals'
         } else { uploadError.value = d.message || 'Upload failed.' }
     } catch { uploadError.value = 'Network error during upload.' }
     finally { uploadingSigned.value = false }
@@ -185,6 +202,8 @@ async function verifyThreshold() {
         if (r.ok) {
             res.status = d.resolution.status
             res.workflow_status = d.resolution.workflow_status
+            // Auto-switch to DSWD tab
+            activeTab.value = 'dswd'
         } else { docError.value = d.message || 'Cannot verify approval threshold.' }
     } catch { docError.value = 'Network error verifying approvals.' }
 }
@@ -229,6 +248,7 @@ async function submitWithdrawal() {
             res.total_withdrawn = d.resolution.total_withdrawn
             res.remaining_balance = d.resolution.remaining_balance
             res.status = d.resolution.status
+            if (d.resolution.workflow_status) res.workflow_status = d.resolution.workflow_status
             withdrawalsList.value.push({
                 id: d.withdrawal.id,
                 amount: parseFloat(d.withdrawal.amount),
@@ -237,13 +257,18 @@ async function submitWithdrawal() {
                 requester_name: d.withdrawal.requester?.name,
                 notes: d.withdrawal.notes,
                 has_report: false,
-                generate_report_url: props.routes.reportGenerate?.replace('__WITHDRAWAL__', d.withdrawal.id),
-                proof_file_url: null,
+                generate_report_url: d.withdrawal.generate_report_url,
+                proof_file_url: d.withdrawal.proof_file_url || null,
                 preview_url: null,
                 download_url: null,
             })
             showWithdrawalForm.value = false
             resetWithdrawalForm()
+            // Update eligibility after withdrawal
+            if (res.remaining_balance <= 0) {
+                eligState.eligible = false
+                eligState.reasons = ['No remaining balance available for withdrawal.']
+            }
         } else if (r.status === 422) {
             const fieldLabels = { amount: 'Amount', bank_account: 'Bank Account', proof_file: 'Proof File', notes: 'Notes' }
             for (const [key, msgs] of Object.entries(d.errors || {})) {
@@ -283,6 +308,7 @@ async function generateLiquidationReport(withdrawal) {
         if (d.resolution) {
             res.status = d.resolution.status
             res.remaining_balance = d.resolution.remaining_balance
+            if (d.resolution.workflow_status) res.workflow_status = d.resolution.workflow_status
         }
     } catch {
         reportErrors.value = { ...reportErrors.value, [withdrawal.id]: 'Connection interrupted.' }
@@ -403,7 +429,7 @@ onMounted(() => {
         <!-- Quick-access approval progress in overview -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-3">Approval Progress</h2>
-            <p class="text-xs text-gray-500 mb-2">Based on {{ props.totalMembers }} members who were present at the meeting.</p>
+            <p class="text-xs text-gray-500 mb-2">Based on {{ props.totalMembers }} eligible members ({{ props.presentCount }} present at meeting).</p>
             <div class="flex items-center justify-between text-sm mb-1">
                 <span class="text-gray-600">{{ res.approved_count }} / {{ props.totalMembers }} members signed</span>
                 <span class="font-semibold" :class="res.has_met_threshold ? 'text-emerald-600' : 'text-amber-600'">{{ pct }}%</span>
@@ -486,7 +512,7 @@ onMounted(() => {
                         <a v-if="doc.file_url" :href="doc.file_url" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-[#0c6d57] bg-emerald-50 rounded-lg hover:bg-emerald-100 min-h-[36px]">View</a>
                     </div>
                 </div>
-                <div v-if="permissions.canUploadSigned">
+                <div v-if="permissions.canUploadSigned || ['generated', 'printed'].includes(res.workflow_status)">
                     <div v-if="uploadSuccess" class="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">✅ Document uploaded successfully!</div>
                     <div v-if="uploadError" class="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">⚠️ {{ uploadError }}</div>
                     <div class="space-y-3">
@@ -500,10 +526,11 @@ onMounted(() => {
             <!-- Verify Threshold -->
             <div class="border rounded-xl p-4">
                 <h3 class="text-sm font-semibold text-gray-900 mb-2">✅ Verify 75% Approval</h3>
+                <p class="text-xs text-gray-500 mb-2">Requires {{ memberSnapshot?.required_approvals || Math.ceil(props.totalMembers * (props.threshold / 100)) }} of {{ props.totalMembers }} eligible members.</p>
                 <div class="flex items-center gap-3 mb-3">
                     <div class="flex-1">
                         <div class="flex items-center justify-between text-sm mb-1">
-                            <span class="text-gray-600">{{ res.approved_count || 0 }} / {{ props.totalMembers }} members signed</span>
+                            <span class="text-gray-600">{{ res.approved_count || 0 }} / {{ props.totalMembers }} eligible members signed</span>
                             <span class="font-semibold" :class="res.has_met_threshold ? 'text-emerald-600' : 'text-amber-600'">{{ pct }}%</span>
                         </div>
                         <div class="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
@@ -511,7 +538,7 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
-                <button v-if="permissions.canVerifyApproval && res.has_met_threshold" @click="verifyThreshold" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-[#0c6d57] rounded-xl hover:bg-[#0a5a48] min-h-[44px]">✅ Verify & Proceed to DSWD</button>
+                <button v-if="(permissions.canVerifyApproval || ['signature_sheet_uploaded', 'pending_member_approval'].includes(res.workflow_status)) && res.has_met_threshold" @click="verifyThreshold" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-[#0c6d57] rounded-xl hover:bg-[#0a5a48] min-h-[44px]">✅ Verify & Proceed to DSWD</button>
                 <p v-else-if="!res.has_met_threshold" class="text-xs text-amber-600">⚠️ The 75% approval threshold has not been met yet.</p>
             </div>
         </div>
@@ -553,7 +580,7 @@ onMounted(() => {
 
         <div class="mb-4">
             <div class="flex items-center justify-between text-sm mb-1">
-                <span class="text-gray-600">{{ res.approved_count }} / {{ props.totalMembers }} members signed</span>
+                <span class="text-gray-600">{{ res.approved_count }} / {{ props.totalMembers }} eligible members signed</span>
                 <span class="font-semibold" :class="res.has_met_threshold ? 'text-emerald-600' : 'text-amber-600'">{{ pct }}%</span>
             </div>
             <div class="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -587,6 +614,21 @@ onMounted(() => {
                     </div>
                     <span :class="m.is_approved ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'" class="px-2.5 py-0.5 rounded-full text-xs font-medium">{{ m.is_approved ? 'Signed' : 'Not signed' }}</span>
                 </button>
+
+                <!-- Vote Tracker Bar -->
+                <div class="sticky bottom-0 bg-white border-t border-gray-200 rounded-b-xl px-4 py-3 -mx-0 -mb-0 shadow-md">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-sm font-semibold text-gray-800">Selected: {{ selectedCount }} / {{ members.length }}</span>
+                        <span class="text-sm font-semibold" :class="selectionColor">{{ selectionPct }}%</span>
+                    </div>
+                    <div class="relative w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-300" :class="selectionPct >= props.threshold ? 'bg-emerald-500' : 'bg-amber-500'" :style="{ width: Math.min(selectionPct, 100) + '%' }"></div>
+                    </div>
+                    <p class="text-xs mt-1" :class="selectionColor">
+                        {{ selectedCount >= selectionNeeded ? '✅ Threshold met!' : '⚠️ Need ' + selectionNeeded + ' signatures (' + props.threshold + '%)' }}
+                    </p>
+                </div>
+
                 <div class="flex justify-end mt-4">
                     <button @click="saveApprovals" :disabled="savingApprovals" class="px-5 py-2.5 bg-[#0c6d57] text-white font-semibold rounded-xl hover:bg-[#0a5a48] min-h-[44px] disabled:opacity-50">{{ savingApprovals ? 'Saving...' : 'Save Approvals' }}</button>
                 </div>

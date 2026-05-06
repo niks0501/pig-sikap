@@ -29,7 +29,7 @@
             ></div>
 
             <aside
-                class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 px-4 py-6 transform transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto"
+                class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 px-4 py-6 transform transition-transform duration-200 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto"
                 :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
             >
                 <div class="flex items-center gap-3 px-3 pb-6 border-b border-slate-100">

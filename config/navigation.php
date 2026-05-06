@@ -99,7 +99,7 @@ return [
                     'route' => 'health.index',
                     'route_pattern' => 'health.*',
                     'icon' => 'health',
-                    'color' => 'amber',
+                    'color' => 'green',
                     'roles' => ['president', 'caretaker'],
                 ],
 
@@ -108,7 +108,7 @@ return [
                     'route' => 'sales.index',
                     'route_pattern' => 'sales.*',
                     'icon' => 'sales',
-                    'color' => 'blue',
+                    'color' => 'green',
                     'roles' => ['president', 'treasurer'],
                 ],
 
@@ -117,7 +117,7 @@ return [
                     'route' => 'expenses.index',
                     'route_pattern' => 'expenses.*',
                     'icon' => 'expenses',
-                    'color' => 'violet',
+                    'color' => 'green',
                     'roles' => ['president', 'treasurer'],
                 ],
 
@@ -126,17 +126,8 @@ return [
                     'route' => 'profitability.index',
                     'route_pattern' => 'profitability.*,profit-sharing*',
                     'icon' => 'profitability',
-                    'color' => 'emerald',
-                    'roles' => ['president', 'treasurer'],
-                ],
-
-                [
-                    'label' => 'Members',
-                    'route' => 'membership.how-to-join',
-                    'route_pattern' => 'membership.*',
-                    'icon' => 'members',
                     'color' => 'green',
-                    'roles' => ['*'],
+                    'roles' => ['president', 'treasurer'],
                 ],
 
                 [
@@ -144,7 +135,7 @@ return [
                     'route' => 'reports.index',
                     'route_pattern' => 'reports.*',
                     'icon' => 'reports',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president', 'treasurer', 'secretary'],
                 ],
 
@@ -153,7 +144,7 @@ return [
                     'route' => 'workflow.meetings.index',
                     'route_pattern' => 'workflow.meetings*',
                     'icon' => 'meetings',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary'],
                 ],
 
@@ -162,7 +153,7 @@ return [
                     'route' => 'workflow.resolutions.index',
                     'route_pattern' => 'workflow.resolutions*',
                     'icon' => 'resolutions',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary', 'treasurer'],
                 ],
 
@@ -171,7 +162,7 @@ return [
                     'route' => 'workflow.documents.page.upload',
                     'route_pattern' => 'workflow.documents.*',
                     'icon' => 'documents',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary', 'treasurer'],
                 ],
 
@@ -180,7 +171,7 @@ return [
                     'route' => 'workflow.canvasses.index',
                     'route_pattern' => 'workflow.canvasses*',
                     'icon' => 'canvassing',
-                    'color' => 'emerald',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary', 'treasurer', 'canvasser'],
                 ],
 
@@ -189,7 +180,7 @@ return [
                     'route' => 'workflow.suppliers.index',
                     'route_pattern' => 'workflow.suppliers*',
                     'icon' => 'suppliers',
-                    'color' => 'emerald',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary', 'treasurer', 'canvasser'],
                 ],
 
@@ -198,7 +189,7 @@ return [
                     'route' => 'workflow.penalties.index',
                     'route_pattern' => 'workflow.penalties*',
                     'icon' => 'penalties',
-                    'color' => 'amber',
+                    'color' => 'green',
                     'roles' => ['president', 'secretary', 'treasurer'],
                 ],
 
@@ -207,7 +198,7 @@ return [
                     'route' => 'workflow.settings.index',
                     'route_pattern' => 'workflow.settings.*',
                     'icon' => 'settings',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president', 'system_admin'],
                 ],
 
@@ -216,7 +207,7 @@ return [
                     'route' => 'audit-trails.index',
                     'route_pattern' => 'audit-trails.*',
                     'icon' => 'audit',
-                    'color' => 'gray',
+                    'color' => 'green',
                     'roles' => ['president'],
                 ],
 

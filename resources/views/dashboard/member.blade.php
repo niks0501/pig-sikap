@@ -4,9 +4,7 @@
             'userName' => Auth::user()->name ?? 'User',
             'roleName' => Auth::user()->role?->name ?? 'User',
             'dataUrl' => route('dashboard.data'),
-            'routes' => [
-                'howToJoin' => route('membership.how-to-join'),
-            ],
+            'routes' => [],
         ];
     @endphp
 

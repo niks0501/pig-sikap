@@ -9,16 +9,16 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * MemberSnapshotService – creates an immutable snapshot of active
+ * MemberSnapshotService – creates an immutable snapshot of eligible
  * members when a resolution enters pending_member_approval.
  */
 class MemberSnapshotService
 {
     /**
-     * Take an immutable snapshot of the active members who were
-     * present at the resolution's associated meeting.
-     * The 75% approval denominator is meeting attendees (present),
-     * not all active user accounts.
+     * Take an immutable snapshot of all eligible (active, non-system-admin)
+     * members of the association.
+     * The 75% approval denominator is all eligible members,
+     * not just meeting present attendees.
      * Idempotent: if a snapshot already exists, it will not be overwritten.
      *
      * @throws RuntimeException
@@ -32,33 +32,27 @@ class MemberSnapshotService
             return $existing;
         }
 
-        $meeting = $resolution->meeting()->first();
-
-        if (! $meeting) {
-            throw new RuntimeException('Cannot take snapshot: resolution is not linked to a meeting.');
-        }
-
-        // Denominator: only members who were marked PRESENT at the meeting
-        $presentSignatories = $meeting->signatories()
-            ->where('attendance_status', 'present')
-            ->with('user.role')
+        // Denominator: ALL active members who are not system admins
+        $eligibleMembers = User::where('is_active', true)
+            ->whereDoesntHave('role', fn ($q) => $q->where('slug', 'system_admin'))
+            ->with('role')
             ->get();
 
-        $eligibleCount = $presentSignatories->count();
+        $eligibleCount = $eligibleMembers->count();
 
         if ($eligibleCount === 0) {
-            throw new RuntimeException('Cannot take snapshot: no present attendees at the meeting.');
+            throw new RuntimeException('Cannot take snapshot: no eligible members in the association.');
         }
 
         // Required approvals = ceil(eligible_count * 0.75)
         $requiredApprovals = (int) ceil($eligibleCount * (Resolution::APPROVAL_THRESHOLD / 100));
 
-        $snapshotData = $presentSignatories->map(fn ($signatory) => [
-            'id' => $signatory->user->id,
-            'name' => $signatory->user->name,
-            'email' => $signatory->user->email,
-            'role' => $signatory->user->relationLoaded('role') && $signatory->user->role ? $signatory->user->role->slug : null,
-            'is_active' => $signatory->user->is_active,
+        $snapshotData = $eligibleMembers->map(fn ($user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->relationLoaded('role') && $user->role ? $user->role->slug : null,
+            'is_active' => $user->is_active,
         ]);
 
         return DB::transaction(function () use ($resolution, $snapshotData, $eligibleCount, $requiredApprovals) {

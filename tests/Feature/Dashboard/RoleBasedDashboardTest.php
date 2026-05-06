@@ -103,7 +103,6 @@ test('member sees minimal sidebar on dashboard page', function () {
     $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertSee('Dashboard');
-    $response->assertSee('Members');
 
     // Should NOT see restricted items
     $response->assertDontSee('Cycles');

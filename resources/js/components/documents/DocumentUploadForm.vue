@@ -55,9 +55,13 @@ const handleFileSelection = (event) => {
 
 const selectDocumentType = (id) => {
   selectedTypeId.value = id;
-  selectedFile.value = null;
   errorMessage.value = '';
   successMessage.value = '';
+  removeFile();
+};
+
+const removeFile = () => {
+  selectedFile.value = null;
   if (fileInput.value) {
     fileInput.value.value = '';
   }
@@ -174,26 +178,39 @@ const submitUpload = async () => {
         </div>
       </div>
 
-      <div v-else class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3 min-w-0">
-            <svg class="h-8 w-8 shrink-0 text-[#0c6d57]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-gray-900">{{ selectedFile.name }}</p>
-              <p class="text-xs text-gray-500">{{ (selectedFile.size / 1024).toFixed(1) }} KB</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
-            @click="selectedFile = null; $refs.fileInput.value = ''"
-          >
-            Change
-          </button>
-        </div>
-      </div>
+       <div v-else class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+         <div class="flex items-center justify-between gap-4">
+           <div class="flex items-center gap-3 min-w-0">
+             <svg class="h-8 w-8 shrink-0 text-[#0c6d57]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+             </svg>
+             <div class="min-w-0">
+               <p class="truncate text-sm font-semibold text-gray-900">{{ selectedFile.name }}</p>
+               <p class="text-xs text-gray-500">{{ (selectedFile.size / 1024).toFixed(1) }} KB</p>
+             </div>
+           </div>
+           <div class="flex items-center gap-2 shrink-0">
+             <button
+               type="button"
+               class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+               @click="removeFile"
+               title="Remove selected file"
+             >
+               <svg class="h-3.5 w-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+               </svg>
+               <span class="hidden sm:inline ml-1">Remove</span>
+             </button>
+             <button
+               type="button"
+               class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+               @click="$refs.fileInput.click()"
+             >
+               Change
+             </button>
+         </div>
+       </div>
+     </div>
     </div>
 
     <div v-if="errorMessage" class="rounded-lg bg-rose-50 border border-rose-200 p-3">

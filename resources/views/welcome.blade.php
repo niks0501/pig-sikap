@@ -26,7 +26,7 @@
 
                 <nav class="hidden md:flex items-center bg-[#197c65] px-8 py-2.5 rounded-full border border-white/10 space-x-10" style="font-family: Fraunces, serif;">
                     <a href="#home" class="text-white font-bold text-sm hover:text-emerald-200 transition">Home</a>
-                    <a href="#about" class="text-white font-bold text-sm hover:text-emerald-200 transition">About</a>
+                    <a href="#how-to-join" class="text-white font-bold text-sm hover:text-emerald-200 transition">How to Join</a>
                     <a href="#features" class="text-white font-bold text-sm hover:text-emerald-200 transition">Features</a>
                     <a href="#how-it-works" class="text-white font-bold text-sm hover:text-emerald-200 transition">How it Works</a>
                     <a href="#who-is-it-for" class="text-white font-bold text-sm hover:text-emerald-200 transition">Who is it for?</a>
@@ -83,64 +83,74 @@
         </section>
 
 
-        <section id="about"class="py-20 bg-emerald-50 border-b border-emerald-100" style="font-family: Fraunces, serif;">
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h1 class="text-4xl md:text-5xl font-bold text-[#0c6d57] mb-6">About Pig-Sikap</h1>
-            </div>
+        <section id="how-to-join" class="py-20 bg-emerald-50 border-b border-emerald-100" style="font-family: Fraunces, serif;">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                <section class="rounded-3xl bg-[#0c6d57] px-5 py-8 text-white shadow-sm sm:px-8">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-100">Membership Guide</p>
+                    <h1 class="mt-2 text-2xl font-black sm:text-3xl">How to Join Elite Visionaries Association</h1>
+                    <p class="mt-3 max-w-3xl text-sm leading-6 text-emerald-50">
+                        Simple Phase 1.5 guide only. This page does not upload sensitive documents or automate DSWD approval.
+                    </p>
+                </section>
 
-            <div class="flex flex-col md:flex-row items-center gap-12 lg:gap-20 bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-emerald-100">
-                    
-                    <div class="w-full md:w-1/2 relative group">
-                        <div class="overflow-hidden rounded-[2rem] aspect-[4/3] bg-gray-100 shadow-sm border border-gray-200">
-                            <img id="about-carousel" src="{{ asset('images/Photo-1.png') }}" alt="Pig-Sikap Farmers" class="w-full h-full object-cover transition-opacity duration-300 ease-in-out">
-                        </div>
-                        
-                        <button onclick="prevSlide()" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/80 hover:bg-white text-[#0c6d57] rounded-full shadow-md transition cursor-pointer z-10 focus:outline-none backdrop-blur-sm border border-emerald-100">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </button>
-                        
-                        <button onclick="nextSlide()" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white/80 hover:bg-white text-[#0c6d57] rounded-full shadow-md transition cursor-pointer z-10 focus:outline-none backdrop-blur-sm border border-emerald-100">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-                    </div>
-
-                    <div class="w-full md:w-1/2">
-                        <p class="text-3xl md:text-4xl font-light text-gray-500 leading-relaxed tracking-wide font-mono" style="font-family: Fraunces, serif;">
-                            <span class="text-lg text-gray-600 mb-8 max-w-lg mx-auto md:mx-0" style="font-family: Fraunces, serif;">The Elite Visionaries of Humayingan, SLP Association will take traditional swine-raising and elevate it into a data-driven enterprise. Building on our foundation from October 2024, we will meticulously plan every phase of our operations from assigning canvassing tasks and forecasting feed requirements to tracking rearing timelines. Through the Pig-Sikap system, our association will replace manual guesswork with business analytics. We will ensure that every community policy we implement will drive transparency, reduce manual workloads, and maximize profitability for all our members.</span>
+                <section class="grid gap-4 md:grid-cols-3">
+                    <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#0c6d57]/10 text-sm font-black text-[#0c6d57]">1</span>
+                        <h2 class="mt-4 text-lg font-bold text-gray-900">Coordinate With Officers</h2>
+                        <p class="mt-2 text-sm leading-6 text-gray-600">
+                            Talk to the current officers of Elite Visionaries Association and ask for the latest meeting schedule, requirements, and profiling instructions.
                         </p>
+                    </article>
+
+                    <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#0c6d57]/10 text-sm font-black text-[#0c6d57]">2</span>
+                        <h2 class="mt-4 text-lg font-bold text-gray-900">Prepare Requirements</h2>
+                        <p class="mt-2 text-sm leading-6 text-gray-600">
+                            Prepare paper copies only. Do not upload IDs or certificates here because this page is informational.
+                        </p>
+                    </article>
+
+                    <article class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#0c6d57]/10 text-sm font-black text-[#0c6d57]">3</span>
+                        <h2 class="mt-4 text-lg font-bold text-gray-900">DSWD SLP Profiling</h2>
+                        <p class="mt-2 text-sm leading-6 text-gray-600">
+                            The SLP Focal Person checks if the applicant qualifies under program criteria such as Listahanan or 4Ps where applicable.
+                        </p>
+                    </article>
+                </section>
+
+                <section class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#0c6d57]">Checklist</p>
+                            <h2 class="mt-1 text-xl font-bold text-gray-900">Membership File Requirements</h2>
+                        </div>
+                        <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">Paper documents only</span>
                     </div>
 
-                </div>
-            <script>
-                const slides = [
-                    "{{ asset('images/Photo-1.png') }}",
-                    "{{ asset('images/Photo-2.png') }}",
-                    "{{ asset('images/Photo-3.png') }}",
-                    "{{ asset('images/Photo-4.png') }}",
-                    "{{ asset('images/Photo-5.png') }}"
-                ];
-                
-                let currentSlide = 0;
-                const slideImage = document.getElementById('about-carousel');
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                        <label class="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-gray-700">
+                            <input type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                            <span>Photocopy of Valid ID</span>
+                        </label>
+                        <label class="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-gray-700">
+                            <input type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                            <span>Barangay Certificate of Residency</span>
+                        </label>
+                        <label class="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-gray-700 sm:col-span-2">
+                            <input type="checkbox" class="mt-1 rounded border-gray-300 text-[#0c6d57] focus:ring-[#0c6d57]">
+                            <span>Barangay Certificate of Indigency, if required for DSWD profiling</span>
+                        </label>
+                    </div>
+                </section>
 
-                function updateSlide() {
-                    slideImage.style.opacity = '0.5'; 
-                    setTimeout(() => {
-                        slideImage.src = slides[currentSlide];
-                        slideImage.style.opacity = '1';
-                    }, 150);
-                }
-
-                function nextSlide() {
-                    currentSlide = (currentSlide === slides.length - 1) ? 0 : currentSlide + 1;
-                    updateSlide();
-                }
-
-                function prevSlide() {
-                    currentSlide = (currentSlide === 0) ? slides.length - 1 : currentSlide - 1;
-                    updateSlide();
-                }
-            </script>
+                <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                    <h2 class="text-base font-bold text-amber-900">Privacy Reminder</h2>
+                    <p class="mt-2 text-sm leading-6 text-amber-800">
+                        Keep valid IDs and barangay certificates in the official paper membership file. Only add digital document upload later if the system has a secure approved pattern for sensitive files.
+                    </p>
+                </section>
+            </div>
         </section>
 
         <!-- Features Grid -->
@@ -336,7 +346,7 @@
                 
                 <div class="flex flex-col sm:flex-row gap-4 sm:gap-8 text-sm">
                     <a href="#" class="hover:text-white transition">Home</a>
-                    <a href="#about" class="hover:text-white transition">About</a>
+                    <a href="#how-to-join" class="hover:text-white transition">How to Join</a>
                     <a href="#" class="hover:text-white transition">Features</a>
                     <a href="{{ route('login') }}" class="hover:text-white transition">Member Login</a>
                 </div>
