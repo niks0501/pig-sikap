@@ -37,7 +37,6 @@ import PigCycleCreate from './components/pig-registry/PigCycleCreate.vue';
 import PigCycleEdit from './components/pig-registry/PigCycleEdit.vue';
 import PigCyclePigs from './components/pig-registry/PigCyclePigs.vue';
 import PigCycleShow from './components/pig-registry/PigCycleShow.vue';
-import PigBreederRegistry from './components/pig-registry/PigBreederRegistry.vue';
 import PigRegistryIndex from './components/pig-registry/PigRegistryIndex.vue';
 import CycleCard from './components/pig-registry/CycleCard.vue';
 import CycleLifecycleTimeline from './components/pig-registry/CycleLifecycleTimeline.vue';
@@ -87,6 +86,11 @@ import QuickReportButtons from './components/reports/QuickReportButtons.vue';
 import CyclePickerModal from './components/reports/CyclePickerModal.vue';
 import MemberShareAllocation from './components/profitability/MemberShareAllocation.vue';
 import OverallDashboard from './components/dashboard/OverallDashboard.vue';
+import SecretaryDashboard from './components/dashboard/roles/SecretaryDashboard.vue';
+import TreasurerDashboard from './components/dashboard/roles/TreasurerDashboard.vue';
+import CanvasserDashboard from './components/dashboard/roles/CanvasserDashboard.vue';
+import CaretakerDashboard from './components/dashboard/roles/CaretakerDashboard.vue';
+import MemberDashboard from './components/dashboard/roles/MemberDashboard.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -119,7 +123,6 @@ const componentRegistry = {
   'pig-cycle-show': PigCycleShow,
   'pig-cycle-archived': PigCycleArchived,
   'pig-cycle-pigs': PigCyclePigs,
-  'pig-breeder-registry': PigBreederRegistry,
   'cycle-card': CycleCard,
   'cycle-lifecycle-timeline': CycleLifecycleTimeline,
   'expense-list': ExpenseList,
@@ -168,6 +171,11 @@ const componentRegistry = {
   'cycle-picker-modal': CyclePickerModal,
   'member-share-allocation': MemberShareAllocation,
   'overall-dashboard': OverallDashboard,
+  'secretary-dashboard': SecretaryDashboard,
+  'treasurer-dashboard': TreasurerDashboard,
+  'canvasser-dashboard': CanvasserDashboard,
+  'caretaker-dashboard': CaretakerDashboard,
+  'member-dashboard': MemberDashboard,
 };
 
 document.addEventListener('DOMContentLoaded', () => {

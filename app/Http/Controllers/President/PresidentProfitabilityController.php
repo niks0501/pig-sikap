@@ -116,7 +116,7 @@ class PresidentProfitabilityController extends Controller
         // Load active members for per-member distribution
         $members = \App\Models\User::query()
             ->where('is_active', true)
-            ->whereHas('role', fn ($q) => $q->whereIn('slug', ['member', 'officer', 'president', 'treasurer', 'secretary']))
+            ->whereHas('role', fn ($q) => $q->whereIn('slug', ['member', 'caretaker', 'canvasser', 'president', 'treasurer', 'secretary']))
             ->whereDoesntHave('role', fn ($q) => $q->where('slug', 'system_admin'))
             ->orderBy('name')
             ->get(['id', 'name', 'email']);

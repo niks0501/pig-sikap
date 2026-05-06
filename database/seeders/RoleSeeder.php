@@ -34,9 +34,24 @@ class RoleSeeder extends Seeder
                 'description' => 'Handles financial records and fund monitoring.',
             ],
             [
-                'name' => 'Officer',
-                'slug' => 'officer',
-                'description' => 'Operational support role for day-to-day updates.',
+                'name' => 'Canvassing/Purchasing Officer',
+                'slug' => 'canvasser',
+                'description' => 'Handles canvass records, supplier directory, and purchase evidence uploads.',
+            ],
+            [
+                'name' => 'Caretaker/Association Officer',
+                'slug' => 'caretaker',
+                'description' => 'Manages assigned cycles, health updates, sick and deceased pig reports.',
+            ],
+            [
+                'name' => 'Auditor',
+                'slug' => 'auditor',
+                'description' => 'Reviews financial records and ensures compliance.',
+            ],
+            [
+                'name' => 'Business Operations Manager',
+                'slug' => 'business_ops',
+                'description' => 'Oversees sales, buyer relationships, and market operations.',
             ],
             [
                 'name' => 'Member',

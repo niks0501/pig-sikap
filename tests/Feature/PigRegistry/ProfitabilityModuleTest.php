@@ -82,7 +82,7 @@ test('profitability pages are visible to finance officers but forbidden for regu
     $president = profitabilityUser('president');
     $treasurer = profitabilityUser('treasurer');
     $secretary = profitabilityUser('secretary');
-    $officer = profitabilityUser('officer');
+    $officer = profitabilityUser('member');
 
     actingAs($president)->get(route('profitability.index'))->assertOk();
     actingAs($treasurer)->get(route('profitability.index'))->assertOk();

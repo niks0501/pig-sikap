@@ -58,7 +58,11 @@
                     </a>
                 </nav>
 
-                <div class="mt-8 border-t border-slate-100 pt-6">
+                <div class="mt-8 border-t border-slate-100 pt-6 space-y-3">
+                    <a href="{{ route('dashboard') }}" class="block w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 text-center">
+                        Switch to Main Dashboard
+                    </a>
+
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100">

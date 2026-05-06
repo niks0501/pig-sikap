@@ -86,7 +86,7 @@ test('sales routes are accessible to president treasurer and secretary but forbi
     $president = salesUser('president');
     $treasurer = salesUser('treasurer');
     $secretary = salesUser('secretary');
-    $officer = salesUser('officer');
+    $officer = salesUser('member');
 
     actingAs($president)->get(route('sales.index'))->assertOk();
     actingAs($treasurer)->get(route('sales.index'))->assertOk();

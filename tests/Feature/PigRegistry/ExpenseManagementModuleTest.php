@@ -78,7 +78,7 @@ test('expense routes are accessible to president treasurer and secretary but for
     $president = expenseUser('president');
     $treasurer = expenseUser('treasurer');
     $secretary = expenseUser('secretary');
-    $officer = expenseUser('officer');
+    $officer = expenseUser('member');
 
     actingAs($president)->get(route('expenses.index'))->assertOk();
     actingAs($treasurer)->get(route('expenses.index'))->assertOk();

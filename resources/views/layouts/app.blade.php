@@ -53,6 +53,11 @@
             $watch('sidebarOpen', value => localStorage.setItem('sidebarOpen_{{ $userId }}', value));
         "
     >
+        <!-- Skip to Content -->
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#0c6d57] focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#0c6d57] focus:ring-offset-2">
+            Skip to content
+        </a>
+
         <!-- Mobile Overlay -->
         <div
             x-show="sidebarOpen && isMobile"
@@ -85,7 +90,7 @@
             @endisset
 
             <!-- Page Content -->
-            <main class="flex-1">
+            <main class="flex-1" id="main-content">
                 <div class="page-transition-enter-active page-transition-leave-active">
                     {{ $slot }}
                 </div>
@@ -97,6 +102,22 @@
         </div>
 
         <!-- Quick Actions Modal -->
+        @php
+            $modalQuickActions = $navigation['sections']['quick_actions']['items'] ?? [];
+            $hasQuickActions = ! empty($modalQuickActions);
+
+            $qaModalIcons = [
+                'New Cycle' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>',
+                'Add Expense' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+                'Record Sale' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>',
+                'Health Incident' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>',
+                'New Meeting' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>',
+                'New Resolution' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>',
+                'New Canvass' => '<svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>',
+            ];
+        @endphp
+
+        @if ($hasQuickActions)
         <div
             x-show="quickActionsOpen"
             x-transition:enter="transition ease-out duration-200"
@@ -129,41 +150,14 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <a href="{{ route('cycles.create') }}" class="flex flex-col items-center p-4 rounded-xl border border-gray-200 hover:border-[#0c6d57] hover:bg-[#0c6d57]/5 transition-colors group">
-                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2 group-hover:bg-[#0c6d57] transition-colors">
-                                <svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-[#0c6d57] transition-colors">New Cycle</span>
-                        </a>
-
-                        <a href="{{ route('expenses.create') }}" class="flex flex-col items-center p-4 rounded-xl border border-gray-200 hover:border-[#0c6d57] hover:bg-[#0c6d57]/5 transition-colors group">
-                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2 group-hover:bg-[#0c6d57] transition-colors">
-                                <svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-[#0c6d57] transition-colors">Add Expense</span>
-                        </a>
-
-                        <a href="{{ route('sales.create') }}" class="flex flex-col items-center p-4 rounded-xl border border-gray-200 hover:border-[#0c6d57] hover:bg-[#0c6d57]/5 transition-colors group">
-                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2 group-hover:bg-[#0c6d57] transition-colors">
-                                <svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                                </svg>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-[#0c6d57] transition-colors">Record Sale</span>
-                        </a>
-
-                        <a href="{{ route('health.create') }}" class="flex flex-col items-center p-4 rounded-xl border border-gray-200 hover:border-[#0c6d57] hover:bg-[#0c6d57]/5 transition-colors group">
-                            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2 group-hover:bg-[#0c6d57] transition-colors">
-                                <svg class="w-5 h-5 text-[#0c6d57] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-[#0c6d57] transition-colors">Health Incident</span>
-                        </a>
+                        @foreach ($modalQuickActions as $action)
+                            <a href="{{ route($action['route']) }}" class="flex flex-col items-center p-4 rounded-xl border border-gray-200 hover:border-[#0c6d57] hover:bg-[#0c6d57]/5 transition-colors group">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-2 group-hover:bg-[#0c6d57] transition-colors">
+                                    {!! $qaModalIcons[$action['label']] ?? $qaModalIcons['New Cycle'] !!}
+                                </div>
+                                <span class="text-sm font-medium text-gray-700 group-hover:text-[#0c6d57] transition-colors">{{ $action['label'] }}</span>
+                            </a>
+                        @endforeach
                     </div>
 
                     <div class="mt-4 pt-4 border-t border-gray-100">
@@ -182,17 +176,21 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <!-- Keyboard Shortcuts Script -->
         <script>
             document.addEventListener('keydown', function(e) {
+                // Skip if focused inside an editable element
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
                 const layoutState = window.Alpine?.$data(document.body);
 
                 // Ctrl/Cmd + K for Quick Actions
                 if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                     e.preventDefault();
                     if (layoutState) {
-                        layoutState.quickActionsOpen = true;
+                        layoutState.quickActionsOpen = !layoutState.quickActionsOpen;
                     }
                 }
 

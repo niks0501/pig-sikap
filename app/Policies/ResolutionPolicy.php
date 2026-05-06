@@ -103,7 +103,7 @@ class ResolutionPolicy
     public function manageCanvass(User $user, Resolution $resolution): bool
     {
         return $user->is_active &&
-            in_array($user->role->slug, ['president', 'secretary', 'treasurer', 'system_admin']);
+            in_array($user->role->slug, ['president', 'secretary', 'treasurer', 'canvasser', 'system_admin']);
     }
 
     /**

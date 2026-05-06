@@ -16,10 +16,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pig_cycle_expenses', function (Blueprint $table) {
-            $table->string('item_name')->nullable()->after('withdrawal_id');
-            $table->foreignId('supplier_id')->nullable()->after('item_name')->constrained('suppliers')->nullOnDelete();
-            $table->string('receipt_reference')->nullable()->after('supplier_id');
-            $table->string('feed_subcategory')->nullable()->after('receipt_reference');
+            $table->string('item_name')->nullable();
+            $table->unsignedBigInteger('supplier_id')->nullable();
+            $table->string('receipt_reference')->nullable();
+            $table->string('feed_subcategory')->nullable();
         });
     }
 

@@ -28,11 +28,11 @@ return new class extends Migration
             $table->date('expense_date')->index();
             $table->string('receipt_reference')->nullable();
             $table->string('receipt_path')->nullable();
-            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
-            $table->foreignId('canvass_id')->nullable()->constrained('canvasses')->nullOnDelete();
+            $table->unsignedBigInteger('supplier_id')->nullable();
+            $table->unsignedBigInteger('canvass_id')->nullable();
             $table->string('fund_source')->nullable();
-            $table->foreignId('approved_resolution_id')->nullable()->constrained('resolutions')->nullOnDelete();
-            $table->foreignId('withdrawal_id')->nullable()->constrained('withdrawals')->nullOnDelete();
+            $table->unsignedBigInteger('approved_resolution_id')->nullable();
+            $table->unsignedBigInteger('withdrawal_id')->nullable();
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();

@@ -23,7 +23,7 @@ class DocumentUploadPolicy
             return false;
         }
 
-        $allowedRoles = ['president', 'secretary', 'treasurer', 'system_admin'];
+        $allowedRoles = ['president', 'secretary', 'treasurer', 'canvasser', 'caretaker', 'system_admin'];
 
         return in_array($user->role?->slug, $allowedRoles);
     }

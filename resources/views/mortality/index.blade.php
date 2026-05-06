@@ -3,7 +3,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 leading-tight">Mortality Records</h2>
-                <p class="text-sm text-gray-500 mt-1">Review documented deaths and incidents for your litters and batches.</p>
+                <p class="text-sm text-gray-500 mt-1">Review documented deaths and incidents for your cycles.</p>
             </div>
             <div>
                 <a href="{{ route('mortality.create') }}" class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-gray-900 text-white font-bold text-sm rounded-xl hover:bg-black transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900">
@@ -27,7 +27,7 @@
                 </div>
                 <div class="shrink-0">
                     <select class="block w-full py-2.5 px-4 border border-gray-200 rounded-xl leading-5 bg-white text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-[#0c6d57]/20 focus:border-[#0c6d57] sm:text-sm transition-colors">
-                        <option>All Batches</option>
+                        <option>All Cycles</option>
                         <option>BAT-001</option>
                         <option>BAT-002</option>
                     </select>

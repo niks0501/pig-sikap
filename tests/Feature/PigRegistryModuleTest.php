@@ -6,7 +6,6 @@ use App\Models\PigBatch;
 use App\Models\PigBatchAdjustment;
 use App\Models\PigBatchStatusHistory;
 use App\Models\PigCycle;
-use App\Models\PigBreeder;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -55,20 +54,6 @@ function presidentUser(array $overrides = []): User
 function secretaryUser(array $overrides = []): User
 {
     return pigRegistryUser('secretary', $overrides);
-}
-
-/**
- * @param  array<string, mixed>  $overrides
- */
-function makeBreeder(User $actor, array $overrides = []): PigBreeder
-{
-    return PigBreeder::query()->create([
-        'breeder_code' => pigRegistryNextCode('INA'),
-        'name_or_tag' => 'Inahin '.pigRegistryNextCode('TAG'),
-        'reproductive_status' => 'Active',
-        'created_by' => $actor->id,
-        ...$overrides,
-    ]);
 }
 
 /**
@@ -129,7 +114,6 @@ test('guest is redirected to login for pig registry pages', function () {
     get(route('cycles.index'))->assertRedirect(route('login'));
     get(route('cycles.create'))->assertRedirect(route('login'));
     get(route('cycles.show', $batch))->assertRedirect(route('login'));
-    get(route('breeders.create'))->assertRedirect(route('login'));
 });
 
 test('non president is forbidden from all pig registry actions', function () {
@@ -149,7 +133,6 @@ test('non president is forbidden from all pig registry actions', function () {
     actingAs($secretary)->get(route('cycles.show', $batch))->assertForbidden();
     actingAs($secretary)->get(route('cycles.edit', $batch))->assertForbidden();
     actingAs($secretary)->get(route('cycles.profiles.index', $batch))->assertForbidden();
-    actingAs($secretary)->get(route('breeders.create'))->assertForbidden();
 
     actingAs($secretary)->post(route('cycles.store'), batchPayload())->assertForbidden();
     actingAs($secretary)->put(route('cycles.update', $batch), [
@@ -178,12 +161,6 @@ test('non president is forbidden from all pig registry actions', function () {
 
     actingAs($secretary)->post(route('cycles.status.store', $batch), [
         'new_stage' => 'Weaning',
-    ])->assertForbidden();
-
-    actingAs($secretary)->post(route('breeders.store'), [
-        'breeder_code' => pigRegistryNextCode('INA'),
-        'name_or_tag' => 'Forbidden breeder',
-        'reproductive_status' => 'Active',
     ])->assertForbidden();
 });
 
@@ -218,18 +195,14 @@ test('president can view pig registry html and json payload', function () {
     expect(batchCodesFromResponse($jsonResponse->json('data') ?? [])->all())->toContain($batch->batch_code);
 });
 
-test('pig registry json endpoint filters by search stage status breeder caretaker and scope', function () {
+test('pig registry json endpoint filters by search stage status caretaker and scope', function () {
     $president = presidentUser();
-
-    $targetBreeder = makeBreeder($president, ['breeder_code' => 'INA-TARGET', 'name_or_tag' => 'Target Breeder']);
-    $otherBreeder = makeBreeder($president, ['breeder_code' => 'INA-OTHER', 'name_or_tag' => 'Other Breeder']);
 
     $targetCaretaker = presidentUser(['name' => 'Target Caretaker']);
     $otherCaretaker = presidentUser(['name' => 'Other Caretaker']);
 
     $targetBatch = makeBatch($president, [
         'batch_code' => 'B-TARGET-001',
-        'breeder_id' => $targetBreeder->id,
         'caretaker_user_id' => $targetCaretaker->id,
         'stage' => 'Piglet',
         'status' => 'Active',
@@ -237,7 +210,6 @@ test('pig registry json endpoint filters by search stage status breeder caretake
 
     makeBatch($president, [
         'batch_code' => 'B-OTHER-002',
-        'breeder_id' => $otherBreeder->id,
         'caretaker_user_id' => $otherCaretaker->id,
         'stage' => 'Fattening',
         'status' => 'Under Monitoring',
@@ -247,7 +219,6 @@ test('pig registry json endpoint filters by search stage status breeder caretake
         'search' => 'TARGET',
         'stage' => 'Piglet',
         'status' => 'Active',
-        'breeder' => (string) $targetBreeder->id,
         'caretaker' => (string) $targetCaretaker->id,
         'scope' => 'active',
     ]));
@@ -352,14 +323,9 @@ test('president can create batch without auto generated pig profiles', function 
 
 test('president can create batch and auto generate pig profiles', function () {
     $president = presidentUser();
-    $breeder = makeBreeder($president, [
-        'breeder_code' => 'INA-001',
-        'name_or_tag' => 'Inahin A',
-    ]);
 
     $response = actingAs($president)->post(route('cycles.store'), batchPayload([
         'batch_code' => 'B-101',
-        'breeder_id' => $breeder->id,
         'caretaker_user_id' => $president->id,
         'cycle_number' => 5,
         'initial_count' => 6,
@@ -679,86 +645,6 @@ test('active batch cannot be deleted', function () {
         ->assertSessionHasErrors(['cycle']);
 
     assertDatabaseHas('pig_cycles', ['id' => $batch->id]);
-});
-
-test('president can view and search breeder registry using html and json', function () {
-    $president = presidentUser();
-    $target = makeBreeder($president, [
-        'breeder_code' => 'INA-SEARCH-001',
-        'name_or_tag' => 'Searchable Breeder',
-    ]);
-    makeBreeder($president, [
-        'breeder_code' => 'INA-SEARCH-002',
-        'name_or_tag' => 'Other Breeder',
-    ]);
-
-    actingAs($president)
-        ->get(route('breeders.create'))
-        ->assertOk()
-        ->assertViewIs('breeders.create');
-
-    $response = actingAs($president)->getJson(route('breeders.create', [
-        'search' => 'SEARCH-001',
-    ]));
-
-    $response
-        ->assertOk()
-        ->assertJsonStructure([
-            'data',
-            'meta' => ['current_page', 'last_page', 'per_page', 'total'],
-        ]);
-
-    $codes = collect($response->json('data') ?? [])->pluck('breeder_code')->all();
-
-    expect($codes)->toHaveCount(1);
-    expect($codes)->toContain($target->breeder_code);
-});
-
-test('president can create breeder and audit is recorded', function () {
-    $president = presidentUser();
-
-    $response = actingAs($president)->post(route('breeders.store'), [
-        'breeder_code' => 'INA-REG-100',
-        'name_or_tag' => 'Breeder Nova',
-        'reproductive_status' => 'Pregnant',
-        'acquisition_date' => '2026-04-01',
-        'expected_farrowing_date' => '2026-05-01',
-        'notes' => 'Healthy breeder profile.',
-    ]);
-
-    $response->assertRedirect(route('breeders.create'));
-
-    assertDatabaseHas('pig_breeders', [
-        'breeder_code' => 'INA-REG-100',
-        'name_or_tag' => 'Breeder Nova',
-        'reproductive_status' => 'Pregnant',
-        'created_by' => $president->id,
-    ]);
-
-    assertDatabaseHas('audit_trails', [
-        'user_id' => $president->id,
-        'action' => 'breeder_created',
-        'module' => 'pig_registry',
-    ]);
-});
-
-test('breeder creation validates unique code enum and date constraints', function () {
-    $president = presidentUser();
-    makeBreeder($president, ['breeder_code' => 'INA-DUPLICATE-01']);
-
-    $response = actingAs($president)->post(route('breeders.store'), [
-        'breeder_code' => 'INA-DUPLICATE-01',
-        'name_or_tag' => 'Invalid Breeder',
-        'reproductive_status' => 'InvalidStatus',
-        'acquisition_date' => '2026-06-20',
-        'expected_farrowing_date' => '2026-06-01',
-    ]);
-
-    $response->assertSessionHasErrors([
-        'breeder_code',
-        'reproductive_status',
-        'expected_farrowing_date',
-    ]);
 });
 
 test('president can view pig profile manager page', function () {

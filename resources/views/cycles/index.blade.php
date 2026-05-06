@@ -22,7 +22,6 @@
                 'index' => route('cycles.index'),
                 'create' => route('cycles.create'),
                 'archived' => route('cycles.archived'),
-                'breeders' => route('breeders.create'),
                 'showBase' => url('/cycles'),
             ],
             'statusMessage' => session('status'),

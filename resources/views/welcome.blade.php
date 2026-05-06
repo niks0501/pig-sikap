@@ -160,7 +160,7 @@
                             </svg>
                         </div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">Pig Inventory Management</h3>
-                        <p class="text-gray-600">Easily track the number of pigs you have, categorize by batches, and monitor their status.</p>
+                        <p class="text-gray-600">Easily track the number of pigs you have, categorize by cycles, and monitor their status.</p>
                     </div>
 
                     <!-- Feature 2 -->
@@ -237,8 +237,8 @@
                     <!-- Step 1 -->
                     <div class="relative text-center group cursor-pointer">
                         <div class="w-16 h-16 mx-auto bg-white border-2 border-[#0c6d57] text-[#0c6d57] group-hover:bg-[#0c6d57] group-hover:text-white transition-colors duration-300 rounded-full flex items-center justify-center text-xl font-bold mb-6 relative z-10 shadow-sm">1</div>
-                        <h4 class="text-lg font-bold text-gray-900 mb-2">Record Batches</h4>
-                        <p class="text-sm text-gray-600">Register new pig batches and activities into the system.</p>
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Record Cycles</h4>
+                        <p class="text-sm text-gray-600">Register new pig cycles and activities into the system.</p>
                     </div>
 
                     <!-- Step 2 -->

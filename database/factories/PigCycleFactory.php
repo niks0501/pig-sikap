@@ -17,7 +17,7 @@ class PigCycleFactory extends Factory
     {
         return [
             'batch_code' => 'BP-'.fake()->unique()->numberBetween(100, 999),
-            'stage' => fake()->randomElement(['Grower', 'Finisher', 'Breeder']),
+            'stage' => fake()->randomElement(['Grower', 'Finisher']),
             'status' => 'Active',
             'initial_count' => fake()->numberBetween(5, 30),
             'current_count' => fake()->numberBetween(2, 30),

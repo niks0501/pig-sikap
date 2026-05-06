@@ -2,7 +2,8 @@
     @php
         $vueProps = [
             'userName' => Auth::user()->name ?? 'User',
-            'overviewUrl' => route('dashboard.overview'),
+            'roleName' => Auth::user()->role?->name ?? 'User',
+            'overviewUrl' => route('dashboard.data'),
             'routes' => [
                 'cyclesIndex' => route('cycles.index'),
                 'healthIndex' => route('health.index'),

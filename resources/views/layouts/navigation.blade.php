@@ -1,11 +1,15 @@
+@php
+    $roleName = Auth::user()->role?->name ?? 'User';
+@endphp
+
 <nav x-data="{ userMenuOpen: false }" class="bg-white border-b border-gray-100 sticky top-0 z-40 shrink-0 transition-all duration-300">
     <!-- Primary Navigation Menu -->
     <div class="px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 items-center">
-            <!-- Left Side (Sidebar toggle + Search) -->
+            <!-- Left Side (Sidebar toggle + Breadcrumb) -->
             <div class="flex items-center gap-2 md:gap-4 flex-1">
                 <!-- Sidebar Toggle -->
-                <button @click="sidebarOpen = !sidebarOpen" class="bg-emerald-50 p-2 rounded-xl text-[#0c6d57] hover:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0c6d57] focus:ring-offset-1" aria-label="Toggle sidebar">
+                <button @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen" class="bg-emerald-50 p-2 rounded-xl text-[#0c6d57] hover:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0c6d57] focus:ring-offset-1" aria-label="Toggle sidebar">
                     <svg class="w-5 h-5 transition-transform duration-300" :class="sidebarOpen ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
                     </svg>
@@ -44,12 +48,36 @@
                         @elseif(request()->routeIs('reports.*'))
                             <li class="text-gray-400">/</li>
                             <li class="text-gray-900 font-medium">Reports</li>
-                        @elseif(request()->routeIs('resolutions.*') || request()->routeIs('minutes.*') || request()->routeIs('withdrawals.*'))
+                        @elseif(request()->routeIs('workflow.meetings*'))
                             <li class="text-gray-400">/</li>
-                            <li class="text-gray-900 font-medium">Docs & Approvals</li>
+                            <li class="text-gray-900 font-medium">Meetings</li>
+                        @elseif(request()->routeIs('workflow.resolutions*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Resolutions</li>
+                        @elseif(request()->routeIs('workflow.withdrawals*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Withdrawals</li>
+                        @elseif(request()->routeIs('workflow.documents*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Documents</li>
+                        @elseif(request()->routeIs('workflow.canvasses*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Canvassing</li>
+                        @elseif(request()->routeIs('workflow.suppliers*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Suppliers</li>
+                        @elseif(request()->routeIs('workflow.penalties*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Penalties</li>
+                        @elseif(request()->routeIs('workflow.settings.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Policy Settings</li>
                         @elseif(request()->routeIs('audit-trails.*'))
                             <li class="text-gray-400">/</li>
                             <li class="text-gray-900 font-medium">Audit Trails</li>
+                        @elseif(request()->routeIs('profile.*'))
+                            <li class="text-gray-400">/</li>
+                            <li class="text-gray-900 font-medium">Profile</li>
                         @else
                             <li class="text-gray-400">/</li>
                             <li class="text-gray-900 font-medium">{{ ucfirst(request()->segment(1)) }}</li>
@@ -57,18 +85,17 @@
                     </ol>
                 </nav>
 
-                <!-- Search Bar -->
-                <div class="relative w-full max-w-sm hidden sm:block">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <input type="text" class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#0c6d57] focus:border-[#0c6d57] sm:text-sm transition-colors" placeholder="Search records, batches..." aria-label="Search">
-                </div>
+                <!-- Role Indicator -->
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-xs font-medium text-[#0c6d57] ml-2">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    {{ $roleName }}
+                </span>
             </div>
 
             <!-- Right Side (Settings & Profile Dropdown) -->
             <div class="flex items-center gap-2">
                 <!-- Quick Actions Button -->
+                @if ($navigation['has_quick_actions'] ?? false)
                 <button
                     type="button"
                     class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none"
@@ -80,13 +107,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </button>
+                @endif
 
-                <!-- Settings Button -->
-                <button class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none hidden sm:block" title="Settings">
+                <!-- Profile Settings Button -->
+                <a href="{{ route('profile.edit') }}" class="p-2 text-gray-400 hover:text-[#0c6d57] hover:bg-emerald-50 rounded-full transition-colors focus:outline-none hidden sm:block" title="Profile Settings" aria-label="Profile settings">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                </button>
+                </a>
 
-                <!-- Settings Dropdown -->
+                <!-- User Dropdown -->
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-xl text-gray-600 bg-gray-50 hover:text-gray-900 hover:bg-gray-100 focus:outline-none transition ease-in-out duration-150">
@@ -106,6 +134,13 @@
                             <svg class="w-4 h-4 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                             {{ __('Profile') }}
                         </x-dropdown-link>
+
+                        @if (Auth::user()->isSystemAdmin())
+                        <x-dropdown-link :href="route('admin.dashboard')" class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-[#0c6d57] mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Admin Panel
+                        </x-dropdown-link>
+                        @endif
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">

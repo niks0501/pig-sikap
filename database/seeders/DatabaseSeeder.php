@@ -18,7 +18,16 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             SystemAdminSeeder::class,
             HealthTemplateSeeder::class,
+            AssociationPolicySettingsSeeder::class,
+            DemoUserSeeder::class,
+            DemoCycleSeeder::class,
             PigSikapOwnerRecordSeeder::class,
+            DemoExpenseSeeder::class,
+            DemoSaleSeeder::class,
+            DemoHealthSeeder::class,
+            DemoWorkflowSeeder::class,
+            DemoCanvassingSeeder::class,
+            DemoReportsSeeder::class,
         ]);
     }
 }

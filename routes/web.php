@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Dashboard\DashboardDataController;
 use App\Http\Controllers\Dashboard\DashboardOverviewController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -11,7 +13,6 @@ use App\Http\Controllers\President\PresidentCycleHealthTaskController;
 use App\Http\Controllers\Expense\AssociationExpenseController;
 use App\Http\Controllers\President\PresidentExpenseController;
 use App\Http\Controllers\President\PresidentHealthController;
-use App\Http\Controllers\President\PresidentPigBreederController;
 use App\Http\Controllers\President\PresidentPigBuyerController;
 use App\Http\Controllers\President\PresidentPigCycleAdjustmentController;
 use App\Http\Controllers\President\PresidentPigCycleSaleController;
@@ -43,12 +44,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'force_password_change'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'force_password_change'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', 'force_password_change', 'role:system_admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -71,7 +70,10 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 
     Route::view('/membership/how-to-join', 'membership.how-to-join')->name('membership.how-to-join');
 
-    Route::middleware(['role:president'])->group(function () {
+    // Role-specific dashboard data endpoint
+    Route::get('/dashboard/data', DashboardDataController::class)->name('dashboard.data');
+
+    Route::middleware(['role:president,system_admin'])->group(function () {
         // Overall dashboard API endpoint
         Route::get('/dashboard/overview', DashboardOverviewController::class)->name('dashboard.overview');
 
@@ -94,45 +96,21 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
             Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
             Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
         });
+    });
 
-        Route::prefix('batches')->name('batches.')->scopeBindings()->group(function () {
-            Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');
-            Route::get('/create', [PresidentPigInventoryController::class, 'create'])->name('create');
-            Route::post('/', [PresidentPigInventoryController::class, 'store'])->name('store');
-            Route::get('/archived', [PresidentPigInventoryController::class, 'archived'])->name('archived');
-            Route::get('/{cycle}', [PresidentPigInventoryController::class, 'show'])->name('show');
-            Route::get('/{cycle}/edit', [PresidentPigInventoryController::class, 'edit'])->name('edit');
-            Route::put('/{cycle}', [PresidentPigInventoryController::class, 'update'])->name('update');
-            Route::delete('/{cycle}', [PresidentPigInventoryController::class, 'destroy'])->name('destroy');
-            Route::patch('/{cycle}/archive', [PresidentPigInventoryController::class, 'archive'])->name('archive');
-
-            Route::get('/{cycle}/pigs', [PresidentPigProfileController::class, 'index'])->name('pigs.index');
-            Route::post('/{cycle}/pigs', [PresidentPigProfileController::class, 'store'])->name('pigs.store');
-            Route::put('/{cycle}/pigs/{pig}', [PresidentPigProfileController::class, 'update'])->name('pigs.update');
-            Route::delete('/{cycle}/pigs/{pig}', [PresidentPigProfileController::class, 'destroy'])->name('pigs.destroy');
-
-            Route::post('/{cycle}/adjustments', [PresidentPigCycleAdjustmentController::class, 'store'])->name('adjustments.store');
-            Route::post('/{cycle}/status', [PresidentPigCycleStatusController::class, 'store'])->name('status.store');
-        });
-
-        Route::prefix('breeders')->name('breeders.')->group(function () {
-            Route::get('/create', [PresidentPigBreederController::class, 'index'])->name('create');
-            Route::post('/', [PresidentPigBreederController::class, 'store'])->name('store');
-        });
-
-        Route::prefix('health')->name('health.')->scopeBindings()->group(function () {
-            Route::get('/', [PresidentHealthController::class, 'index'])->name('index');
-            Route::get('/schedule', [PresidentHealthController::class, 'schedule'])->name('schedule');
-            Route::get('/create', [PresidentHealthController::class, 'create'])->name('create');
-            Route::get('/mortality', [PresidentHealthController::class, 'mortality'])->name('mortality');
-            Route::get('/mortality/create', [PresidentHealthController::class, 'createMortality'])->name('mortality.create');
-            Route::post('/incidents', [PresidentHealthController::class, 'storeIncident'])->name('incidents.store');
-            Route::get('/sick', [PresidentHealthController::class, 'sick'])->name('sick');
-            Route::get('/cycles/{cycle}', [PresidentHealthController::class, 'showCycle'])->name('cycles.show');
-            Route::patch('/cycles/{cycle}/tasks/{healthTask}', [PresidentCycleHealthTaskController::class, 'update'])->name('cycles.tasks.update');
-            Route::patch('/cycles/{cycle}/tasks/{healthTask}/undo', [PresidentCycleHealthTaskController::class, 'undo'])->name('cycles.tasks.undo');
-            Route::post('/cycles/{cycle}/incidents', [PresidentCycleHealthIncidentController::class, 'store'])->name('cycles.incidents.store');
-        });
+    // Health routes — president and caretaker
+    Route::middleware(['role:president,caretaker'])->prefix('health')->name('health.')->scopeBindings()->group(function () {
+        Route::get('/', [PresidentHealthController::class, 'index'])->name('index');
+        Route::get('/schedule', [PresidentHealthController::class, 'schedule'])->name('schedule');
+        Route::get('/create', [PresidentHealthController::class, 'create'])->name('create');
+        Route::get('/mortality', [PresidentHealthController::class, 'mortality'])->name('mortality');
+        Route::get('/mortality/create', [PresidentHealthController::class, 'createMortality'])->name('mortality.create');
+        Route::post('/incidents', [PresidentHealthController::class, 'storeIncident'])->name('incidents.store');
+        Route::get('/sick', [PresidentHealthController::class, 'sick'])->name('sick');
+        Route::get('/cycles/{cycle}', [PresidentHealthController::class, 'showCycle'])->name('cycles.show');
+        Route::patch('/cycles/{cycle}/tasks/{healthTask}', [PresidentCycleHealthTaskController::class, 'update'])->name('cycles.tasks.update');
+        Route::patch('/cycles/{cycle}/tasks/{healthTask}/undo', [PresidentCycleHealthTaskController::class, 'undo'])->name('cycles.tasks.undo');
+        Route::post('/cycles/{cycle}/incidents', [PresidentCycleHealthIncidentController::class, 'store'])->name('cycles.incidents.store');
     });
 
     // Sales Transaction Module
@@ -260,24 +238,6 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
 })->name('dashboard.summary');
 
 // ── Governance Improvements: Canvassing, Suppliers, Penalties ───────
-        Route::prefix('canvasses')->name('canvasses.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Workflow\CanvassController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'store'])->name('store');
-            Route::get('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'show'])->name('show');
-            Route::get('/{canvass}/edit', [\App\Http\Controllers\Workflow\CanvassController::class, 'edit'])->name('edit');
-            Route::put('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'update'])->name('update');
-            Route::delete('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'destroy'])->name('destroy');
-            Route::patch('/{canvass}/items/{item}/select', [\App\Http\Controllers\Workflow\CanvassController::class, 'selectItem'])->name('items.select');
-        });
-
-        Route::prefix('suppliers')->name('suppliers.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'index'])->name('index');
-            Route::post('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'store'])->name('store');
-            Route::put('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'update'])->name('update');
-            Route::delete('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'destroy'])->name('destroy');
-        });
-
         Route::prefix('penalties')->name('penalties.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Workflow\PenaltyController::class, 'index'])->name('index');
             Route::get('/member/{user}', [\App\Http\Controllers\Workflow\PenaltyController::class, 'byMember'])->name('by-member');
@@ -320,6 +280,27 @@ Route::middleware(['role:president,system_admin'])->prefix('admin/document-types
 
 Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::class, 'index'])->name('document-types.list');
 });
+
+    // Canvassing & Suppliers (president, secretary, treasurer, canvasser)
+    Route::middleware(['role:president,treasurer,secretary,canvasser'])->prefix('workflow')->name('workflow.')->group(function () {
+        Route::prefix('canvasses')->name('canvasses.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Workflow\CanvassController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Workflow\CanvassController::class, 'store'])->name('store');
+            Route::get('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'show'])->name('show');
+            Route::get('/{canvass}/edit', [\App\Http\Controllers\Workflow\CanvassController::class, 'edit'])->name('edit');
+            Route::put('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'update'])->name('update');
+            Route::delete('/{canvass}', [\App\Http\Controllers\Workflow\CanvassController::class, 'destroy'])->name('destroy');
+            Route::patch('/{canvass}/items/{item}/select', [\App\Http\Controllers\Workflow\CanvassController::class, 'selectItem'])->name('items.select');
+        });
+
+        Route::prefix('suppliers')->name('suppliers.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Workflow\SupplierController::class, 'store'])->name('store');
+            Route::put('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'update'])->name('update');
+            Route::delete('/{supplier}', [\App\Http\Controllers\Workflow\SupplierController::class, 'destroy'])->name('destroy');
+        });
+    });
 
         // Legacy route redirects for sidebar compatibility
     Route::get('/resolutions', fn () => redirect()->route('workflow.resolutions.index'))->name('resolutions.index');
@@ -369,9 +350,6 @@ Route::middleware(['auth'])->get('/document-types', [DocumentTypeController::cla
     Route::middleware(['role:president'])->group(function () {
         Route::get('/cycles/{cycle}/audit', [\App\Http\Controllers\AuditTrailController::class, 'cycleAudit'])
             ->name('cycles.audit')
-            ->scopeBindings();
-        Route::get('/batches/{cycle}/audit', [\App\Http\Controllers\AuditTrailController::class, 'cycleAudit'])
-            ->name('batches.audit')
             ->scopeBindings();
         Route::get('/workflow/resolutions/{resolution}/audit', [\App\Http\Controllers\AuditTrailController::class, 'resolutionAudit'])
             ->name('workflow.resolutions.audit')

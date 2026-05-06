@@ -89,6 +89,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * True when user is a caretaker/association officer.
+     */
+    public function isCaretaker(): bool
+    {
+        return $this->hasRole('caretaker');
+    }
+
+    /**
+     * True when user is a canvassing/purchasing officer.
+     */
+    public function isCanvasser(): bool
+    {
+        return $this->hasRole('canvasser');
+    }
+
+    /**
      * Scope to filter users available as caretakers.
      * Excludes inactive users and system administrators.
      */

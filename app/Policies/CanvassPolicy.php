@@ -9,7 +9,7 @@ class CanvassPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->role?->slug, ['president', 'secretary', 'treasurer', 'system_admin']);
+        return in_array($user->role?->slug, ['president', 'secretary', 'treasurer', 'canvasser', 'system_admin']);
     }
 
     public function view(User $user, Canvass $canvass): bool

@@ -37,7 +37,6 @@ class PigSikapOwnerRecordSeeder extends Seeder
         }
 
         DB::transaction(function (): void {
-            $this->seedUsers();
             $this->clearDemoCycleData();
             $cycles = $this->seedCycles();
             $buyers = $this->seedBuyers();
@@ -45,37 +44,6 @@ class PigSikapOwnerRecordSeeder extends Seeder
             $this->seedSales($cycles, $buyers);
             $this->seedProfitabilitySnapshots($cycles);
         });
-    }
-
-    /**
-     * @return array<string, User>
-     */
-    private function seedUsers(): array
-    {
-        $users = [];
-
-        foreach ($this->demoUsers() as $row) {
-            $roleId = Role::where('slug', $row['role'])->value('id');
-
-            $user = User::updateOrCreate(
-                ['email' => $row['email']],
-                $this->onlyExistingColumns('users', [
-                    'name' => $row['name'],
-                    'password' => Hash::make('password'),
-                    'role_id' => $roleId,
-                    'is_active' => true,
-                    'must_change_password' => false,
-                ])
-            );
-
-            if (Schema::hasColumn('users', 'email_verified_at')) {
-                $user->forceFill(['email_verified_at' => now()])->save();
-            }
-
-            $users[$row['email']] = $user;
-        }
-
-        return $users;
     }
 
     private function clearDemoCycleData(): void
@@ -113,7 +81,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
     private function seedCycles(): array
     {
         $cycles = [];
-        $presidentId = User::where('email', 'eva.vivas@pigsikap.local')->value('id');
+        $presidentId = User::where('email', 'president.eva@pigsikap.local')->value('id');
 
         foreach ($this->cycles() as $row) {
             $caretakerId = User::where('email', $row['caretaker_email'])->value('id');
@@ -153,15 +121,15 @@ class PigSikapOwnerRecordSeeder extends Seeder
             return $buyers;
         }
 
-        $presidentId = User::where('email', 'eva.vivas@pigsikap.local')->value('id');
+        $presidentId = User::where('email', 'president.eva@pigsikap.local')->value('id');
 
-        foreach (['CSV Buyer Cycle 1', 'CSV Buyer Cycle 2'] as $name) {
+        foreach (['CSV Buyer 1', 'CSV Buyer 2'] as $name) {
             $buyer = PigBuyer::withTrashed()->firstOrNew(['name' => $name]);
             $buyer->fill($this->onlyExistingColumns('pig_buyers', [
                 'name' => $name,
                 'contact_number' => null,
                 'address' => 'Barangay Humayingan, Lian, Batangas',
-                'notes' => 'Demo buyer generated from uploaded Pig Cycle CSV sales records.',
+                'notes' => 'Buyer record generated from uploaded Pig Cycle CSV sales records.',
                 'created_by' => $presidentId,
                 'updated_by' => $presidentId,
             ]));
@@ -182,7 +150,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
      */
     private function seedExpenses(array $cycles): void
     {
-        $presidentId = User::where('email', 'eva.vivas@pigsikap.local')->value('id');
+        $presidentId = User::where('email', 'president.eva@pigsikap.local')->value('id');
 
         foreach ($this->expenses() as $row) {
             $cycle = $cycles[$row['cycle_code']] ?? null;
@@ -213,7 +181,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
      */
     private function seedSales(array $cycles, array $buyers): void
     {
-        $presidentId = User::where('email', 'eva.vivas@pigsikap.local')->value('id');
+        $presidentId = User::where('email', 'president.eva@pigsikap.local')->value('id');
 
         foreach ($this->sales() as $row) {
             $cycle = $cycles[$row['cycle_code']] ?? null;
@@ -253,9 +221,9 @@ class PigSikapOwnerRecordSeeder extends Seeder
             return;
         }
 
-        $presidentId = User::where('email', 'eva.vivas@pigsikap.local')->value('id');
+        $presidentId = User::where('email', 'president.eva@pigsikap.local')->value('id');
 
-        foreach (['CSV-CYCLE-001', 'CSV-CYCLE-002'] as $cycleCode) {
+        foreach (['CYC-2025-001', 'CYC-2025-002'] as $cycleCode) {
             $cycle = $cycles[$cycleCode] ?? null;
 
             if (! $cycle) {
@@ -274,7 +242,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
             $totalExpenses = round((float) $cycle->expenses()->sum('amount'), 2);
             $net = round($grossIncome - $totalExpenses, 2);
             $distributable = max($net, 0);
-            $snapshotNumber = (int) str_replace('CSV-CYCLE-', '', $cycleCode);
+            $snapshotNumber = (int) substr($cycleCode, -3);
 
             $payload = $this->onlyExistingColumns('profitability_snapshots', [
                 'pig_cycle_id' => $cycle->id,
@@ -315,7 +283,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'is_current' => true,
                 'finalized_at' => now(),
                 'finalized_by_user_id' => $presidentId,
-                'notes' => 'Demo finalized snapshot generated from uploaded CSV source data.',
+                'notes' => 'Finalized snapshot generated from uploaded CSV source data.',
                 'computation_version' => '2026-05-cycle-profitability-v1',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -343,63 +311,14 @@ class PigSikapOwnerRecordSeeder extends Seeder
     }
 
     /**
-     * @return list<array<string, string>>
-     */
-    private function demoUsers(): array
-    {
-        return [
-            [
-                'name' => 'Eva G. Vivas',
-                'email' => 'eva.vivas@pigsikap.local',
-                'role' => 'president',
-            ],
-            [
-                'name' => 'Ronalyn C. Balbar',
-                'email' => 'ronalyn.balbar@pigsikap.local',
-                'role' => 'secretary',
-            ],
-            [
-                'name' => 'Anaceta C. Guevarra',
-                'email' => 'anaceta.guevarra@pigsikap.local',
-                'role' => 'treasurer',
-            ],
-            [
-                'name' => 'Maricon Aquino',
-                'email' => 'maricon.aquino@pigsikap.local',
-                'role' => 'officer',
-            ],
-            [
-                'name' => 'Leciria Vabingan',
-                'email' => 'leciria.vabingan@pigsikap.local',
-                'role' => 'member',
-            ],
-            [
-                'name' => 'Cycle 3 Caretaker',
-                'email' => 'csv.caretaker3@pigsikap.local',
-                'role' => 'member',
-            ],
-            [
-                'name' => 'Cycle 4 Caretaker',
-                'email' => 'csv.caretaker4@pigsikap.local',
-                'role' => 'member',
-            ],
-            [
-                'name' => 'Cycle 5 Caretaker',
-                'email' => 'csv.caretaker5@pigsikap.local',
-                'role' => 'member',
-            ],
-        ];
-    }
-
-    /**
      * @return list<array<string, mixed>>
      */
     private function cycles(): array
     {
         return [
             [
-                'batch_code' => 'CSV-CYCLE-001',
-                'caretaker_email' => 'maricon.aquino@pigsikap.local',
+                'batch_code' => 'CYC-2025-001',
+                'caretaker_email' => 'officer.maricon@pigsikap.local',
                 'cycle_number' => 1,
                 'date_of_purchase' => '2025-08-15',
                 'initial_count' => 9,
@@ -408,11 +327,11 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'stage' => 'Completed',
                 'status' => 'Closed',
                 'has_pig_profiles' => false,
-                'notes' => 'Seeded from REPORT(Pig Cycle 1).csv and REPORT(Expenses Cycle 1).csv. Total pigs: 9; caretaker from CSV: Maricon Aquino.',
+                'notes' => 'Source: Cycle 1 production records. Total pigs: 9; caretaker: Maricon Aquino.',
             ],
             [
-                'batch_code' => 'CSV-CYCLE-002',
-                'caretaker_email' => 'leciria.vabingan@pigsikap.local',
+                'batch_code' => 'CYC-2025-002',
+                'caretaker_email' => 'member.leciria@pigsikap.local',
                 'cycle_number' => 2,
                 'date_of_purchase' => '2025-08-30',
                 'initial_count' => 5,
@@ -421,11 +340,11 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'stage' => 'Completed',
                 'status' => 'Closed',
                 'has_pig_profiles' => false,
-                'notes' => 'Seeded from REPORT(Pig Cycle 2).csv and REPORT(Expenses Cycle 2).csv. Source sale report says total pigs: 5; expense report lists 6 piglets.',
+                'notes' => 'Source: Cycle 2 production records. Total pigs: 5; caretaker: Leciria Vabingan.',
             ],
             [
-                'batch_code' => 'CSV-CYCLE-003',
-                'caretaker_email' => 'csv.caretaker3@pigsikap.local',
+                'batch_code' => 'CYC-2025-003',
+                'caretaker_email' => 'caretaker.cycle3@pigsikap.local',
                 'cycle_number' => 3,
                 'date_of_purchase' => '2025-10-09',
                 'initial_count' => 5,
@@ -434,11 +353,11 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'stage' => 'For Sale',
                 'status' => 'Ready for Sale',
                 'has_pig_profiles' => false,
-                'notes' => 'Seeded from REPORT(Expenses Cycle 3).csv. No matching sales CSV uploaded.',
+                'notes' => 'Source: Cycle 3 expense records. Caretaker: Felicidad Mercado.',
             ],
             [
-                'batch_code' => 'CSV-CYCLE-004',
-                'caretaker_email' => 'csv.caretaker4@pigsikap.local',
+                'batch_code' => 'CYC-2026-001',
+                'caretaker_email' => 'caretaker.cycle4@pigsikap.local',
                 'cycle_number' => 4,
                 'date_of_purchase' => '2026-01-26',
                 'initial_count' => 12,
@@ -447,11 +366,11 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'stage' => 'Fattening',
                 'status' => 'Under Monitoring',
                 'has_pig_profiles' => false,
-                'notes' => 'Seeded from REPORT(Expenses Cycle 4).csv. No matching sales CSV uploaded.',
+                'notes' => 'Source: Cycle 4 expense records. Caretaker: Domingo Cruz.',
             ],
             [
-                'batch_code' => 'CSV-CYCLE-005',
-                'caretaker_email' => 'csv.caretaker5@pigsikap.local',
+                'batch_code' => 'CYC-2026-002',
+                'caretaker_email' => 'caretaker.cycle5@pigsikap.local',
                 'cycle_number' => 5,
                 'date_of_purchase' => '2026-02-15',
                 'initial_count' => 5,
@@ -460,7 +379,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'stage' => 'Growing',
                 'status' => 'Active',
                 'has_pig_profiles' => false,
-                'notes' => 'Seeded from REPORT(Expenses Cycle 5).csv. No matching sales CSV uploaded.',
+                'notes' => 'Source: Cycle 5 expense records. Caretaker: Rosario Lopez.',
             ],
         ];
     }
@@ -472,7 +391,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
     {
         return [
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'emergency',
                 'item' => 'Drum',
                 'quantity' => 1,
@@ -484,7 +403,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 1: Drum',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'acquisition',
                 'item' => 'Biik',
                 'quantity' => 9,
@@ -496,7 +415,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 2: Biik',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 25,
@@ -508,7 +427,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 3: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 1,
@@ -520,7 +439,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 4: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Vitamin Pro',
                 'quantity' => 3,
@@ -532,7 +451,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 5: Vitamin Pro',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Streptopen',
                 'quantity' => 2,
@@ -544,7 +463,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 6: Streptopen',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 1,
@@ -556,7 +475,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 7: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Vetracin',
                 'quantity' => 12,
@@ -568,7 +487,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 8: Vetracin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Syringe',
                 'quantity' => 1,
@@ -580,7 +499,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 9: Syringe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 3,
@@ -592,7 +511,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 10: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -604,7 +523,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 11: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 5,
@@ -616,7 +535,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 12: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Vitmin Pro',
                 'quantity' => 18,
@@ -628,7 +547,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 13: Vitmin Pro',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Vetracin',
                 'quantity' => 5,
@@ -640,7 +559,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 14: Vetracin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 2,
@@ -652,7 +571,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 15: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -664,7 +583,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 16: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Injection',
                 'quantity' => 1,
@@ -676,7 +595,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 17: Injection',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -688,7 +607,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 18: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -700,7 +619,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 19: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Vetracin',
                 'quantity' => 3,
@@ -712,7 +631,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 20: Vetracin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Injection',
                 'quantity' => 1,
@@ -724,7 +643,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 21: Injection',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -736,7 +655,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 22: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -748,7 +667,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 23: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 3,
@@ -760,7 +679,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 24: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 4,
@@ -772,7 +691,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 25: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -784,7 +703,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 26: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -796,7 +715,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 27: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -808,7 +727,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 28: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -820,7 +739,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 29: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -832,7 +751,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 30: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gastos Katay',
                 'quantity' => 1,
@@ -844,7 +763,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 31: Gastos Katay',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'emergency',
                 'item' => 'Plastic',
                 'quantity' => null,
@@ -856,7 +775,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 32: Plastic',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 3,
@@ -868,7 +787,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 33: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -880,7 +799,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 34: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gastos Katay',
                 'quantity' => 1,
@@ -892,7 +811,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 35: Gastos Katay',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 1,
@@ -904,7 +823,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 36: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gastos Katay',
                 'quantity' => 2,
@@ -916,7 +835,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 37: Gastos Katay',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
+                'cycle_code' => 'CYC-2025-001',
                 'category' => 'transport',
                 'item' => 'Gastos Katay',
                 'quantity' => 3,
@@ -928,7 +847,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 38: Gastos Katay',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 12.5,
@@ -940,7 +859,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 1: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 1,
@@ -952,7 +871,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 2: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'medicine',
                 'item' => 'Vetricin',
                 'quantity' => 1,
@@ -964,7 +883,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 3: Vetricin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'acquisition',
                 'item' => 'Piglet',
                 'quantity' => 6,
@@ -976,7 +895,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 4: Piglet',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 2,
@@ -988,7 +907,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 5: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 3,
@@ -1000,7 +919,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 6: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'medicine',
                 'item' => 'Vetricin',
                 'quantity' => 5,
@@ -1012,7 +931,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 7: Vetricin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 2,
@@ -1024,7 +943,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 8: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'medicine',
                 'item' => 'Vitmin Pro',
                 'quantity' => 5,
@@ -1036,7 +955,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 9: Vitmin Pro',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -1048,7 +967,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 10: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 6,
@@ -1060,7 +979,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 11: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 6,
@@ -1072,7 +991,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 12: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 1,
@@ -1084,7 +1003,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 13: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 2,
@@ -1096,7 +1015,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 14: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 2,
@@ -1108,7 +1027,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 15: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 2,
@@ -1120,7 +1039,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 16: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 1,
@@ -1132,7 +1051,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 17: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
+                'cycle_code' => 'CYC-2025-002',
                 'category' => 'feed',
                 'item' => 'Hog Finisher',
                 'quantity' => 2,
@@ -1144,7 +1063,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 18: Hog Finisher',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'acquisition',
                 'item' => 'Piglet',
                 'quantity' => 5,
@@ -1156,7 +1075,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 1: Piglet',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 12,
@@ -1168,7 +1087,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 2: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 1,
@@ -1180,7 +1099,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 3: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'medicine',
                 'item' => 'Vetracin',
                 'quantity' => 5,
@@ -1192,7 +1111,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 4: Vetracin',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1204,7 +1123,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 5: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'medicine',
                 'item' => 'Injection',
                 'quantity' => null,
@@ -1216,7 +1135,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 6: Injection',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 2,
@@ -1228,7 +1147,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 7: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1240,7 +1159,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 8: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 2,
@@ -1252,7 +1171,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 9: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1264,7 +1183,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 10: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 3,
@@ -1276,7 +1195,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 11: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1288,7 +1207,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 12: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 10,
@@ -1300,7 +1219,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 13: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 2,
@@ -1312,7 +1231,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 14: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => 2,
@@ -1324,7 +1243,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 15: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 2,
@@ -1336,7 +1255,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 16: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => 1,
@@ -1348,7 +1267,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 17: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-003',
+                'cycle_code' => 'CYC-2025-003',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 1,
@@ -1360,7 +1279,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 18: Hog Grower; source date adjusted from 2025-01-25 to 2026-01-25',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'acquisition',
                 'item' => 'Piglet',
                 'quantity' => 12,
@@ -1372,7 +1291,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 1: Piglet',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -1384,7 +1303,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 2: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Vitmin Pro',
                 'quantity' => 1,
@@ -1396,7 +1315,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 3: Vitmin Pro',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Aquadox',
                 'quantity' => 1,
@@ -1408,7 +1327,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 4: Aquadox',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Vimtin Pro',
                 'quantity' => 1,
@@ -1420,7 +1339,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 5: Vimtin Pro',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Dextrose Powder',
                 'quantity' => 1,
@@ -1432,7 +1351,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 6: Dextrose Powder',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Streptopen',
                 'quantity' => 12,
@@ -1444,7 +1363,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 7: Streptopen',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'Hog Nipple',
                 'quantity' => 1,
@@ -1456,7 +1375,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 8: Hog Nipple',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'acquisition',
                 'item' => 'Bayad pagkuha ng biik',
                 'quantity' => null,
@@ -1468,7 +1387,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 9: Bayad pagkuha ng biik',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'Hog Nipple',
                 'quantity' => 1,
@@ -1480,7 +1399,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 10: Hog Nipple',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'PVC. PIPE 1/2',
                 'quantity' => 1,
@@ -1492,7 +1411,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 11: PVC. PIPE 1/2',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'PVC. MALE',
                 'quantity' => 1,
@@ -1504,7 +1423,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 12: PVC. MALE',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'PVC. FEMALE',
                 'quantity' => 2,
@@ -1516,7 +1435,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 13: PVC. FEMALE',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'ELBOW',
                 'quantity' => 3,
@@ -1528,7 +1447,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 14: ELBOW',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 2,
@@ -1540,7 +1459,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 15: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 2,
@@ -1552,7 +1471,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 16: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 1,
@@ -1564,7 +1483,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 17: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'emergency',
                 'item' => 'Drum',
                 'quantity' => 1,
@@ -1576,7 +1495,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 18: Drum',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 3,
@@ -1588,7 +1507,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 19: Hog Starter; source date adjusted from 2025-02-15 to 2026-02-15',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -1600,7 +1519,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 20: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Injectable',
                 'quantity' => 1,
@@ -1612,7 +1531,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 21: Injectable',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 5,
@@ -1624,7 +1543,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 22: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'transport',
                 'item' => 'Gas',
                 'quantity' => null,
@@ -1636,7 +1555,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 23: Gas',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 2,
@@ -1648,7 +1567,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 24: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 2,
@@ -1660,7 +1579,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 25: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'transport',
                 'item' => 'Delivery Charge',
                 'quantity' => null,
@@ -1672,7 +1591,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 26: Delivery Charge',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 1,
@@ -1684,7 +1603,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 27: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 10,
@@ -1696,7 +1615,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 28: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Latigo 1000',
                 'quantity' => 2,
@@ -1708,7 +1627,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 29: Latigo 1000',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-004',
+                'cycle_code' => 'CYC-2026-001',
                 'category' => 'medicine',
                 'item' => 'Injectable',
                 'quantity' => 1,
@@ -1720,7 +1639,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 30: Injectable',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'acquisition',
                 'item' => 'Piglet',
                 'quantity' => 5,
@@ -1732,7 +1651,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 1: Piglet',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'transport',
                 'item' => 'Delivery Charge',
                 'quantity' => null,
@@ -1744,7 +1663,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 2: Delivery Charge',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'feed',
                 'item' => 'Pre Starter',
                 'quantity' => 2,
@@ -1756,7 +1675,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 3: Pre Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'feed',
                 'item' => 'Tracking for feeds',
                 'quantity' => null,
@@ -1768,7 +1687,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 4: Tracking for feeds',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 1,
@@ -1780,7 +1699,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 5: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'feed',
                 'item' => 'Hog Starter',
                 'quantity' => 4,
@@ -1792,7 +1711,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 6: Hog Starter',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1804,7 +1723,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 7: Pamasahe',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'feed',
                 'item' => 'Hog Grower',
                 'quantity' => 4,
@@ -1816,7 +1735,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 8: Hog Grower',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'medicine',
                 'item' => 'Injectable',
                 'quantity' => null,
@@ -1828,7 +1747,7 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'notes' => 'CSV row 9: Injectable',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-005',
+                'cycle_code' => 'CYC-2026-002',
                 'category' => 'transport',
                 'item' => 'Pamasahe',
                 'quantity' => null,
@@ -1849,8 +1768,8 @@ class PigSikapOwnerRecordSeeder extends Seeder
     {
         return [
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 1,
                 'amount' => 22875,
                 'sale_date' => '2025-12-04',
@@ -1860,12 +1779,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 22875,
                 'payment_status' => 'paid',
                 'amount_paid' => 22875,
-                'receipt_reference' => 'CSV-C1-P1',
-                'notes' => 'CSV sale P1: Body/Pata/Ulo itemized total.',
+                'receipt_reference' => 'RECEIPT-C1-P1',
+                'notes' => 'P1: Body/Pata/Ulo itemized total.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 1,
                 'amount' => 19475,
                 'sale_date' => '2025-12-12',
@@ -1875,12 +1794,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 19475,
                 'payment_status' => 'paid',
                 'amount_paid' => 19475,
-                'receipt_reference' => 'CSV-C1-P2',
-                'notes' => 'CSV sale P2: Body/Pata/Ulo itemized total.',
+                'receipt_reference' => 'RECEIPT-C1-P2',
+                'notes' => 'P2: Body/Pata/Ulo itemized total.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 1,
                 'amount' => 16471,
                 'sale_date' => '2025-12-23',
@@ -1890,12 +1809,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 16471,
                 'payment_status' => 'paid',
                 'amount_paid' => 16471,
-                'receipt_reference' => 'CSV-C1-P3',
-                'notes' => 'CSV sale P3: Body/Pata itemized total.',
+                'receipt_reference' => 'RECEIPT-C1-P3',
+                'notes' => 'P3: Body/Pata itemized total.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 2,
                 'amount' => 42259,
                 'sale_date' => '2025-12-24',
@@ -1905,12 +1824,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 21129.5,
                 'payment_status' => 'paid',
                 'amount_paid' => 42259,
-                'receipt_reference' => 'CSV-C1-P4-P5',
-                'notes' => 'CSV sale P4 & P5: Body/Pata/Ulo itemized total.',
+                'receipt_reference' => 'RECEIPT-C1-P4-P5',
+                'notes' => 'P4 & P5: Body/Pata/Ulo itemized total.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 3,
                 'amount' => 56941,
                 'sale_date' => '2025-12-31',
@@ -1920,12 +1839,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 18980.33,
                 'payment_status' => 'paid',
                 'amount_paid' => 56941,
-                'receipt_reference' => 'CSV-C1-P6-P8',
-                'notes' => 'CSV sale P6, P7, P8: Body/Pata/Ulo itemized total.',
+                'receipt_reference' => 'RECEIPT-C1-P6-P8',
+                'notes' => 'P6, P7, P8: Body/Pata/Ulo itemized total.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-001',
-                'buyer' => 'CSV Buyer Cycle 1',
+                'cycle_code' => 'CYC-2025-001',
+                'buyer' => 'CSV Buyer 1',
                 'pigs_sold' => 1,
                 'amount' => 17100,
                 'sale_date' => '2026-01-12',
@@ -1935,12 +1854,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => null,
                 'payment_status' => 'paid',
                 'amount_paid' => 17100,
-                'receipt_reference' => 'CSV-C1-P9',
-                'notes' => 'CSV sale P9: Whole, 95 kg at ₱180.',
+                'receipt_reference' => 'RECEIPT-C1-P9',
+                'notes' => 'P9: Whole, 95 kg at ₱180.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
-                'buyer' => 'CSV Buyer Cycle 2',
+                'cycle_code' => 'CYC-2025-002',
+                'buyer' => 'CSV Buyer 2',
                 'pigs_sold' => 1,
                 'amount' => 16406,
                 'sale_date' => '2025-12-05',
@@ -1950,12 +1869,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => null,
                 'payment_status' => 'paid',
                 'amount_paid' => 16406,
-                'receipt_reference' => 'CSV-C2-P10',
-                'notes' => 'CSV sale P10: Whole, 63.1 kg at ₱260.',
+                'receipt_reference' => 'RECEIPT-C2-P10',
+                'notes' => 'P10: Whole, 63.1 kg at ₱260.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
-                'buyer' => 'CSV Buyer Cycle 2',
+                'cycle_code' => 'CYC-2025-002',
+                'buyer' => 'CSV Buyer 2',
                 'pigs_sold' => 1,
                 'amount' => 19731.6,
                 'sale_date' => '2026-02-16',
@@ -1965,12 +1884,12 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => null,
                 'payment_status' => 'paid',
                 'amount_paid' => 19731.6,
-                'receipt_reference' => 'CSV-C2-P11',
-                'notes' => 'CSV sale P11: Whole, 243 kg at ₱81.20.',
+                'receipt_reference' => 'RECEIPT-C2-P11',
+                'notes' => 'P11: Whole, 243 kg at ₱81.20.',
             ],
             [
-                'cycle_code' => 'CSV-CYCLE-002',
-                'buyer' => 'CSV Buyer Cycle 2',
+                'cycle_code' => 'CYC-2025-002',
+                'buyer' => 'CSV Buyer 2',
                 'pigs_sold' => 3,
                 'amount' => 46080,
                 'sale_date' => '2026-02-16',
@@ -1980,8 +1899,8 @@ class PigSikapOwnerRecordSeeder extends Seeder
                 'price_per_head' => 15360,
                 'payment_status' => 'paid',
                 'amount_paid' => 46080,
-                'receipt_reference' => 'CSV-C2-P12-P15',
-                'notes' => 'CSV sale P12, P13, P15: grouped sale; date/weight not specified in CSV.',
+                'receipt_reference' => 'RECEIPT-C2-P12-P15',
+                'notes' => 'P12, P13, P15: Grouped sale.',
             ],
         ];
     }
