@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Dashboard\DashboardOverviewController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
@@ -71,6 +72,9 @@ Route::middleware(['auth', 'verified', 'force_password_change'])->group(function
     Route::view('/membership/how-to-join', 'membership.how-to-join')->name('membership.how-to-join');
 
     Route::middleware(['role:president'])->group(function () {
+        // Overall dashboard API endpoint
+        Route::get('/dashboard/overview', DashboardOverviewController::class)->name('dashboard.overview');
+
         Route::prefix('cycles')->name('cycles.')->scopeBindings()->group(function () {
             Route::get('/', [PresidentPigInventoryController::class, 'index'])->name('index');
             Route::get('/create', [PresidentPigInventoryController::class, 'create'])->name('create');

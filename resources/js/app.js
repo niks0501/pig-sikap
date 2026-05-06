@@ -86,6 +86,7 @@ import ReportHistoryTable from './components/reports/ReportHistoryTable.vue';
 import QuickReportButtons from './components/reports/QuickReportButtons.vue';
 import CyclePickerModal from './components/reports/CyclePickerModal.vue';
 import MemberShareAllocation from './components/profitability/MemberShareAllocation.vue';
+import OverallDashboard from './components/dashboard/OverallDashboard.vue';
 
 const componentRegistry = {
   'audit-trail-list': AuditTrailList,
@@ -166,6 +167,7 @@ const componentRegistry = {
   'quick-report-buttons': QuickReportButtons,
   'cycle-picker-modal': CyclePickerModal,
   'member-share-allocation': MemberShareAllocation,
+  'overall-dashboard': OverallDashboard,
 };
 
 document.addEventListener('DOMContentLoaded', () => {
