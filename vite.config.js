@@ -19,4 +19,22 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('chart.js') || id.includes('vue-chartjs')) return 'chart';
+                    if (id.includes('node_modules/vue') || id.includes('node_modules/alpinejs')) return 'vendor';
+                    if (id.includes('components/dashboard/')) return 'dashboard';
+                    if (id.includes('components/pig-registry/')) return 'cycles';
+                    if (id.includes('components/expenses/')) return 'expenses';
+                    if (id.includes('components/workflow/')) return 'workflow';
+                    if (id.includes('components/reports/')) return 'reports';
+                    if (id.includes('components/sales/')) return 'sales';
+                    if (id.includes('components/health/')) return 'health';
+                    if (id.includes('components/admin/')) return 'admin';
+                },
+            },
+        },
+    },
 });
