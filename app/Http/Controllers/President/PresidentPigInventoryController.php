@@ -368,7 +368,8 @@ class PresidentPigInventoryController extends Controller
                 'description' => "Stage/status updated to {$history->new_stage} / {$history->new_status}",
                 'actor' => $history->changedBy?->name,
                 'created_at' => $history->created_at,
-            ]);
+            ])
+            ->toBase();
 
         $adjustmentRows = PigCycleAdjustment::query()
             ->with(['cycle:id,batch_code', 'createdBy:id,name'])
@@ -381,7 +382,8 @@ class PresidentPigInventoryController extends Controller
                 'description' => "Count adjusted from {$adjustment->quantity_before} to {$adjustment->quantity_after}",
                 'actor' => $adjustment->createdBy?->name,
                 'created_at' => $adjustment->created_at,
-            ]);
+            ])
+            ->toBase();
 
         return $statusRows
             ->merge($adjustmentRows)
